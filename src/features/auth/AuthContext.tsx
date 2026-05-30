@@ -1,41 +1,50 @@
-import {createContext, useContext, useState, type ReactNode} from 'react';
+import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { refresh } from './api';
+import { ApiError } from '../../lib/http';
 
-type User = {
-    id: string;
-    name: string;
-    email: string;
-};
+type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
-type AuthState = {
-    user: User | null;
-    token: string | null;
-};
+interface AuthContextValue {
+  accessToken: string | null;
+  status: AuthStatus;
+  setAccessToken: (token: string | null) => void;
+}
 
-const AuthContext = createContext<AuthState | null>(null);
+export const AuthContext = createContext<AuthContextValue | null>(null);
 
 type AuthProviderProps = {
-    children: ReactNode;
+  children: ReactNode;
 };
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    const [authState, setAuthState] = useState<AuthState>({
-        user: null,
-        token: null,
-    });
-    
-    return (
-        <AuthContext.Provider value={authState}>
-            {children}
-        </AuthContext.Provider>
-    );
-}
+  const [accessToken, setAccessTokenState] = useState<string | null>(null);
+  const [status, setStatus] = useState<AuthStatus>('loading');
 
-export function useAuth() {
-    const context = useContext(AuthContext);
+  const setAccessToken = useCallback((token: string | null) => {
+    setAccessTokenState(token);
+    setStatus(token ? 'authenticated' : 'unauthenticated');
+  }, []);
 
-    if (!context) {
-        throw new Error('useAuth must be used within an AuthProvider');
-    }  
+  useEffect(() => {
+    async function tryRefresh() {
+      try {
+        const response = await refresh();
+        setAccessToken(response.accessToken);
+      } catch (error) {
+        if (error instanceof ApiError) {
+          setAccessToken(null);
+        } else {
+          console.error('Unexpected error during session restore:', error);
+          setAccessToken(null);
+        }
+      }
+    }
+    tryRefresh();
+  }, [setAccessToken]);
 
-    return context;
+  return (
+    <AuthContext.Provider value={{ accessToken, status, setAccessToken }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }

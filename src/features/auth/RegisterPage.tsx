@@ -1,30 +1,41 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { useLogin } from './useLogin';
+import { useRegister } from './useRegister';
 
-export function LoginPage() {
+export function RegisterPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { mutate, isPending, isError, error } = useLogin();
+  const { mutate, isPending, isError, error } = useRegister();
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    mutate({ email, password });
+    mutate({ name, email, password });
   };
 
   const errorMessage = (() => {
     if (!isError || !error) return null;
     switch (error.code) {
-      case 'INVALID_CREDENTIALS': return 'Email o contraseña incorrectos.';
-      case 'RATE_LIMIT_EXCEEDED': return 'Demasiados intentos. Esperá un momento.';
+      case 'EMAIL_ALREADY_EXISTS': return 'Ese email ya está registrado.';
       case 'VALIDATION_ERROR': return 'Revisá los datos del formulario.';
+      case 'RATE_LIMIT_EXCEEDED': return 'Demasiados intentos. Esperá un momento.';
       default: return 'Algo salió mal. Intentá de nuevo.';
     }
   })();
 
   return (
     <form onSubmit={handleSubmit}>
-      <h1>Iniciar sesión</h1>
+      <h1>Crear cuenta</h1>
+
+      <label htmlFor="name">Nombre</label>
+      <input
+        id="name"
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        disabled={isPending}
+      />
 
       <label htmlFor="email">Email</label>
       <input
@@ -50,11 +61,11 @@ export function LoginPage() {
       {errorMessage && <p role="alert">{errorMessage}</p>}
 
       <button type="submit" disabled={isPending}>
-        {isPending ? 'Ingresando...' : 'Ingresar'}
+        {isPending ? 'Creando cuenta...' : 'Crear cuenta'}
       </button>
 
       <p>
-        ¿No tenés cuenta? <Link to="/register">Registrate</Link>
+        ¿Ya tenés cuenta? <Link to="/login">Iniciá sesión</Link>
       </p>
     </form>
   );

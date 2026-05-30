@@ -1,28 +1,21 @@
-import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
-
-function LoginPage() {
-    return <h1>Login Page</h1>;
-}
-
-function AccountPage() {
-    return <h1>Account Page</h1>;
-}
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
+import { ProtectedRoute } from '../features/auth/ProtectedRoute';
+import { AccountsPage } from '../features/accounts/AccountsPage';
 
 const router = createBrowserRouter([
-    {
-    path: "/",
-    element: <Navigate to="/login" replace />,
-    },
-    {
-        path: "/login",
-        element: <LoginPage />,
-    },
-    {   
-        path: "/accounts",
-        element: <AccountPage />,
-    },
+  { path: '/login', element: <LoginPage /> },
+  { path: '/register', element: <RegisterPage /> },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      { path: '/accounts', element: <AccountsPage /> },
+    ],
+  },
+  { path: '/', element: <Navigate to="/accounts" replace /> },
 ]);
 
 export function AppRouter() {
-    return <RouterProvider router={router} />;
+  return <RouterProvider router={router} />;
 }
