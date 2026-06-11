@@ -25,7 +25,7 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
     const body = await response.json().catch(() => ({}));
     throw new ApiError(
       response.status,
-      body.code ?? 'UNKNOWN_ERROR',
+      body.error ?? 'UNKNOWN_ERROR',
       body.message ?? response.statusText
     );
   }
