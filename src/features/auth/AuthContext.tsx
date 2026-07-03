@@ -1,16 +1,9 @@
-import { createContext, useState, useEffect, useCallback, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { refresh } from './api';
 import { ApiError } from '../../lib/http';
+import { AuthContext } from './context';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
-
-interface AuthContextValue {
-  accessToken: string | null;
-  status: AuthStatus;
-  setAccessToken: (token: string | null) => void;
-}
-
-export const AuthContext = createContext<AuthContextValue | null>(null);
 
 type AuthProviderProps = {
   children: ReactNode;

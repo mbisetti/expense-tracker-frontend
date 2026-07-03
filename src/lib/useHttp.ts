@@ -7,7 +7,9 @@ export function useHttp() {
 
   return useCallback(
     <T>(path: string, options?: RequestInit): Promise<T> => {
-      const authHeader = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+      const authHeader: Record<string, string> = accessToken
+        ? { Authorization: `Bearer ${accessToken}` }
+        : {};
       return http<T>(path, {
         ...options,
         headers: {
