@@ -10,6 +10,10 @@ export function AppLayout() {
           <NavLink to="/accounts">Cuentas</NavLink>
           {' · '}
           <NavLink to="/transactions">Transacciones</NavLink>
+          {' · '}
+          <NavLink to="/categories">Categorías</NavLink>
+          {' · '}
+          <NavLink to="/payment-methods">Métodos de pago</NavLink>
         </nav>
       </header>
       <main>
