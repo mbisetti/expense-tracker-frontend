@@ -32,7 +32,7 @@ export function PaymentMethodsPage() {
   };
 
   const confirmDelete = (id: string) => {
-    deleteMutation.mutate(id, { onSuccess: () => setConfirmingDeleteId(null) });
+    deleteMutation.mutate(id, { onSettled: () => setConfirmingDeleteId(null) });
   };
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { formatMoney } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
 import { useTransactions } from './useTransactions';
@@ -64,9 +65,6 @@ export function TransactionsPage() {
   const categoryName = (id: string | null) =>
     id ? categories?.find((c) => c.id === id)?.name ?? '—' : '—';
 
-  const formatMoney = (amount: number, currency: string) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(amount);
-
   const formatAmount = (amount: number, currency: string, txType: TransactionType) => {
     const formatted = formatMoney(amount, currency);
     return txType === 'EXPENSE' ? `-${formatted}` : `+${formatted}`;
@@ -83,7 +81,7 @@ export function TransactionsPage() {
   };
 
   const confirmDelete = (id: string) => {
-    deleteMutation.mutate(id, { onSuccess: () => setConfirmingDeleteId(null) });
+    deleteMutation.mutate(id, { onSettled: () => setConfirmingDeleteId(null) });
   };
 
   return (

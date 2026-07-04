@@ -13,7 +13,11 @@ export function CategoryForm({ category, onClose }: CategoryFormProps) {
 
   const [name, setName] = useState(category?.name ?? '');
   const [type, setType] = useState<CategoryType>(category?.type ?? 'EXPENSE');
-  const [color, setColor] = useState(category?.color ?? '#aa3bff');
+  // El input type=color necesita un hex válido aunque la categoría no tenga color;
+  // comparar contra initialColor (no contra category.color) evita mandar el default
+  // en PATCHes donde el usuario no tocó el picker
+  const initialColor = category?.color ?? '#aa3bff';
+  const [color, setColor] = useState(initialColor);
 
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
@@ -25,7 +29,7 @@ export function CategoryForm({ category, onClose }: CategoryFormProps) {
       const changes: UpdateCategoryInput = {};
       if (name !== category.name) changes.name = name;
       if (type !== category.type) changes.type = type;
-      if (color !== category.color) changes.color = color;
+      if (color !== initialColor) changes.color = color;
 
       if (Object.keys(changes).length === 0) {
         onClose();

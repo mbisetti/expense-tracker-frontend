@@ -1,10 +1,8 @@
+import { formatMoney } from '../../lib/money';
 import { useDashboardOverview } from './useDashboardOverview';
 
 export function DashboardPage() {
   const { data, isPending, isError } = useDashboardOverview();
-
-  const formatMoney = (amount: number, currency: string) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(amount);
 
   return (
     <section>

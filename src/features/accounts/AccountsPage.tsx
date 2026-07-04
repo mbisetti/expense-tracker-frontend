@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatMoney } from '../../lib/money';
 import { useAccounts } from './useAccounts';
 import { useDeleteAccount } from './useAccountMutations';
 import { accountErrorMessage } from './errorMessages';
@@ -19,9 +20,6 @@ export function AccountsPage() {
   const { data: accounts, isPending, isError } = useAccounts();
   const deleteMutation = useDeleteAccount();
 
-  const formatMoney = (amount: number, currency: string) =>
-    new Intl.NumberFormat('es-AR', { style: 'currency', currency }).format(amount);
-
   const closeForm = () => {
     setFormOpen(false);
     setEditing(null);
@@ -33,7 +31,8 @@ export function AccountsPage() {
   };
 
   const confirmDelete = (id: string) => {
-    deleteMutation.mutate(id, { onSuccess: () => setConfirmingDeleteId(null) });
+    // onSettled: también en error, para que la fila no quede clavada en ¿Borrar? Sí/No
+    deleteMutation.mutate(id, { onSettled: () => setConfirmingDeleteId(null) });
   };
 
   return (
