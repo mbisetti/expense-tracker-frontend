@@ -61,6 +61,9 @@ export function useDeleteTransaction() {
   const http = useHttp();
   const invalidate = useInvalidateTransactions();
 
+  // Contrato: DELETE responde 200 con TransactionResponse completo (accountBalance
+  // recalculado post-delete), NO 204 — fijado por TransactionIntegrationTest en el
+  // backend. Si se simplifica a { accountBalance } (backlog 6c-1), ajustar el tipo.
   return useMutation<TransactionResponse, ApiError, string>({
     mutationFn: (id) =>
       http<TransactionResponse>(`/transactions/${id}`, { method: 'DELETE' }),
