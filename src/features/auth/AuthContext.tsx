@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { refresh } from './api';
-import { ApiError } from '../../lib/http';
+import { refreshAccessToken } from './refreshManager';
 import { AuthContext } from './context';
 
 type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -19,18 +18,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, []);
 
   useEffect(() => {
+    // refreshAccessToken es single-flight: el doble efecto de StrictMode comparte
+    // una sola rotación (dos en paralelo dispararían la detección de reuso)
     async function tryRefresh() {
-      try {
-        const response = await refresh();
-        setAccessToken(response.accessToken);
-      } catch (error) {
-        if (error instanceof ApiError) {
-          setAccessToken(null);
-        } else {
-          console.error('Unexpected error during session restore:', error);
-          setAccessToken(null);
-        }
-      }
+      const token = await refreshAccessToken();
+      setAccessToken(token);
     }
     tryRefresh();
   }, [setAccessToken]);

@@ -1,6 +1,9 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { useLogout } from '../features/auth/useLogout';
 
 export function AppLayout() {
+  const { mutate: logout, isPending } = useLogout();
+
   return (
     <>
       <header>
@@ -14,6 +17,10 @@ export function AppLayout() {
           <NavLink to="/categories">Categorías</NavLink>
           {' · '}
           <NavLink to="/payment-methods">Métodos de pago</NavLink>
+          {' · '}
+          <button type="button" onClick={() => logout()} disabled={isPending}>
+            {isPending ? 'Saliendo...' : 'Cerrar sesión'}
+          </button>
         </nav>
       </header>
       <main>
