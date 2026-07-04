@@ -26,6 +26,7 @@ function useInvalidateTransactions() {
   return () => {
     queryClient.invalidateQueries({ queryKey: ['transactions'] });
     queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    queryClient.invalidateQueries({ queryKey: ['summary'] });
   };
 }
 

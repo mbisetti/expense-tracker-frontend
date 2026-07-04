@@ -19,6 +19,7 @@ function useInvalidateAccounts() {
   const queryClient = useQueryClient();
   return () => {
     queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    queryClient.invalidateQueries({ queryKey: ['summary'] });
   };
 }
 
