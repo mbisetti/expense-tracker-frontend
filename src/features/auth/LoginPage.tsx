@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useLogin } from './useLogin';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const location = useLocation();
   const { mutate, isPending, isError, error } = useLogin();
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -54,7 +55,10 @@ export function LoginPage() {
       </button>
 
       <p>
-        ¿No tenés cuenta? <Link to="/register">Registrate</Link>
+        ¿No tenés cuenta?{' '}
+        <Link to="/register" state={location.state}>
+          Registrate
+        </Link>
       </p>
     </form>
   );

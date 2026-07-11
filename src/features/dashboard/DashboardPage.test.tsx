@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
@@ -195,6 +195,97 @@ describe('DashboardPage', () => {
 
     renderPage();
 
-    expect(await screen.findByRole('heading', { name: 'Ingresos vs gastos' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Ingresos vs gastos' }),
+    ).toBeInTheDocument();
+  });
+
+  it('si falla el gráfico o los movimientos, muestra un error en vez de datos engañosos', async () => {
+    const fail = () =>
+      Promise.resolve({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ error: 'INTERNAL', message: 'boom' }),
+      } as Response);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/summary/overview')) {
+          return ok({
+            byCurrency: [
+              { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+            ],
+          });
+        }
+        return fail();
+      }),
+    );
+
+    renderPage();
+
+    expect(
+      await screen.findByText('No pudimos cargar el gráfico. Intentá de nuevo.'),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText('No pudimos cargar los últimos movimientos. Intentá de nuevo.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Sin movimientos en los últimos 6 meses.')).not.toBeInTheDocument();
+  });
+
+  it('si la moneda seleccionada desaparece del resumen, cae a la primera disponible', async () => {
+    const ars = { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 };
+    const usd = { currency: 'USD', totalBalance: 100, monthIncome: 0, monthExpense: 0 };
+    let overviewCalls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/summary/overview')) {
+          overviewCalls += 1;
+          // primer fetch: dos monedas; refetch: USD ya no existe
+          return ok({ byCurrency: overviewCalls === 1 ? [ars, usd] : [ars] });
+        }
+        if (url.includes('/summary/monthly')) return ok(monthlyFixture);
+        if (url.includes('/transactions')) return ok(pageFixture);
+        throw new Error('URL inesperada: ' + url);
+      }),
+    );
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider
+          value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
+        >
+          <MemoryRouter>
+            <DashboardPage />
+          </MemoryRouter>
+        </AuthContext.Provider>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole('article', { name: 'Resumen ARS' });
+    fireEvent.click(screen.getByRole('tab', { name: 'USD' }));
+    await screen.findByRole('article', { name: 'Resumen USD' });
+
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ['summary', 'overview'] });
+    });
+
+    expect(await screen.findByRole('article', { name: 'Resumen ARS' })).toBeInTheDocument();
+  });
+
+  it('mientras carga el resumen inicial, muestra el skeleton', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise(() => {})),
+    );
+
+    renderPage();
+
+    expect(screen.getByRole('status', { name: 'Cargando resumen' })).toBeInTheDocument();
   });
 });
