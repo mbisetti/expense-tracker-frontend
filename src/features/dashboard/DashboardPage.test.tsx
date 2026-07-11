@@ -1,8 +1,83 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { DashboardPage } from './DashboardPage';
+import type { TransactionListItem } from '../transactions/api';
+
+function ok(body: unknown) {
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(body),
+  } as Response);
+}
+
+const monthlyFixture = {
+  byCurrency: [
+    {
+      currency: 'ARS',
+      months: [
+        { month: '2026-02', income: 100000, expense: 40000 },
+        { month: '2026-03', income: 120000, expense: 45000 },
+        { month: '2026-04', income: 110000, expense: 30000 },
+        { month: '2026-05', income: 130000, expense: 60000 },
+        { month: '2026-06', income: 140000, expense: 55000 },
+        { month: '2026-07', income: 250000, expense: 50000 },
+      ],
+    },
+  ],
+};
+
+const transaction1: TransactionListItem = {
+  id: 't1',
+  accountId: 'acc1',
+  categoryId: 'cat1',
+  paymentMethodId: 'pm1',
+  type: 'INCOME',
+  amount: 15000,
+  currency: 'ARS',
+  exchangeRateAtTime: null,
+  date: '2026-07-05',
+  description: 'Sueldo',
+  createdAt: '2026-07-05T10:00:00Z',
+};
+
+const transaction2: TransactionListItem = {
+  id: 't2',
+  accountId: 'acc1',
+  categoryId: null,
+  paymentMethodId: null,
+  type: 'EXPENSE',
+  amount: 3200,
+  currency: 'ARS',
+  exchangeRateAtTime: null,
+  date: '2026-07-06',
+  description: null,
+  createdAt: '2026-07-06T10:00:00Z',
+};
+
+const pageFixture = {
+  content: [transaction1, transaction2],
+  page: 0,
+  size: 5,
+  totalElements: 2,
+  totalPages: 1,
+};
+
+function stubEndpoints(overview: unknown, monthly: unknown, page: unknown) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/summary/overview')) return ok(overview);
+      if (url.includes('/summary/monthly')) return ok(monthly);
+      if (url.includes('/transactions')) return ok(page);
+      throw new Error('URL inesperada: ' + url);
+    }),
+  );
+}
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -13,7 +88,9 @@ function renderPage() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <DashboardPage />
+        <MemoryRouter>
+          <DashboardPage />
+        </MemoryRouter>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -24,22 +101,15 @@ afterEach(() => {
 });
 
 describe('DashboardPage', () => {
-  it('muestra un resumen por cada moneda', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () =>
-            Promise.resolve({
-              byCurrency: [
-                { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
-                { currency: 'USD', totalBalance: 100, monthIncome: 0, monthExpense: 0 },
-              ],
-            }),
-        } as Response),
-      ),
+  it('muestra las 4 cards de la primera moneda con valores formateados', async () => {
+    stubEndpoints(
+      {
+        byCurrency: [
+          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+        ],
+      },
+      monthlyFixture,
+      pageFixture,
     );
 
     renderPage();
@@ -47,23 +117,41 @@ describe('DashboardPage', () => {
     const ars = await screen.findByRole('article', { name: 'Resumen ARS' });
     expect(ars).toHaveTextContent('Balance total');
     expect(ars).toHaveTextContent('$ 200.000,00');
+    expect(ars).toHaveTextContent('Ingresos del mes');
     expect(ars).toHaveTextContent('$ 250.000,00');
+    expect(ars).toHaveTextContent('Gastos del mes');
     expect(ars).toHaveTextContent('$ 50.000,00');
+    expect(ars).toHaveTextContent('Ahorro del mes');
+    expect(ars).toHaveTextContent('$ 200.000,00');
+  });
 
-    const usd = screen.getByRole('article', { name: 'Resumen USD' });
-    expect(usd).toHaveTextContent('US$ 100,00');
+  it('con dos monedas muestra el tab USD y cambia el resumen al hacer click', async () => {
+    stubEndpoints(
+      {
+        byCurrency: [
+          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+          { currency: 'USD', totalBalance: 100, monthIncome: 0, monthExpense: 0 },
+        ],
+      },
+      monthlyFixture,
+      pageFixture,
+    );
+
+    renderPage();
+
+    await screen.findByRole('article', { name: 'Resumen ARS' });
+    const usdTab = screen.getByRole('tab', { name: 'USD' });
+
+    fireEvent.click(usdTab);
+
+    expect(await screen.findByRole('article', { name: 'Resumen USD' })).toBeInTheDocument();
   });
 
   it('muestra empty state sin datos', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(() =>
-        Promise.resolve({
-          ok: true,
-          status: 200,
-          json: () => Promise.resolve({ byCurrency: [] }),
-        } as Response),
-      ),
+    stubEndpoints(
+      { byCurrency: [] },
+      { byCurrency: [] },
+      { content: [], page: 0, size: 5, totalElements: 0, totalPages: 0 },
     );
 
     renderPage();
@@ -73,5 +161,40 @@ describe('DashboardPage', () => {
         'Todavía no hay datos. Creá una cuenta y registrá transacciones para ver el resumen.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('muestra los últimos movimientos con descripción, fallback y montos formateados', async () => {
+    stubEndpoints(
+      {
+        byCurrency: [
+          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+        ],
+      },
+      monthlyFixture,
+      pageFixture,
+    );
+
+    renderPage();
+
+    expect(await screen.findByText('Sueldo')).toBeInTheDocument();
+    expect(screen.getByText('Sin descripción')).toBeInTheDocument();
+    expect(screen.getByText('+$ 15.000,00')).toBeInTheDocument();
+    expect(screen.getByText('−$ 3.200,00')).toBeInTheDocument();
+  });
+
+  it('muestra el heading del gráfico de ingresos vs gastos', async () => {
+    stubEndpoints(
+      {
+        byCurrency: [
+          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+        ],
+      },
+      monthlyFixture,
+      pageFixture,
+    );
+
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Ingresos vs gastos' })).toBeInTheDocument();
   });
 });
