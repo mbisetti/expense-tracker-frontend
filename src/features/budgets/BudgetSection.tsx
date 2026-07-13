@@ -52,7 +52,7 @@ export function BudgetSection() {
               <li key={budget.budgetId}>
                 <div className="flex justify-between items-baseline gap-2">
                   <span className="text-ink">{budget.categoryName}</span>
-                  <span className={`text-sm ${STATUS_CLASSES[status]}`}>
+                  <span className={`text-sm shrink-0 whitespace-nowrap ${STATUS_CLASSES[status]}`}>
                     {STATUS_LABEL[status]}
                   </span>
                 </div>

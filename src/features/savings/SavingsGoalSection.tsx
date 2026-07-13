@@ -51,10 +51,10 @@ export function SavingsGoalSection() {
                 <div className="flex justify-between items-baseline gap-2">
                   <span className="text-ink">{goal.name}</span>
                   {completed ? (
-                    <span className="text-income text-sm">Completado</span>
+                    <span className="text-income text-sm shrink-0 whitespace-nowrap">Completado</span>
                   ) : (
                     goal.deadline && (
-                      <span className={`text-sm ${past ? 'text-expense' : 'text-body'}`}>
+                      <span className={`text-sm shrink-0 whitespace-nowrap ${past ? 'text-expense' : 'text-body'}`}>
                         {formatDeadline(goal.deadline)}
                       </span>
                     )
