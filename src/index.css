@@ -14,11 +14,13 @@
   --color-brand-bg: var(--accent-bg);
   --color-income: var(--income);
   --color-expense: var(--expense);
+  --color-warning: var(--warning);
 }
 
 :root {
   --income: #15803d;
   --expense: #b91c1c;
+  --warning: #b45309;
   --text: #6b6375;
   --text-h: #08060d;
   --bg: #fff;
@@ -54,6 +56,7 @@
   :root {
     --income: #4ade80;
     --expense: #f87171;
+    --warning: #fbbf24;
     --text: #9ca3af;
     --text-h: #f3f4f6;
     --bg: #16171d;

@@ -71,6 +71,8 @@ function stubEndpoints(overview: unknown, monthly: unknown, page: unknown) {
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.includes('/summary/budgets')) return ok({ budgets: [] });
+      if (url.includes('/savings')) return ok([]);
       if (url.includes('/summary/overview')) return ok(overview);
       if (url.includes('/summary/monthly')) return ok(monthly);
       if (url.includes('/transactions')) return ok(page);
@@ -211,6 +213,8 @@ describe('DashboardPage', () => {
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
         const url = String(input);
+        if (url.includes('/summary/budgets')) return ok({ budgets: [] });
+        if (url.includes('/savings')) return ok([]);
         if (url.includes('/summary/overview')) {
           return ok({
             byCurrency: [
@@ -241,6 +245,8 @@ describe('DashboardPage', () => {
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
         const url = String(input);
+        if (url.includes('/summary/budgets')) return ok({ budgets: [] });
+        if (url.includes('/savings')) return ok([]);
         if (url.includes('/summary/overview')) {
           overviewCalls += 1;
           // primer fetch: dos monedas; refetch: USD ya no existe

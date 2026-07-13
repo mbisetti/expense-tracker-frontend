@@ -6,6 +6,8 @@ import { OverviewSkeleton, ChartSkeleton, ListSkeleton } from './DashboardSkelet
 import { useDashboardOverview } from './useDashboardOverview';
 import { useMonthlySummary } from './useMonthlySummary';
 import { useTransactions } from '../transactions/useTransactions';
+import { BudgetSection } from '../budgets/BudgetSection';
+import { SavingsGoalSection } from '../savings/SavingsGoalSection';
 
 const MonthlyChart = lazy(() =>
   import('./MonthlyChart').then((m) => ({ default: m.MonthlyChart })),
@@ -63,6 +65,9 @@ export function DashboardPage() {
           </article>
         </>
       )}
+
+      <BudgetSection />
+      <SavingsGoalSection />
 
       {transactions.isPending && <ListSkeleton />}
       {transactions.isError && (
