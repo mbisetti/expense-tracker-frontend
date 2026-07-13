@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { PaymentMethodsPage } from './PaymentMethodsPage';
 import type { PaymentMethod } from './api';
+import { jsonResponse } from '../../test/mockResponse';
 
 const visa: PaymentMethod = {
   id: 'pm-1',
@@ -22,14 +23,6 @@ const cash: PaymentMethod = {
   isDefault: false,
   createdAt: '2026-07-01T00:00:00',
 };
-
-function jsonResponse(status: number, body?: unknown) {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  } as Response;
-}
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -61,7 +54,7 @@ describe('PaymentMethodsPage', () => {
   it('lista con badge de default solo en el método por defecto', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => Promise.resolve(jsonResponse(200, [visa, cash]))),
+      vi.fn(() => jsonResponse(200, [visa, cash])),
     );
 
     renderPage();
@@ -80,9 +73,9 @@ describe('PaymentMethodsPage', () => {
         if (options?.method === 'POST') {
           created = true;
           postBody = JSON.parse(options.body as string);
-          return Promise.resolve(jsonResponse(201, { ...cash, id: 'pm-new', name: postBody!.name }));
+          return jsonResponse(201, { ...cash, id: 'pm-new', name: postBody!.name });
         }
-        return Promise.resolve(jsonResponse(200, created ? [visa, { ...cash, id: 'pm-new', name: 'MP' }] : [visa]));
+        return jsonResponse(200, created ? [visa, { ...cash, id: 'pm-new', name: 'MP' }] : [visa]);
       }),
     );
 
@@ -106,13 +99,13 @@ describe('PaymentMethodsPage', () => {
           patched = true;
           patchBody = JSON.parse(options.body as string);
           expect(url).toContain('/payment-methods/pm-2');
-          return Promise.resolve(jsonResponse(200, { ...cash, isDefault: true }));
+          return jsonResponse(200, { ...cash, isDefault: true });
         }
         // El backend garantiza default único: al re-fetchear, visa ya no es default
         const list = patched
           ? [{ ...visa, isDefault: false }, { ...cash, isDefault: true }]
           : [visa, cash];
-        return Promise.resolve(jsonResponse(200, list));
+        return jsonResponse(200, list);
       }),
     );
 
@@ -138,7 +131,7 @@ describe('PaymentMethodsPage', () => {
           deleted = true;
           return Promise.resolve({ ok: true, status: 204 } as Response);
         }
-        return Promise.resolve(jsonResponse(200, deleted ? [visa] : [visa, cash]));
+        return jsonResponse(200, deleted ? [visa] : [visa, cash]);
       }),
     );
 
@@ -159,11 +152,9 @@ describe('PaymentMethodsPage', () => {
       'fetch',
       vi.fn((_url: string, options?: RequestInit) => {
         if (options?.method === 'DELETE') {
-          return Promise.resolve(
-            jsonResponse(404, { error: 'PAYMENT_METHOD_NOT_FOUND', message: 'gone' }),
-          );
+          return jsonResponse(404, { error: 'PAYMENT_METHOD_NOT_FOUND', message: 'gone' });
         }
-        return Promise.resolve(jsonResponse(200, [cash]));
+        return jsonResponse(200, [cash]);
       }),
     );
 

@@ -3,14 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { TransactionsPage } from './TransactionsPage';
-
-function jsonResponse(body: unknown) {
-  return {
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as Response;
-}
+import { jsonResponse } from '../../test/mockResponse';
 
 const emptyPage = { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 };
 
@@ -34,8 +27,8 @@ describe('TransactionsPage', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string) => {
-        if (url.includes('/transactions')) return Promise.resolve(jsonResponse(emptyPage));
-        return Promise.resolve(jsonResponse([]));
+        if (url.includes('/transactions')) return jsonResponse(200, emptyPage);
+        return jsonResponse(200, []);
       }),
     );
   });
@@ -91,12 +84,12 @@ describe('TransactionsPage', () => {
         calls.push({ url, method: options?.method });
         if (options?.method === 'DELETE') {
           deleted = true;
-          return Promise.resolve(jsonResponse({ ...tx, accountBalance: 1000 }));
+          return jsonResponse(200, { ...tx, accountBalance: 1000 });
         }
         if (url.includes('/transactions'))
-          return Promise.resolve(jsonResponse(deleted ? emptyPage : oneItemPage));
-        if (url.includes('/accounts')) return Promise.resolve(jsonResponse([account]));
-        return Promise.resolve(jsonResponse([]));
+          return jsonResponse(200, deleted ? emptyPage : oneItemPage);
+        if (url.includes('/accounts')) return jsonResponse(200, [account]);
+        return jsonResponse(200, []);
       }),
     );
 

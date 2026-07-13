@@ -1,15 +1,8 @@
+import { Card } from '../../components/Card';
 import { ProgressBar } from '../../components/ProgressBar';
+import { PlaceholderRow } from '../../components/SectionPlaceholder';
 import { formatMoney } from '../../lib/money';
 import { useSavingsGoals } from './useSavingsGoals';
-
-function PlaceholderRow() {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="h-4 w-40 bg-line rounded" />
-      <div className="h-2 bg-line rounded-full" />
-    </div>
-  );
-}
 
 function formatDeadline(deadline: string): string {
   return new Date(deadline + 'T00:00:00').toLocaleDateString('es-AR', {
@@ -29,7 +22,7 @@ export function SavingsGoalSection() {
   const { data, isPending, isError } = useSavingsGoals();
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
+    <Card>
       <h2>Objetivos de ahorro</h2>
 
       {isPending && (
@@ -81,6 +74,6 @@ export function SavingsGoalSection() {
           })}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

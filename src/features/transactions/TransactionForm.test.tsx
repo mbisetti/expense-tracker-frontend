@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { TransactionForm } from './TransactionForm';
 import type { TransactionListItem } from './api';
+import { jsonResponse } from '../../test/mockResponse';
 
 const account = {
   id: 'acc-1',
@@ -28,14 +29,6 @@ const editTx: TransactionListItem = {
   createdAt: '2026-07-01T00:00:00',
 };
 
-function jsonResponse(status: number, body: unknown) {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  } as Response;
-}
-
 let patchCalls: { url: string; body: Record<string, unknown> }[];
 let patchResponse: { status: number; body: unknown };
 
@@ -47,10 +40,10 @@ beforeEach(() => {
     vi.fn((url: string, options?: RequestInit) => {
       if (options?.method === 'PATCH') {
         patchCalls.push({ url, body: JSON.parse(options.body as string) });
-        return Promise.resolve(jsonResponse(patchResponse.status, patchResponse.body));
+        return jsonResponse(patchResponse.status, patchResponse.body);
       }
-      if (url.includes('/accounts')) return Promise.resolve(jsonResponse(200, [account]));
-      return Promise.resolve(jsonResponse(200, []));
+      if (url.includes('/accounts')) return jsonResponse(200, [account]);
+      return jsonResponse(200, []);
     }),
   );
 });

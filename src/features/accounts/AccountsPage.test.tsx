@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { AccountsPage } from './AccountsPage';
+import { jsonResponse } from '../../test/mockResponse';
 
 const account = {
   id: 'acc-1',
@@ -12,14 +13,6 @@ const account = {
   balance: 1000,
   createdAt: '2026-07-01T00:00:00',
 };
-
-function jsonResponse(status: number, body: unknown) {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  } as Response;
-}
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -46,12 +39,10 @@ describe('AccountsPage', () => {
       'fetch',
       vi.fn((url: string, options?: RequestInit) => {
         if (options?.method === 'DELETE') {
-          return Promise.resolve(
-            jsonResponse(409, { error: 'ACCOUNT_HAS_TRANSACTIONS', message: 'has transactions' }),
-          );
+          return jsonResponse(409, { error: 'ACCOUNT_HAS_TRANSACTIONS', message: 'has transactions' });
         }
-        if (url.includes('/accounts')) return Promise.resolve(jsonResponse(200, [account]));
-        return Promise.resolve(jsonResponse(200, []));
+        if (url.includes('/accounts')) return jsonResponse(200, [account]);
+        return jsonResponse(200, []);
       }),
     );
 
@@ -76,8 +67,8 @@ describe('AccountsPage', () => {
           return Promise.resolve({ ok: true, status: 204 } as Response);
         }
         if (url.includes('/accounts'))
-          return Promise.resolve(jsonResponse(200, deleted ? [] : [account]));
-        return Promise.resolve(jsonResponse(200, []));
+          return jsonResponse(200, deleted ? [] : [account]);
+        return jsonResponse(200, []);
       }),
     );
 

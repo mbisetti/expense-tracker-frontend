@@ -3,14 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { SavingsGoalSection } from './SavingsGoalSection';
-
-function ok(body: unknown) {
-  return Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as Response);
-}
+import { ok } from '../../test/mockResponse';
 
 function renderSection() {
   const queryClient = new QueryClient({

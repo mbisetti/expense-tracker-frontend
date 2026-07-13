@@ -1,16 +1,9 @@
+import { Card } from '../../components/Card';
 import { ProgressBar } from '../../components/ProgressBar';
+import { PlaceholderRow } from '../../components/SectionPlaceholder';
 import { formatMoney } from '../../lib/money';
 import { budgetStatus } from './api';
 import { useBudgetsSummary } from './useBudgetsSummary';
-
-function PlaceholderRow() {
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="h-4 w-40 bg-line rounded" />
-      <div className="h-2 bg-line rounded-full" />
-    </div>
-  );
-}
 
 const STATUS_LABEL: Record<'ok' | 'warning' | 'exceeded', string> = {
   ok: 'En presupuesto',
@@ -34,7 +27,7 @@ export function BudgetSection() {
   const { data, isPending, isError } = useBudgetsSummary();
 
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
+    <Card>
       <h2>Presupuestos del mes</h2>
 
       {isPending && (
@@ -77,6 +70,6 @@ export function BudgetSection() {
           })}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }

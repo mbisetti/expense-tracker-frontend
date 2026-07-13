@@ -3,22 +3,9 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { BudgetSection } from './BudgetSection';
+import { jsonResponse, ok } from '../../test/mockResponse';
 
-function ok(body: unknown) {
-  return Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as Response);
-}
-
-function fail() {
-  return Promise.resolve({
-    ok: false,
-    status: 500,
-    json: () => Promise.resolve({ error: 'INTERNAL', message: 'boom' }),
-  } as Response);
-}
+const fail = () => jsonResponse(500, { error: 'INTERNAL', message: 'boom' });
 
 function renderSection() {
   const queryClient = new QueryClient({

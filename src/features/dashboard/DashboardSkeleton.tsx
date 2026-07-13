@@ -1,18 +1,20 @@
+import { Card } from '../../components/Card';
+
 function CardPlaceholder() {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4 animate-pulse">
+    <Card className="animate-pulse">
       <div className="h-3 w-20 rounded bg-line mb-3" />
       <div className="h-6 w-28 rounded bg-line" />
-    </div>
+    </Card>
   );
 }
 
 function ChartPlaceholder() {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4 animate-pulse">
+    <Card className="animate-pulse">
       <div className="h-5 w-40 rounded bg-line mb-4" />
       <div className="h-[240px] rounded bg-line" />
-    </div>
+    </Card>
   );
 }
 
@@ -41,17 +43,13 @@ export function ChartSkeleton() {
 
 export function ListSkeleton() {
   return (
-    <div
-      role="status"
-      aria-label="Cargando movimientos"
-      className="rounded-xl border border-line bg-surface p-4 animate-pulse"
-    >
+    <Card role="status" aria-label="Cargando movimientos" className="animate-pulse">
       {Array.from({ length: 5 }).map((_, i) => (
         <div key={i} className="flex justify-between py-2">
           <div className="h-4 w-32 bg-line rounded" />
           <div className="h-4 w-20 bg-line rounded" />
         </div>
       ))}
-    </div>
+    </Card>
   );
 }

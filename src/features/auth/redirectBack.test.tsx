@@ -5,14 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { LoginPage } from './LoginPage';
-
-function jsonResponse(status: number, body?: unknown) {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  } as Response;
-}
+import { jsonResponse } from '../../test/mockResponse';
 
 function renderWithRouter(initialEntries: string[]) {
   const router = createMemoryRouter(
@@ -49,12 +42,12 @@ describe('redirect-back tras login', () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/auth/refresh')) {
-        return Promise.resolve(jsonResponse(401, { error: 'INVALID_REFRESH_TOKEN' }));
+        return jsonResponse(401, { error: 'INVALID_REFRESH_TOKEN' });
       }
       if (url.includes('/auth/login')) {
-        return Promise.resolve(jsonResponse(200, { accessToken: 'tok' }));
+        return jsonResponse(200, { accessToken: 'tok' });
       }
-      return Promise.resolve(jsonResponse(200, {}));
+      return jsonResponse(200, {});
     });
     vi.stubGlobal('fetch', fetchMock);
 
@@ -73,12 +66,12 @@ describe('redirect-back tras login', () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/auth/refresh')) {
-        return Promise.resolve(jsonResponse(401, { error: 'INVALID_REFRESH_TOKEN' }));
+        return jsonResponse(401, { error: 'INVALID_REFRESH_TOKEN' });
       }
       if (url.includes('/auth/login')) {
-        return Promise.resolve(jsonResponse(200, { accessToken: 'tok' }));
+        return jsonResponse(200, { accessToken: 'tok' });
       }
-      return Promise.resolve(jsonResponse(200, {}));
+      return jsonResponse(200, {});
     });
     vi.stubGlobal('fetch', fetchMock);
 

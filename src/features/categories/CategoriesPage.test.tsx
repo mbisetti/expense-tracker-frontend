@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { CategoriesPage } from './CategoriesPage';
+import { jsonResponse } from '../../test/mockResponse';
 
 const userCategory = {
   id: 'cat-1',
@@ -25,14 +26,6 @@ const systemCategory = {
   sourceDefaultCategoryId: null,
   createdAt: '2026-07-01T00:00:00',
 };
-
-function jsonResponse(status: number, body: unknown) {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  } as Response;
-}
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -57,7 +50,7 @@ describe('CategoriesPage', () => {
   it('las categorías del sistema no muestran acciones de edición', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => Promise.resolve(jsonResponse(200, [userCategory, systemCategory]))),
+      vi.fn(() => jsonResponse(200, [userCategory, systemCategory])),
     );
 
     renderPage();
@@ -74,11 +67,9 @@ describe('CategoriesPage', () => {
       'fetch',
       vi.fn((_url: string, options?: RequestInit) => {
         if (options?.method === 'DELETE') {
-          return Promise.resolve(
-            jsonResponse(403, { error: 'CATEGORY_NOT_EDITABLE', message: 'system' }),
-          );
+          return jsonResponse(403, { error: 'CATEGORY_NOT_EDITABLE', message: 'system' });
         }
-        return Promise.resolve(jsonResponse(200, [userCategory]));
+        return jsonResponse(200, [userCategory]);
       }),
     );
 

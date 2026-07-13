@@ -5,14 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { DashboardPage } from './DashboardPage';
 import type { TransactionListItem } from '../transactions/api';
-
-function ok(body: unknown) {
-  return Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(body),
-  } as Response);
-}
+import { jsonResponse, ok } from '../../test/mockResponse';
 
 const monthlyFixture = {
   byCurrency: [
@@ -203,12 +196,7 @@ describe('DashboardPage', () => {
   });
 
   it('si falla el gráfico o los movimientos, muestra un error en vez de datos engañosos', async () => {
-    const fail = () =>
-      Promise.resolve({
-        ok: false,
-        status: 500,
-        json: () => Promise.resolve({ error: 'INTERNAL', message: 'boom' }),
-      } as Response);
+    const fail = () => jsonResponse(500, { error: 'INTERNAL', message: 'boom' });
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
@@ -293,5 +281,31 @@ describe('DashboardPage', () => {
     renderPage();
 
     expect(screen.getByRole('status', { name: 'Cargando resumen' })).toBeInTheDocument();
+  });
+
+  it('con overview resuelto pero gráfico y movimientos colgados, muestra ambos skeletons junto con las cards', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/summary/budgets')) return ok({ budgets: [] });
+        if (url.includes('/savings')) return ok([]);
+        if (url.includes('/summary/overview')) {
+          return ok({
+            byCurrency: [
+              { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+            ],
+          });
+        }
+        // monthly y transactions quedan colgados: la carga parcial debe verse en los skeletons
+        return new Promise(() => {});
+      }),
+    );
+
+    renderPage();
+
+    expect(await screen.findByRole('article', { name: 'Resumen ARS' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Cargando gráfico' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Cargando movimientos' })).toBeInTheDocument();
   });
 });

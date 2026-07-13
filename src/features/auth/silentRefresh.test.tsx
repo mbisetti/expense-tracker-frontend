@@ -4,14 +4,7 @@ import type { ReactNode } from 'react';
 import { AuthContext } from './context';
 import { refreshAccessToken } from './refreshManager';
 import { useHttp } from '../../lib/useHttp';
-
-function jsonResponse(status: number, body?: unknown) {
-  return {
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  } as Response;
-}
+import { jsonResponse } from '../../test/mockResponse';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -20,7 +13,7 @@ afterEach(() => {
 describe('refreshAccessToken (single-flight)', () => {
   it('dos llamadas concurrentes comparten un solo POST /auth/refresh', async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(jsonResponse(200, { accessToken: 'fresh-token' })),
+      jsonResponse(200, { accessToken: 'fresh-token' }),
     );
     vi.stubGlobal('fetch', fetchMock);
 
@@ -34,7 +27,7 @@ describe('refreshAccessToken (single-flight)', () => {
   it('devuelve null si el refresh falla (cookie vencida)', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => Promise.resolve(jsonResponse(401, { error: 'INVALID_REFRESH_TOKEN' }))),
+      vi.fn(() => jsonResponse(401, { error: 'INVALID_REFRESH_TOKEN' })),
     );
 
     expect(await refreshAccessToken()).toBeNull();
@@ -62,12 +55,12 @@ describe('useHttp (silent refresh on 401)', () => {
       const auth = (options?.headers as Record<string, string>)?.Authorization;
       calls.push({ url, auth });
       if (url.includes('/auth/refresh')) {
-        return Promise.resolve(jsonResponse(200, { accessToken: 'new-token' }));
+        return jsonResponse(200, { accessToken: 'new-token' });
       }
       if (auth === 'Bearer new-token') {
-        return Promise.resolve(jsonResponse(200, [{ id: 'acc-1' }]));
+        return jsonResponse(200, [{ id: 'acc-1' }]);
       }
-      return Promise.resolve(jsonResponse(401, { error: 'UNAUTHORIZED' }));
+      return jsonResponse(401, { error: 'UNAUTHORIZED' });
     });
 
     const { http, setAccessToken } = setup(fetchMock);
@@ -85,9 +78,9 @@ describe('useHttp (silent refresh on 401)', () => {
   it('si el refresh falla, limpia la sesión y propaga el 401 original', async () => {
     const fetchMock = vi.fn((url: string) => {
       if (url.includes('/auth/refresh')) {
-        return Promise.resolve(jsonResponse(401, { error: 'INVALID_REFRESH_TOKEN' }));
+        return jsonResponse(401, { error: 'INVALID_REFRESH_TOKEN' });
       }
-      return Promise.resolve(jsonResponse(401, { error: 'UNAUTHORIZED' }));
+      return jsonResponse(401, { error: 'UNAUTHORIZED' });
     });
 
     const { http, setAccessToken } = setup(fetchMock);
@@ -98,7 +91,7 @@ describe('useHttp (silent refresh on 401)', () => {
 
   it('un 401 en /auth/* NO dispara refresh (credencial inválida, no token vencido)', async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(jsonResponse(401, { error: 'INVALID_CREDENTIALS' })),
+      jsonResponse(401, { error: 'INVALID_CREDENTIALS' }),
     );
 
     const { http } = setup(fetchMock);
@@ -111,7 +104,7 @@ describe('useHttp (silent refresh on 401)', () => {
 
   it('errores que no son 401 pasan directo, sin refresh', async () => {
     const fetchMock = vi.fn(() =>
-      Promise.resolve(jsonResponse(422, { error: 'INSUFFICIENT_BALANCE' })),
+      jsonResponse(422, { error: 'INSUFFICIENT_BALANCE' }),
     );
 
     const { http } = setup(fetchMock);

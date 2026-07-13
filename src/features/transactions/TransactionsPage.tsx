@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatMoney } from '../../lib/money';
+import { amountSign, formatMoney } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
 import { useTransactions } from './useTransactions';
@@ -65,10 +65,8 @@ export function TransactionsPage() {
   const categoryName = (id: string | null) =>
     id ? categories?.find((c) => c.id === id)?.name ?? '—' : '—';
 
-  const formatAmount = (amount: number, currency: string, txType: TransactionType) => {
-    const formatted = formatMoney(amount, currency);
-    return txType === 'EXPENSE' ? `-${formatted}` : `+${formatted}`;
-  };
+  const formatAmount = (amount: number, currency: string, txType: TransactionType) =>
+    amountSign(txType) + formatMoney(amount, currency);
 
   const closeForm = () => {
     setFormOpen(false);

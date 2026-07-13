@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
-import { formatMoney } from '../../lib/money';
+import { Card } from '../../components/Card';
+import { amountSign, amountToneClass, formatMoney } from '../../lib/money';
 import type { TransactionListItem } from '../transactions/api';
 
 type RecentTransactionsProps = {
@@ -15,7 +16,7 @@ function formatDate(date: string): string {
 
 export function RecentTransactions({ transactions }: RecentTransactionsProps) {
   return (
-    <div className="rounded-xl border border-line bg-surface p-4">
+    <Card>
       <div className="flex items-baseline justify-between">
         <h2>Últimos movimientos</h2>
         <Link to="/transactions" className="text-brand text-sm">
@@ -33,14 +34,14 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
                 <p className="text-ink">{t.description || 'Sin descripción'}</p>
                 <p className="text-body text-sm">{formatDate(t.date)}</p>
               </div>
-              <p className={`tabular-nums ${t.type === 'INCOME' ? 'text-income' : 'text-expense'}`}>
-                {t.type === 'INCOME' ? '+' : '−'}
+              <p className={`tabular-nums ${amountToneClass(t.type)}`}>
+                {amountSign(t.type)}
                 {formatMoney(t.amount, t.currency)}
               </p>
             </li>
           ))}
         </ul>
       )}
-    </div>
+    </Card>
   );
 }
