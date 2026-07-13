@@ -22,9 +22,10 @@ export type BudgetsSummaryResponse = {
 
 export type BudgetStatus = 'ok' | 'warning' | 'exceeded';
 
-// Umbrales de UI (spec budgets FR-5): el backend solo manda los dos montos
+// Umbrales de UI (spec budgets, revisión 2026-07-13): el backend solo manda los
+// dos montos. Gastar exactamente el límite ES excedido — te queda $0.
 export function budgetStatus(spent: number, limit: number): BudgetStatus {
-  if (spent > limit) return 'exceeded';
+  if (spent >= limit) return 'exceeded';
   if (spent >= limit * 0.8) return 'warning';
   return 'ok';
 }

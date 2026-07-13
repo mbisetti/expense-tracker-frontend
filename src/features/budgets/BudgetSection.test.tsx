@@ -74,7 +74,8 @@ describe('BudgetSection', () => {
     expect(bars.map((bar) => bar.getAttribute('aria-valuetext'))).toEqual(['45%', '85%', '120%']);
   });
 
-  it('80% exacto es warning y 100% exacto no es exceeded', async () => {
+  // Revisión 2026-07-13: 100% exacto ES excedido (te queda $0); warning es [80%, 100%)
+  it('80% exacto es warning y 100% exacto es exceeded', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() =>
@@ -103,9 +104,8 @@ describe('BudgetSection', () => {
 
     renderSection();
 
-    const warnings = await screen.findAllByText('Cerca del límite');
-    expect(warnings).toHaveLength(2);
-    expect(screen.queryByText('Excedido')).not.toBeInTheDocument();
+    expect(await screen.findByText('Cerca del límite')).toBeInTheDocument();
+    expect(screen.getByText('Excedido')).toBeInTheDocument();
   });
 
   it('muestra empty state sin presupuestos', async () => {
