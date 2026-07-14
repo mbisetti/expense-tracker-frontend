@@ -4,11 +4,13 @@ import { PlaceholderRow } from '../../components/SectionPlaceholder';
 import { useIncomeSources } from './useIncomeSources';
 import { useCreateIncomeSource } from './useIncomeMutations';
 import { incomeErrorMessage } from './errorMessages';
+import { DeductionManager } from './DeductionManager';
 
 export function IncomeSourceList() {
   const [formOpen, setFormOpen] = useState(false);
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('');
+  const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
 
   const { data: sources, isPending, isError } = useIncomeSources();
   const createMutation = useCreateIncomeSource();
@@ -91,12 +93,27 @@ export function IncomeSourceList() {
       {sources && sources.length > 0 && (
         <ul className="list-none p-0 m-0 divide-y divide-line">
           {sources.map((source) => (
-            <li key={source.id} className="py-2 flex justify-between">
-              <span className={`text-ink${!source.active ? ' opacity-60' : ''}`}>
-                {source.name}
-                {!source.active && <span className="text-body text-sm"> (inactiva)</span>}
-              </span>
-              <span className="text-body text-sm">{source.currency}</span>
+            <li key={source.id} className="py-2">
+              <div className="flex justify-between items-center">
+                <span className={`text-ink${!source.active ? ' opacity-60' : ''}`}>
+                  {source.name}
+                  {!source.active && <span className="text-body text-sm"> (inactiva)</span>}
+                </span>
+                <span className="flex items-center gap-3">
+                  <span className="text-body text-sm">{source.currency}</span>
+                  <button
+                    type="button"
+                    className="text-sm"
+                    aria-expanded={expandedSourceId === source.id}
+                    onClick={() =>
+                      setExpandedSourceId(expandedSourceId === source.id ? null : source.id)
+                    }
+                  >
+                    {expandedSourceId === source.id ? 'Ocultar' : 'Deducciones'}
+                  </button>
+                </span>
+              </div>
+              {expandedSourceId === source.id && <DeductionManager sourceId={source.id} />}
             </li>
           ))}
         </ul>

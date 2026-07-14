@@ -11,7 +11,9 @@ export type CreateIncomeSourceInput = {
 export type CreateIncomeEntryInput = {
   incomeSourceId: string;
   accountId: string;
-  amount: number;
+  grossAmount: number;
+  deductionIds?: string[];
+  netOverride?: number;
   date: string;
   notes?: string;
 };

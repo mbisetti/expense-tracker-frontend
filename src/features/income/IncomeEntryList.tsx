@@ -39,11 +39,14 @@ export function IncomeEntryList() {
                 <p className="text-body text-sm">
                   {formatDate(entry.date)}
                   {entry.notes ? ` · ${entry.notes}` : ''}
+                  {entry.deductions.length > 0 &&
+                    ` · bruto ${formatMoney(entry.grossAmount, entry.currency)} − ${entry.deductions.length} deducc.`}
+                  {entry.netOverridden && ' · neto manual'}
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-income tabular-nums">
-                  +{formatMoney(entry.amount, entry.currency)}
+                  +{formatMoney(entry.netAmount, entry.currency)}
                 </span>
                 <button
                   type="button"

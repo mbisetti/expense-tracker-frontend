@@ -36,7 +36,11 @@ const entry = {
   incomeSourceId: 'src1',
   sourceName: 'Sueldo',
   accountId: 'acc1',
-  amount: 250000,
+  grossAmount: 250000,
+  deductions: [],
+  calculatedNetAmount: 250000,
+  netAmount: 250000,
+  netOverridden: false,
   currency: 'ARS',
   date: '2026-07-05',
   notes: null,
@@ -72,6 +76,7 @@ function stubEndpoints(options?: {
         options?.onPost?.(body);
         return ok(options?.postResponse ?? { ...entry, accountBalance: 999 });
       }
+      if (url.includes('/deductions')) return ok([]);
       if (url.includes('/income-sources')) return ok(sources);
       if (url.includes('/income-entries')) return ok(entriesPage);
       if (url.includes('/accounts')) return ok(accounts);
@@ -141,14 +146,14 @@ describe('IncomePage', () => {
     // el select existe recién cuando las fuentes cargaron — esperar el label, no el heading
     fireEvent.change(await screen.findByLabelText('Fuente'), { target: { value: 'src1' } });
     fireEvent.change(screen.getByLabelText('Cuenta destino'), { target: { value: 'acc1' } });
-    fireEvent.change(screen.getByLabelText('Monto'), { target: { value: '10000' } });
+    fireEvent.change(screen.getByLabelText('Monto bruto'), { target: { value: '10000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(await screen.findByText(/Ingreso registrado/)).toBeInTheDocument();
     expect(postedBody).toMatchObject({
       incomeSourceId: 'src1',
       accountId: 'acc1',
-      amount: 10000,
+      grossAmount: 10000,
     });
     expect(postedBody?.date).toBeTruthy();
   });
