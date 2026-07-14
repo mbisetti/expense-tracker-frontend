@@ -5,6 +5,7 @@ import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { AccountsPage } from '../features/accounts/AccountsPage';
 import { TransactionsPage } from '../features/transactions/TransactionsPage';
 import { IncomePage } from '../features/income/IncomePage';
+import { TransfersPage } from '../features/transfers/TransfersPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { CategoriesPage } from '../features/categories/CategoriesPage';
 import { PaymentMethodsPage } from '../features/paymentMethods/PaymentMethodsPage';
@@ -23,6 +24,7 @@ const router = createBrowserRouter([
           { path: '/accounts', element: <AccountsPage /> },
           { path: '/transactions', element: <TransactionsPage /> },
           { path: '/income', element: <IncomePage /> },
+          { path: '/transfers', element: <TransfersPage /> },
           { path: '/categories', element: <CategoriesPage /> },
           { path: '/payment-methods', element: <PaymentMethodsPage /> },
         ],

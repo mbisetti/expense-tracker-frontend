@@ -17,6 +17,8 @@ export function AppLayout() {
           {' · '}
           <NavLink to="/income">Ingresos</NavLink>
           {' · '}
+          <NavLink to="/transfers">Transferencias</NavLink>
+          {' · '}
           <NavLink to="/categories">Categorías</NavLink>
           {' · '}
           <NavLink to="/payment-methods">Métodos de pago</NavLink>
