@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Graphify code graph (índice local de navegación, no versionado)
+graphify-out/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
