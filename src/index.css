@@ -6,28 +6,71 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 
 @theme inline {
+  /* Neutros cálidos */
   --color-ink: var(--text-h);
   --color-body: var(--text);
+  --color-muted: var(--text-muted);
   --color-surface: var(--bg);
+  --color-surface-elevated: var(--bg-elevated);
+  --color-surface-sunken: var(--bg-sunken);
   --color-line: var(--border);
+
+  /* Acento de marca — índigo (sólo chrome interactivo, nunca datos) */
   --color-brand: var(--accent);
+  --color-brand-hover: var(--accent-hover);
   --color-brand-bg: var(--accent-bg);
+  --color-on-brand: var(--on-accent);
+
+  /* Semánticos financieros — sagrados (sólo datos/estado, nunca chrome) */
   --color-income: var(--income);
   --color-expense: var(--expense);
+  --color-transfer: var(--transfer);
   --color-warning: var(--warning);
+  --color-exceeded: var(--exceeded);
+
+  /* Radios (design-principles.md §3) */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  /* Sombras — sutiles, re-mapeadas por tema (§3: en dark casi no se ven) */
+  --shadow-sm: var(--elevation-sm);
+  --shadow-md: var(--elevation-md);
+  --shadow-lg: var(--elevation-lg);
 }
 
 :root {
-  --income: #15803d;
-  --expense: #b91c1c;
+  /* Neutros cálidos — familia "stone" tibia (light) */
+  --bg: #fafaf9;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #f5f5f4;
+  --text-h: #1c1917;
+  --text: #57534e;
+  --text-muted: #78716c;
+  --border: #e7e5e4;
+
+  /* Acento de marca — índigo (light) */
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-bg: rgba(79, 70, 229, 0.08);
+  --on-accent: #ffffff;
+
+  /* Semánticos financieros (light) */
+  --income: #047857;
+  --expense: #dc2626;
+  --transfer: #0284c7;
   --warning: #b45309;
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
+  --exceeded: #b91c1c;
+
+  /* Sombras crudas (light) — mapeadas arriba a --shadow-sm/md/lg */
+  --elevation-sm: 0 1px 2px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.08);
+  --elevation-md:
+    0 4px 6px -1px rgba(28, 25, 23, 0.08), 0 2px 4px -2px rgba(28, 25, 23, 0.06);
+  --elevation-lg:
+    0 10px 15px -3px rgba(28, 25, 23, 0.1), 0 4px 6px -4px rgba(28, 25, 23, 0.06);
+
+  /* Template leftovers — sin migrar (S19) */
   --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
   --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
@@ -52,18 +95,33 @@
   }
 }
 
+/* Dark — sistema operativo, salvo que el toggle manual fuerce light (data-theme="light") */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --income: #4ade80;
+  :root:not([data-theme='light']) {
+    --bg: #0c0a09;
+    --bg-elevated: #1c1917;
+    --bg-sunken: #141210;
+    --text-h: #fafaf9;
+    --text: #a8a29e;
+    --text-muted: #78716c;
+    --border: rgba(250, 250, 249, 0.1);
+
+    --accent: #818cf8;
+    --accent-hover: #a5b4fc;
+    --accent-bg: rgba(129, 140, 248, 0.14);
+    --on-accent: #1c1917;
+
+    --income: #34d399;
     --expense: #f87171;
+    --transfer: #38bdf8;
     --warning: #fbbf24;
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
+    --exceeded: #fca5a5;
+
+    --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+    --elevation-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    --elevation-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+
     --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
     --social-bg: rgba(47, 48, 58, 0.5);
     --shadow:
@@ -73,6 +131,59 @@
   #social .button-icon {
     filter: invert(1) brightness(2);
   }
+}
+
+/* Toggle manual — pisa al sistema en cualquier dirección */
+:root[data-theme='dark'] {
+  --bg: #0c0a09;
+  --bg-elevated: #1c1917;
+  --bg-sunken: #141210;
+  --text-h: #fafaf9;
+  --text: #a8a29e;
+  --text-muted: #78716c;
+  --border: rgba(250, 250, 249, 0.1);
+
+  --accent: #818cf8;
+  --accent-hover: #a5b4fc;
+  --accent-bg: rgba(129, 140, 248, 0.14);
+  --on-accent: #1c1917;
+
+  --income: #34d399;
+  --expense: #f87171;
+  --transfer: #38bdf8;
+  --warning: #fbbf24;
+  --exceeded: #fca5a5;
+
+  --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --elevation-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --elevation-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme='light'] {
+  --bg: #fafaf9;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #f5f5f4;
+  --text-h: #1c1917;
+  --text: #57534e;
+  --text-muted: #78716c;
+  --border: #e7e5e4;
+
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent-bg: rgba(79, 70, 229, 0.08);
+  --on-accent: #ffffff;
+
+  --income: #047857;
+  --expense: #dc2626;
+  --transfer: #0284c7;
+  --warning: #b45309;
+  --exceeded: #b91c1c;
+
+  --elevation-sm: 0 1px 2px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.08);
+  --elevation-md:
+    0 4px 6px -1px rgba(28, 25, 23, 0.08), 0 2px 4px -2px rgba(28, 25, 23, 0.06);
+  --elevation-lg:
+    0 10px 15px -3px rgba(28, 25, 23, 0.1), 0 4px 6px -4px rgba(28, 25, 23, 0.06);
 }
 
 #root {

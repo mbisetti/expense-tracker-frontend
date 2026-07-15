@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, Navigate, RouterProvider, type RouteObject } from 'react-router-dom';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
@@ -10,8 +10,9 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { CategoriesPage } from '../features/categories/CategoriesPage';
 import { PaymentMethodsPage } from '../features/paymentMethods/PaymentMethodsPage';
 import { AppLayout } from '../components/AppLayout';
+import { UiGalleryPage } from '../features/dev/UiGalleryPage';
 
-const router = createBrowserRouter([
+const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   {
@@ -32,7 +33,17 @@ const router = createBrowserRouter([
     ],
   },
   { path: '/', element: <Navigate to="/dashboard" replace /> },
-]);
+];
+
+// Styleguide viva (S18): sólo se registra en dev. import.meta.env.DEV es `false` en el
+// build de producción, así Rollup elimina esta rama muerta (y con ella la única
+// referencia a UiGalleryPage, dejando el import sin uso y por lo tanto tree-shakeado)
+// — no queda ruta ni código alcanzable en prod.
+if (import.meta.env.DEV) {
+  routes.push({ path: '/dev/ui', element: <UiGalleryPage /> });
+}
+
+const router = createBrowserRouter(routes);
 
 export function AppRouter() {
   return <RouterProvider router={router} />;

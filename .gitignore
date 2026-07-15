@@ -34,3 +34,5 @@ target/
 .mvn/
 *.iml
 .idea/
+# Skills de tooling (ui-ux-pro-max, ui-styling) — instaladas localmente, no van al repo de la app
+.claude/skills/
