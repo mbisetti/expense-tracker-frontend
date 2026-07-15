@@ -2,7 +2,7 @@
 // para que los 3 campos se vean idénticos (mismo alto, radio, foco, estado de error).
 // min-h-11 = 44px: cumple el mínimo de touch target (§4) en los tres.
 export const FIELD_BASE =
-  'w-full min-h-11 rounded-sm border bg-surface-sunken px-3 text-base text-ink placeholder:text-muted transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50';
+  'w-full min-h-11 rounded-sm border bg-surface-sunken px-3 text-base text-ink placeholder:text-muted transition-colors duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
 
 // Reutiliza el token `expense` (no `exceeded`, que es específico de presupuestos) como
 // el "negativo/peligro" genérico de chrome — mismo criterio que Button variant="danger".

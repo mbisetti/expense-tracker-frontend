@@ -75,6 +75,27 @@ export function ChevronDownIcon(props: IconProps) {
   );
 }
 
+export function XIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+// Ilustración simple para EmptyState (caja vacía) — mismo estilo stroke que el resto,
+// no es un ícono semántico, así que no lleva color propio (lo hereda del contenedor).
+export function EmptyBoxIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="m3.3 7 8.7 5 8.7-5" />
+      <path d="M12 22V12" />
+      <path d="m20.7 7-8.7-5-8.7 5v10l8.7 5 8.7-5Z" />
+    </svg>
+  );
+}
+
 export function SpinnerIcon(props: IconProps) {
   const { className, ...rest } = props;
   return (

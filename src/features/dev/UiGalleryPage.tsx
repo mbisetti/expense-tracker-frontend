@@ -7,6 +7,14 @@ import { Card } from '../../components/ui/Card';
 import { Amount, type AmountSize } from '../../components/ui/Amount';
 import { Badge, type BadgeStatus } from '../../components/ui/Badge';
 import { CheckCircleIcon, InfoIcon } from '../../components/ui/icons';
+import { ProgressBar, type ProgressBarTone } from '../../components/ui/ProgressBar';
+import { Modal } from '../../components/ui/Modal';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { Skeleton, type SkeletonVariant } from '../../components/ui/Skeleton';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ToastProvider } from '../../components/ui/ToastProvider';
+import { useToast } from '../../components/ui/toastContext';
+import { BottomNav } from '../../components/ui/BottomNav';
 
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger'];
 const BUTTON_SIZES: ButtonSize[] = ['sm', 'md', 'lg'];
@@ -18,6 +26,29 @@ const BADGE_STATUSES: { status: BadgeStatus; label: string }[] = [
   { status: 'pending', label: 'Pendiente' },
   { status: 'info', label: 'Informativo' },
 ];
+const PROGRESS_TONES: { tone: ProgressBarTone; ratio: number; label: string }[] = [
+  { tone: 'brand', ratio: 0.35, label: 'Progreso genérico' },
+  { tone: 'income', ratio: 0.6, label: 'Ahorro del mes' },
+  { tone: 'warning', ratio: 0.85, label: 'Presupuesto Comida — cerca del límite' },
+  { tone: 'expense', ratio: 1.15, label: 'Presupuesto Salidas — excedido' },
+];
+const SKELETON_VARIANTS: SkeletonVariant[] = ['text', 'card', 'list', 'chart'];
+
+// Botones que disparan toasts vía useToast() — necesitan estar dentro del ToastProvider
+// local de esta sección (el ToastProvider real de la app recién se monta en S19).
+function ToastDemoButtons() {
+  const toast = useToast();
+  return (
+    <>
+      <Button variant="primary" onClick={() => toast.success('Cuenta guardada con éxito.')}>
+        Disparar success
+      </Button>
+      <Button variant="danger" onClick={() => toast.error('No se pudo guardar. Reintentá.')}>
+        Disparar error
+      </Button>
+    </>
+  );
+}
 
 type ThemeChoice = 'system' | 'light' | 'dark';
 
@@ -44,6 +75,10 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 // así que no forma parte del bundle/ruta de producción.
 export function UiGalleryPage() {
   const [theme, setTheme] = useState<ThemeChoice>('system');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmDangerOpen, setConfirmDangerOpen] = useState(false);
+  const [confirmLoadingOpen, setConfirmLoadingOpen] = useState(false);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -195,9 +230,11 @@ export function UiGalleryPage() {
             <Amount key={size} amount={-4230.75} currency="ARS" size={size} />
           ))}
         </Row>
-        <Row label="tone explícito">
+        <Row label="tone explícito (signo siempre a juego con el tono, no con el signo crudo)">
           <Amount amount={1000} currency="USD" tone="income" />
           <Amount amount={1000} currency="USD" tone="expense" />
+          <Amount amount={-1000} currency="USD" tone="income" />
+          <Amount amount={-1000} currency="USD" tone="expense" />
           <Amount amount={1000} currency="USD" tone="neutral" />
           <Amount amount={0} currency="ARS" />
         </Row>
@@ -208,6 +245,159 @@ export function UiGalleryPage() {
           {BADGE_STATUSES.map(({ status, label }) => (
             <Badge key={status} status={status} label={label} />
           ))}
+        </Row>
+      </Section>
+
+      <Section title="ProgressBar">
+        <Row label="tones">
+          <div className="flex w-full max-w-sm flex-col gap-3">
+            {PROGRESS_TONES.map(({ tone, ratio, label }) => (
+              <ProgressBar key={tone} tone={tone} ratio={ratio} label={label} />
+            ))}
+          </div>
+        </Row>
+        <Row label="con markerRatio (proyección fin de mes, S16)">
+          <div className="w-full max-w-sm">
+            <ProgressBar
+              tone="warning"
+              ratio={0.55}
+              markerRatio={0.9}
+              label="Presupuesto Comida con proyección"
+            />
+          </div>
+        </Row>
+      </Section>
+
+      <Section title="Skeleton">
+        <Row label="variantes">
+          <div className="flex w-full max-w-sm flex-col gap-6">
+            {SKELETON_VARIANTS.map((variant) => (
+              <div key={variant} className="flex flex-col gap-1">
+                <p className="text-xs text-muted">{variant}</p>
+                <Skeleton variant={variant} rows={3} />
+              </div>
+            ))}
+          </div>
+        </Row>
+      </Section>
+
+      <Section title="EmptyState">
+        <Row label="sin CTA">
+          <div className="w-full max-w-sm">
+            <EmptyState
+              title="No hay movimientos"
+              message="Todavía no registraste transacciones este mes."
+            />
+          </div>
+        </Row>
+        <Row label="con CTA">
+          <div className="w-full max-w-sm">
+            <EmptyState
+              title="No hay cuentas"
+              message="Agregá tu primera cuenta para empezar a registrar movimientos."
+              actionLabel="Agregar cuenta"
+              onAction={() => {}}
+            />
+          </div>
+        </Row>
+      </Section>
+
+      <Section title="Modal / ConfirmDialog">
+        <Row label="Modal genérico">
+          <Button variant="secondary" onClick={() => setModalOpen(true)}>
+            Abrir modal
+          </Button>
+          <Modal
+            open={modalOpen}
+            onClose={() => setModalOpen(false)}
+            title="Editar categoría"
+            footer={
+              <>
+                <Button variant="secondary" onClick={() => setModalOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button variant="primary" onClick={() => setModalOpen(false)}>
+                  Guardar
+                </Button>
+              </>
+            }
+          >
+            <p>
+              Contenido de ejemplo: focus trap, Esc y click en el backdrop cierran el modal, y
+              el foco vuelve al botón que lo abrió.
+            </p>
+          </Modal>
+        </Row>
+        <Row label="ConfirmDialog (default)">
+          <Button variant="secondary" onClick={() => setConfirmOpen(true)}>
+            Abrir confirm
+          </Button>
+          <ConfirmDialog
+            open={confirmOpen}
+            title="Archivar cuenta"
+            message="Podés reactivarla después desde Configuración."
+            onConfirm={() => setConfirmOpen(false)}
+            onCancel={() => setConfirmOpen(false)}
+          />
+        </Row>
+        <Row label="ConfirmDialog (danger)">
+          <Button variant="secondary" onClick={() => setConfirmDangerOpen(true)}>
+            Abrir confirm danger
+          </Button>
+          <ConfirmDialog
+            open={confirmDangerOpen}
+            danger
+            title="Borrar transacción"
+            message="Esta acción no se puede deshacer."
+            confirmLabel="Borrar"
+            onConfirm={() => setConfirmDangerOpen(false)}
+            onCancel={() => setConfirmDangerOpen(false)}
+          />
+        </Row>
+        <Row label="ConfirmDialog (loading)">
+          <Button variant="secondary" onClick={() => setConfirmLoadingOpen(true)}>
+            Abrir confirm loading
+          </Button>
+          <ConfirmDialog
+            open={confirmLoadingOpen}
+            danger
+            loading
+            title="Borrando transacción…"
+            message="Esta acción no se puede deshacer."
+            confirmLabel="Borrar"
+            onConfirm={() => {}}
+            onCancel={() => setConfirmLoadingOpen(false)}
+          />
+        </Row>
+      </Section>
+
+      <Section title="Toast">
+        <ToastProvider>
+          <Row label="toast.success(msg) / toast.error(msg) — auto-dismiss ~4s, stackeable">
+            <ToastDemoButtons />
+          </Row>
+        </ToastProvider>
+      </Section>
+
+      <Section title="BottomNav (v2)">
+        <Row label="frame mobile (375×640) — real, aria-current según la ruta activa">
+          <div className="flex flex-col gap-2">
+            <div
+              className="relative mx-auto h-[640px] w-[375px] overflow-hidden rounded-lg border border-line bg-surface"
+              style={{ transform: 'translateZ(0)' }}
+              // Sólo para esta demo: neutraliza la navegación real (el Link de react-router
+              // aborta si el evento ya llega con defaultPrevented), así el click no saca a
+              // Marko de /dev/ui. El componente en sí no se toca.
+              onClickCapture={(event) => event.preventDefault()}
+            >
+              <p className="p-4 text-sm text-muted">Contenido de pantalla (mock)</p>
+              <BottomNav />
+            </div>
+            <p className="max-w-sm text-xs text-muted">
+              Se oculta en desktop (<code>md:hidden</code>, mobile-first). Para verla, angostá
+              la ventana del navegador por debajo del breakpoint <code>md</code>.
+            </p>
+          </div>
         </Row>
       </Section>
     </div>

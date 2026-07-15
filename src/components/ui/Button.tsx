@@ -12,7 +12,7 @@ type ButtonProps = {
   rightIcon?: ReactNode;
 } & ButtonHTMLAttributes<HTMLButtonElement>;
 
-// El acento de marca (terracota) es SOLO chrome interactivo (§1.5): primary lo usa acá.
+// El acento de marca (índigo) es SOLO chrome interactivo (§1.5): primary lo usa acá.
 // danger usa `expense` — única excepción admitida a la regla chrome↔dato, porque acá el
 // semántico no describe un monto/estado financiero sino la severidad de la acción (borrar).
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {

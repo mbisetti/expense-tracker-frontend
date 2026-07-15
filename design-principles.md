@@ -99,14 +99,12 @@ Texto normal ≥ **4.5:1**, texto grande/UI ≥ 3:1. `ink`/`body` sobre `surface
 
 ## 5. Patrones de feedback (un patrón por situación, igual en toda la app)
 
-Hoy están dispersos (21 pantallas resuelven el error a su manera, 4 confirman borrado inline). Se unifican:
+Hoy están dispersos (21 pantallas resuelven el error a su manera, 4 confirman borrado inline). Se unifican con los componentes del Bloque 3 (`src/components/ui/`):
 
-- **Loading:** `Skeleton` con la forma del contenido (card / lista / gráfico). **Nunca un spinner a pantalla completa.**
-- **Error de server:** `Toast` (feedback de mutación) + estado local en la vista. Un solo componente de error de mutación.
-- **Lista vacía:** `EmptyState` (ilustración simple + mensaje + CTA). Nunca una vista en blanco.
-- **Confirmación destructiva:** `ConfirmDialog` (modal), **reemplaza** los "¿Borrar? Sí/No" inline de Accounts/Categories/PaymentMethods/Transactions.
-
-(El detalle de cada componente se define en los Bloques 2 y 3.)
+- **Loading → `Skeleton`.** Variantes `text` / `card` / `list` (N filas vía `rows`) / `chart`, con la forma del contenido que va a aparecer — nunca layout shift ni un spinner a pantalla completa. `role="status"` + `aria-label="Cargando…"` (el loading se anuncia una vez, no fila por fila). `animate-pulse` sobre `surface-sunken`, anulado con `motion-reduce:animate-none`.
+- **Error de server → `Toast` + estado local.** `ToastProvider` (contexto) se monta una vez en la raíz (S19); cualquier pantalla llama `useToast().error(mensaje)` en el `onError` de su mutación — un solo componente para todo error de mutación, se acabaron los 21 manejos ad-hoc. `role="alert"` (error) vs `role="status"` + `aria-live="polite"` (success), auto-dismiss ~4s, descartable a mano, apilable. El estado local de la vista (ej. no limpiar un form si falla) sigue siendo responsabilidad de la pantalla; el Toast es sólo la notificación.
+- **Lista vacía → `EmptyState`.** Ilustración inline (SVG, nunca emoji) + título + mensaje opcional + CTA opcional (`Button`). Nunca una vista en blanco ni una tabla con cero filas sin contexto.
+- **Confirmación destructiva → `ConfirmDialog`.** Wrapper de `Modal` con contrato fijo (`title`, `message`, `confirmLabel`, `cancelLabel`, `onConfirm`, `onCancel`, `danger?`, `loading?`); `danger` pinta el botón de confirmar con `variant="danger"` (`bg-expense`, la única excepción admitida a la regla chrome↔dato — ver comentario en `Button.tsx`). **Reemplaza** los "¿Borrar? Sí/No" inline de Accounts/Categories/PaymentMethods/Transactions. `Modal` en sí (focus trap, Esc, backdrop-click, foco de vuelta al trigger) es reutilizable para diálogos no destructivos (ej. edición rápida).
 
 ---
 
