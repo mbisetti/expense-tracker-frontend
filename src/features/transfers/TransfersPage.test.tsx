@@ -14,9 +14,10 @@ const transfer = {
   id: 'tr1',
   fromAccountId: 'acc1',
   toAccountId: 'acc2',
-  amount: 1500,
+  fromAmount: 1500,
+  toAmount: 1500,
   fee: null,
-  exchangeRate: null,
+  exchangeRate: 1,
   date: '2026-07-10',
   description: null,
   fromTransactionId: 'tx1',
@@ -44,6 +45,8 @@ function stubEndpoints(options?: {
         options?.onPost?.(body);
         return ok(options?.postResponse ?? { ...transfer, fromAccountBalance: 3500, toAccountBalance: 1500 });
       }
+      if (url.includes('/exchange-rates'))
+        return ok({ base: 'ARS', target: 'USD', rate: 0.01, asOf: null, unavailable: false });
       if (url.includes('/transfers')) return ok(transfersPage);
       if (url.includes('/accounts')) return ok(accounts);
       throw new Error('URL inesperada: ' + url);
@@ -83,18 +86,29 @@ describe('TransfersPage', () => {
     expect(screen.getByText('$ 1.500,00')).toBeInTheDocument();
   });
 
-  it('el destino excluye el origen y las cuentas de otra moneda', async () => {
+  it('el destino excluye solo el origen (cross-currency habilitado)', async () => {
     stubEndpoints();
     renderPage();
 
-    // elegir origen ARS habilita el destino, filtrado a misma moneda ≠ origen
     fireEvent.change(await screen.findByLabelText('Cuenta origen'), { target: { value: 'acc1' } });
 
     const toSelect = screen.getByLabelText('Cuenta destino') as HTMLSelectElement;
     const labels = Array.from(toSelect.options).map((o) => o.textContent ?? '');
-    expect(labels.some((l) => l.includes('Ahorro ARS'))).toBe(true);   // ARS, distinta
+    expect(labels.some((l) => l.includes('Ahorro ARS'))).toBe(true);   // otra ARS
+    expect(labels.some((l) => l.includes('Dolares'))).toBe(true);      // USD ahora SÍ (cross-currency)
     expect(labels.some((l) => l.includes('Banco ARS'))).toBe(false);   // es el origen
-    expect(labels.some((l) => l.includes('Dolares'))).toBe(false);     // otra moneda
+  });
+
+  it('cross-currency: aparece el segundo monto y la cotización sugerida', async () => {
+    stubEndpoints();
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText('Cuenta origen'), { target: { value: 'acc1' } }); // ARS
+    fireEvent.change(screen.getByLabelText('Cuenta destino'), { target: { value: 'acc3' } });       // USD
+
+    // aparece el input de monto a acreditar en la moneda destino
+    expect(await screen.findByLabelText(/Monto a acreditar \(USD\)/)).toBeInTheDocument();
+    expect(await screen.findByText(/Cotización sugerida/)).toBeInTheDocument();
   });
 
   it('submit: manda POST con los datos y muestra el mensaje de éxito con ambos saldos', async () => {
@@ -108,7 +122,8 @@ describe('TransfersPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Transferir' }));
 
     expect(await screen.findByText(/Transferencia realizada/)).toBeInTheDocument();
-    expect(postedBody).toMatchObject({ fromAccountId: 'acc1', toAccountId: 'acc2', amount: 1500 });
+    // same-currency: fromAmount == toAmount
+    expect(postedBody).toMatchObject({ fromAccountId: 'acc1', toAccountId: 'acc2', fromAmount: 1500, toAmount: 1500 });
     expect(postedBody?.date).toBeTruthy();
   });
 

@@ -1,12 +1,17 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Card } from '../../components/Card';
 import { formatMoney } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCreateTransfer } from './useTransferMutations';
+import { useExchangeRate } from './useExchangeRate';
 import { transferErrorMessage } from './errorMessages';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function round2(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
 export function TransferForm() {
@@ -15,46 +20,61 @@ export function TransferForm() {
 
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
-  const [amount, setAmount] = useState('');
+  const [fromAmount, setFromAmount] = useState('');
+  const [toAmount, setToAmount] = useState('');
+  const [toAmountTouched, setToAmountTouched] = useState(false);
   const [date, setDate] = useState(todayIso());
   const [description, setDescription] = useState('');
 
   const fromAccount = accounts?.find((a) => a.id === fromAccountId);
   const toAccount = accounts?.find((a) => a.id === toAccountId);
+  const crossCurrency = !!fromAccount && !!toAccount && fromAccount.currency !== toAccount.currency;
 
-  // MVP misma moneda: el destino se limita a cuentas de la misma moneda que el
-  // origen y distintas de él → SAME_ACCOUNT_TRANSFER y CROSS_CURRENCY_NOT_SUPPORTED
-  // quedan inalcanzables desde la UI (el backend los valida igual — defensa en
-  // profundidad, mismo criterio que income excluyendo fuentes inactivas del select).
-  const toOptions = (accounts ?? []).filter(
-    (a) => a.id !== fromAccountId && (!fromAccount || a.currency === fromAccount.currency),
+  const { data: rate } = useExchangeRate(
+    crossCurrency ? fromAccount!.currency : undefined,
+    crossCurrency ? toAccount!.currency : undefined,
   );
+
+  // Pre-llena el monto de destino con la cotización sugerida, salvo que el usuario lo
+  // haya editado: el monto real lo pone el usuario (el rate es sugerencia, no verdad).
+  useEffect(() => {
+    if (crossCurrency && rate?.rate && !toAmountTouched && fromAmount) {
+      setToAmount(round2(Number(fromAmount) * rate.rate).toString());
+    }
+  }, [crossCurrency, rate, fromAmount, toAmountTouched]);
+
+  // El destino puede ser cualquier otra cuenta (cross-currency habilitado en Sprint 15).
+  const toOptions = (accounts ?? []).filter((a) => a.id !== fromAccountId);
 
   const handleFromChange = (id: string) => {
     setFromAccountId(id);
-    // si el destino elegido dejó de ser válido (misma cuenta o distinta moneda), lo limpio
-    const newFrom = accounts?.find((a) => a.id === id);
-    const currentTo = accounts?.find((a) => a.id === toAccountId);
-    const toStillValid =
-      currentTo && currentTo.id !== id && (!newFrom || currentTo.currency === newFrom.currency);
-    if (!toStillValid) setToAccountId('');
+    setToAmountTouched(false);
+    if (toAccountId === id) setToAccountId('');
+  };
+
+  const handleToChange = (id: string) => {
+    setToAccountId(id);
+    setToAmountTouched(false);
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const from = Number(fromAmount);
+    const to = crossCurrency ? Number(toAmount) : from;
     mutation.mutate(
       {
         fromAccountId,
         toAccountId,
-        amount: Number(amount),
+        fromAmount: from,
+        toAmount: to,
         date,
         description: description || undefined,
       },
       {
         onSuccess: () => {
-          // se retiene origen/destino/fecha para cargar varias seguidas; se limpia
-          // lo que cambia entre transferencias (monto, descripción)
-          setAmount('');
+          setFromAmount('');
+          setToAmount('');
+          setToAmountTouched(false);
           setDescription('');
         },
       },
@@ -91,7 +111,7 @@ export function TransferForm() {
           <select
             id="transfer-to"
             value={toAccountId}
-            onChange={(e) => setToAccountId(e.target.value)}
+            onChange={(e) => handleToChange(e.target.value)}
             required
             disabled={mutation.isPending || !fromAccountId}
           >
@@ -102,23 +122,46 @@ export function TransferForm() {
               </option>
             ))}
           </select>
-          {fromAccountId && toOptions.length === 0 && (
-            <p className="text-body text-sm">
-              No tenés otra cuenta en {fromAccount?.currency} para transferir.
-            </p>
-          )}
 
-          <label htmlFor="transfer-amount">Monto</label>
+          <label htmlFor="transfer-from-amount">
+            {crossCurrency ? `Monto a debitar (${fromAccount!.currency})` : 'Monto'}
+          </label>
           <input
-            id="transfer-amount"
+            id="transfer-from-amount"
             type="number"
             min="0.01"
             step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            value={fromAmount}
+            onChange={(e) => setFromAmount(e.target.value)}
             required
             disabled={mutation.isPending}
           />
+
+          {crossCurrency && (
+            <>
+              <label htmlFor="transfer-to-amount">Monto a acreditar ({toAccount!.currency})</label>
+              <input
+                id="transfer-to-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={toAmount}
+                onChange={(e) => {
+                  setToAmount(e.target.value);
+                  setToAmountTouched(true);
+                }}
+                required
+                disabled={mutation.isPending}
+              />
+              <p className="text-body text-sm">
+                {rate?.unavailable
+                  ? 'Cotización no disponible — ingresá el monto de destino a mano.'
+                  : rate?.rate
+                    ? `Cotización sugerida: 1 ${fromAccount!.currency} ≈ ${rate.rate} ${toAccount!.currency} (editable).`
+                    : 'Buscando cotización...'}
+              </p>
+            </>
+          )}
 
           <label htmlFor="transfer-date">Fecha</label>
           <input

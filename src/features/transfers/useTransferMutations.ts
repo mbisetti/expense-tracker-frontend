@@ -6,7 +6,8 @@ import type { TransferResponse } from './api';
 export type CreateTransferInput = {
   fromAccountId: string;
   toAccountId: string;
-  amount: number;
+  fromAmount: number;
+  toAmount: number;
   date: string;
   description?: string;
 };

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from 'react';
 import { CurrencyTabs } from './CurrencyTabs';
+import { ConsolidatedBanner } from './ConsolidatedBanner';
 import { OverviewCards } from './OverviewCards';
 import { RecentTransactions } from './RecentTransactions';
 import { OverviewSkeleton, ChartSkeleton, ListSkeleton } from './DashboardSkeleton';
@@ -38,6 +39,10 @@ export function DashboardPage() {
 
       {data && overview && (
         <>
+          {data.consolidated && data.byCurrency.length > 1 && (
+            <ConsolidatedBanner consolidated={data.consolidated} />
+          )}
+
           <CurrencyTabs
             currencies={data.byCurrency.map((item) => item.currency)}
             selected={overview.currency}

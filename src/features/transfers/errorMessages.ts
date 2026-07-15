@@ -7,8 +7,8 @@ export function transferErrorMessage(error: unknown): string {
   switch (error.code) {
     case 'SAME_ACCOUNT_TRANSFER':
       return 'Elegí dos cuentas distintas.';
-    case 'CROSS_CURRENCY_NOT_SUPPORTED':
-      return 'Por ahora solo se puede transferir entre cuentas de la misma moneda.';
+    case 'SAME_CURRENCY_AMOUNT_MISMATCH':
+      return 'Entre cuentas de la misma moneda, los montos deben coincidir.';
     case 'INSUFFICIENT_BALANCE':
       return 'La cuenta de origen no tiene saldo suficiente.';
     case 'ACCOUNT_NOT_FOUND':

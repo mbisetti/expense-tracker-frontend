@@ -18,7 +18,6 @@ export function TransferList() {
   const deleteMutation = useDeleteTransfer();
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—';
-  // moneda derivada de la cuenta (MVP misma moneda: origen y destino coinciden)
   const currencyOf = (id: string) => accounts?.find((a) => a.id === id)?.currency;
 
   return (
@@ -39,7 +38,9 @@ export function TransferList() {
       {data && data.content.length > 0 && (
         <ul className="list-none p-0 m-0 divide-y divide-line">
           {data.content.map((transfer) => {
-            const currency = currencyOf(transfer.fromAccountId);
+            const fromCcy = currencyOf(transfer.fromAccountId);
+            const toCcy = currencyOf(transfer.toAccountId);
+            const crossCurrency = !!fromCcy && !!toCcy && fromCcy !== toCcy;
             return (
               <li key={transfer.id} className="flex justify-between items-center gap-3 py-2">
                 <div>
@@ -53,9 +54,8 @@ export function TransferList() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-ink tabular-nums">
-                    {currency
-                      ? formatMoney(transfer.amount, currency)
-                      : transfer.amount.toLocaleString('es-AR')}
+                    {fromCcy ? formatMoney(transfer.fromAmount, fromCcy) : transfer.fromAmount.toLocaleString('es-AR')}
+                    {crossCurrency && ` → ${formatMoney(transfer.toAmount, toCcy!)}`}
                   </span>
                   <button
                     type="button"

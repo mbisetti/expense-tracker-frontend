@@ -5,8 +5,16 @@ export type CurrencyOverview = {
   monthExpense: number;
 };
 
+export type ConsolidatedBalance = {
+  amount: number;
+  currency: string;
+  isEstimate: boolean;
+  partial: boolean;
+};
+
 export type OverviewResponse = {
   byCurrency: CurrencyOverview[];
+  consolidated: ConsolidatedBalance | null;
 };
 
 export type MonthlyBucket = {
