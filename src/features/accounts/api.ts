@@ -6,5 +6,6 @@ export type Account = {
   type: AccountType;
   currency: string;
   balance: number;
+  isInformal: boolean;
   createdAt: string;
 };

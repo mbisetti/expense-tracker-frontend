@@ -1,11 +1,14 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useHttp } from '../../lib/useHttp';
 import type { ApiError } from '../../lib/http';
-import type { IncomeEntryResponse, IncomeSourceResponse } from './api';
+import type { IncomeEntryResponse, IncomeFrequency, IncomeSourceResponse } from './api';
 
 export type CreateIncomeSourceInput = {
   name: string;
   currency: string;
+  frequency?: IncomeFrequency;
+  expectedAmount?: number;
+  billingDay?: number;
 };
 
 export type CreateIncomeEntryInput = {
@@ -39,7 +42,11 @@ export function useCreateIncomeSource() {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['income', 'sources'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['income', 'sources'] });
+      // una source recurrente alimenta el card de esperados (['summary','expectedIncome'])
+      queryClient.invalidateQueries({ queryKey: ['summary'] });
+    },
   });
 }
 

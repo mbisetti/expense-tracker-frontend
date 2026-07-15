@@ -79,7 +79,14 @@ export function AccountsPage() {
           <tbody>
             {accounts.map((account) => (
               <tr key={account.id}>
-                <td>{account.name}</td>
+                <td>
+                  {account.name}
+                  {account.isInformal && (
+                    <span className="ml-2 text-xs text-body border border-line rounded-full px-2 py-0.5">
+                      Informal
+                    </span>
+                  )}
+                </td>
                 <td>{TYPE_LABELS[account.type]}</td>
                 <td>{account.currency}</td>
                 <td>{formatMoney(account.balance, account.currency)}</td>

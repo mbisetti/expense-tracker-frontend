@@ -24,6 +24,7 @@ function renderSection() {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe('BudgetSection', () => {
@@ -40,6 +41,8 @@ describe('BudgetSection', () => {
               currency: 'ARS',
               limitAmount: 100000,
               spentAmount: 45000,
+              projectedEndOfMonth: 45000,
+              projectedStatus: 'ok',
             },
             {
               budgetId: 'b2',
@@ -48,6 +51,8 @@ describe('BudgetSection', () => {
               currency: 'ARS',
               limitAmount: 100000,
               spentAmount: 85000,
+              projectedEndOfMonth: 85000,
+              projectedStatus: 'ok',
             },
             {
               budgetId: 'b3',
@@ -56,6 +61,8 @@ describe('BudgetSection', () => {
               currency: 'ARS',
               limitAmount: 100000,
               spentAmount: 120000,
+              projectedEndOfMonth: 120000,
+              projectedStatus: 'will_exceed',
             },
           ],
         }),
@@ -88,6 +95,8 @@ describe('BudgetSection', () => {
               currency: 'ARS',
               limitAmount: 100000,
               spentAmount: 80000,
+              projectedEndOfMonth: 80000,
+              projectedStatus: 'ok',
             },
             {
               budgetId: 'b2',
@@ -96,6 +105,8 @@ describe('BudgetSection', () => {
               currency: 'ARS',
               limitAmount: 100000,
               spentAmount: 100000,
+              projectedEndOfMonth: 100000,
+              projectedStatus: 'ok',
             },
           ],
         }),
@@ -127,5 +138,102 @@ describe('BudgetSection', () => {
       await screen.findByText('No pudimos cargar los presupuestos. Intentá de nuevo.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  it('muestra la proyección de fin de mes y ubica el marcador según el límite', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        ok({
+          budgets: [
+            {
+              budgetId: 'b1',
+              categoryId: 'c1',
+              categoryName: 'Comida',
+              currency: 'ARS',
+              limitAmount: 100000,
+              spentAmount: 45000,
+              projectedEndOfMonth: 90000,
+              projectedStatus: 'ok',
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderSection();
+
+    expect(await screen.findByText(/Proyección fin de mes:/)).toHaveTextContent(
+      'Proyección fin de mes: $ 90.000,00',
+    );
+    const bar = screen.getByRole('progressbar');
+    const marker = bar.querySelector('[aria-hidden="true"]');
+    expect(marker).toHaveStyle({ left: '90%' });
+  });
+
+  // Regla "no alarmar temprano" (revisión 2026-07-14): projectedStatus=will_exceed
+  // antes del día 7 se muestra neutro; a partir del día 7, en rojo con aviso.
+  it('will_exceed antes del día 7: proyección neutra, sin alarma', async () => {
+    vi.setSystemTime(new Date(2026, 6, 3)); // 3 de julio
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        ok({
+          budgets: [
+            {
+              budgetId: 'b1',
+              categoryId: 'c1',
+              categoryName: 'Comida',
+              currency: 'ARS',
+              limitAmount: 100000,
+              spentAmount: 20000,
+              projectedEndOfMonth: 150000,
+              projectedStatus: 'will_exceed',
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderSection();
+
+    const projection = await screen.findByText(/Proyección fin de mes:/);
+    expect(projection).not.toHaveTextContent('va a excederse');
+    expect(projection).not.toHaveClass('text-expense');
+  });
+
+  it('will_exceed desde el día 7: proyección en alarma', async () => {
+    vi.setSystemTime(new Date(2026, 6, 7)); // 7 de julio
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        ok({
+          budgets: [
+            {
+              budgetId: 'b1',
+              categoryId: 'c1',
+              categoryName: 'Comida',
+              currency: 'ARS',
+              limitAmount: 100000,
+              spentAmount: 20000,
+              projectedEndOfMonth: 150000,
+              projectedStatus: 'will_exceed',
+            },
+          ],
+        }),
+      ),
+    );
+
+    renderSection();
+
+    const projection = await screen.findByText(/Proyección fin de mes:/);
+    expect(projection).toHaveTextContent('va a excederse');
+    expect(projection).toHaveClass('text-expense');
+
+    // proyección 150% del límite → el marcador se clampea a 100% (no se sale de la barra)
+    const marker = screen.getByRole('progressbar').querySelector('[aria-hidden="true"]');
+    expect(marker).toHaveStyle({ left: '100%' });
   });
 });

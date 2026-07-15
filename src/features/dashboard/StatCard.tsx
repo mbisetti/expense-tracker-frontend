@@ -4,6 +4,8 @@ type StatCardProps = {
   label: string;
   value: string;
   tone: StatCardTone;
+  /** Línea secundaria muted opcional, ej. desglose formal/informal */
+  secondary?: string;
 };
 
 const TONE_CLASS: Record<StatCardTone, string> = {
@@ -12,11 +14,12 @@ const TONE_CLASS: Record<StatCardTone, string> = {
   expense: 'text-expense',
 };
 
-export function StatCard({ label, value, tone }: StatCardProps) {
+export function StatCard({ label, value, tone, secondary }: StatCardProps) {
   return (
     <article className="rounded-xl border border-line bg-surface p-4">
       <p className="text-xs uppercase tracking-wide text-body">{label}</p>
       <p className={`text-xl font-semibold tabular-nums ${TONE_CLASS[tone]}`}>{value}</p>
+      {secondary && <p className="text-body text-sm">{secondary}</p>}
     </article>
   );
 }

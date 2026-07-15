@@ -2,6 +2,8 @@ type ProgressBarProps = {
   ratio: number;
   tone: 'brand' | 'warning' | 'expense' | 'income';
   label: string;
+  /** Posición (0..1) de una marca vertical decorativa sobre la barra, ej. proyección fin de mes */
+  markerRatio?: number;
 };
 
 const TONE_CLASSES: Record<ProgressBarProps['tone'], string> = {
@@ -11,8 +13,10 @@ const TONE_CLASSES: Record<ProgressBarProps['tone'], string> = {
   income: 'bg-[var(--income)]',
 };
 
-export function ProgressBar({ ratio, tone, label }: ProgressBarProps) {
+export function ProgressBar({ ratio, tone, label, markerRatio }: ProgressBarProps) {
   const clamped = Math.min(Math.max(ratio, 0), 1);
+  const clampedMarker =
+    markerRatio === undefined ? undefined : Math.min(Math.max(markerRatio, 0), 1);
 
   return (
     <div
@@ -23,12 +27,19 @@ export function ProgressBar({ ratio, tone, label }: ProgressBarProps) {
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuetext={`${Math.round(ratio * 100)}%`}
-      className="h-2 w-full rounded-full bg-[var(--border)] overflow-hidden"
+      className="relative h-2 w-full rounded-full bg-[var(--border)] overflow-hidden"
     >
       <div
         className={`h-full rounded-full ${TONE_CLASSES[tone]}`}
         style={{ width: `${clamped * 100}%` }}
       />
+      {clampedMarker !== undefined && (
+        <div
+          aria-hidden="true"
+          className="absolute top-0 h-full w-0.5 bg-ink"
+          style={{ left: `${clampedMarker * 100}%` }}
+        />
+      )}
     </div>
   );
 }

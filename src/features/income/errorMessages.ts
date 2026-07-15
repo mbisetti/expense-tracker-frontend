@@ -25,6 +25,10 @@ export function incomeErrorMessage(error: unknown): string {
       return 'Un porcentaje no puede superar 100.';
     case 'VALIDATION_ERROR':
       return 'Revisá los datos del formulario.';
+    case 'INCOMPLETE_RECURRENCE':
+      return 'Completá los tres campos de recurrencia (frecuencia, monto y día) o dejalos vacíos.';
+    case 'INVALID_BILLING_DAY':
+      return 'El día de cobro debe estar entre 1 y 28.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }

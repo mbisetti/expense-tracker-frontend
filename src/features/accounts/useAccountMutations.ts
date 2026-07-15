@@ -7,12 +7,14 @@ export type CreateAccountInput = {
   name: string;
   type: AccountType;
   currency: string;
+  isInformal?: boolean;
 };
 
 export type UpdateAccountInput = {
   name?: string;
   type?: AccountType;
   currency?: string;
+  isInformal?: boolean;
 };
 
 function useInvalidateAccounts() {

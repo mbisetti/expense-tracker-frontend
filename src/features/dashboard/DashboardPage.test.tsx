@@ -66,6 +66,8 @@ function stubEndpoints(overview: unknown, monthly: unknown, page: unknown) {
       const url = String(input);
       if (url.includes('/summary/budgets')) return ok({ budgets: [] });
       if (url.includes('/savings')) return ok([]);
+      if (url.includes('/summary/expected-income'))
+        return ok({ month: 7, year: 2026, byCurrency: [], sources: [] });
       if (url.includes('/summary/overview')) return ok(overview);
       if (url.includes('/summary/monthly')) return ok(monthly);
       if (url.includes('/transactions')) return ok(page);
@@ -100,7 +102,7 @@ describe('DashboardPage', () => {
     stubEndpoints(
       {
         byCurrency: [
-          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000, formalBalance: 200000, informalBalance: 0 },
         ],
       },
       monthlyFixture,
@@ -118,14 +120,40 @@ describe('DashboardPage', () => {
     expect(ars).toHaveTextContent('$ 50.000,00');
     expect(ars).toHaveTextContent('Ahorro del mes');
     expect(ars).toHaveTextContent('$ 200.000,00');
+    // informalBalance 0: no hay ruido de desglose formal/informal
+    expect(ars).not.toHaveTextContent('Formal');
+  });
+
+  it('con informalBalance distinto de 0 muestra el desglose formal/informal', async () => {
+    stubEndpoints(
+      {
+        byCurrency: [
+          {
+            currency: 'ARS',
+            totalBalance: 200000,
+            monthIncome: 250000,
+            monthExpense: 50000,
+            formalBalance: 150000,
+            informalBalance: 50000,
+          },
+        ],
+      },
+      monthlyFixture,
+      pageFixture,
+    );
+
+    renderPage();
+
+    const ars = await screen.findByRole('article', { name: 'Resumen ARS' });
+    expect(ars).toHaveTextContent('Formal $ 150.000,00 · Informal $ 50.000,00');
   });
 
   it('con dos monedas muestra el tab USD y cambia el resumen al hacer click', async () => {
     stubEndpoints(
       {
         byCurrency: [
-          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
-          { currency: 'USD', totalBalance: 100, monthIncome: 0, monthExpense: 0 },
+          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000, formalBalance: 200000, informalBalance: 0 },
+          { currency: 'USD', totalBalance: 100, monthIncome: 0, monthExpense: 0, formalBalance: 100, informalBalance: 0 },
         ],
       },
       monthlyFixture,
@@ -162,7 +190,7 @@ describe('DashboardPage', () => {
     stubEndpoints(
       {
         byCurrency: [
-          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000, formalBalance: 200000, informalBalance: 0 },
         ],
       },
       monthlyFixture,
@@ -181,7 +209,7 @@ describe('DashboardPage', () => {
     stubEndpoints(
       {
         byCurrency: [
-          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+          { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000, formalBalance: 200000, informalBalance: 0 },
         ],
       },
       monthlyFixture,
@@ -203,10 +231,12 @@ describe('DashboardPage', () => {
         const url = String(input);
         if (url.includes('/summary/budgets')) return ok({ budgets: [] });
         if (url.includes('/savings')) return ok([]);
+        if (url.includes('/summary/expected-income'))
+          return ok({ month: 7, year: 2026, byCurrency: [], sources: [] });
         if (url.includes('/summary/overview')) {
           return ok({
             byCurrency: [
-              { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+              { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000, formalBalance: 200000, informalBalance: 0 },
             ],
           });
         }
@@ -226,8 +256,8 @@ describe('DashboardPage', () => {
   });
 
   it('si la moneda seleccionada desaparece del resumen, cae a la primera disponible', async () => {
-    const ars = { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 };
-    const usd = { currency: 'USD', totalBalance: 100, monthIncome: 0, monthExpense: 0 };
+    const ars = { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000, formalBalance: 200000, informalBalance: 0 };
+    const usd = { currency: 'USD', totalBalance: 100, monthIncome: 0, monthExpense: 0, formalBalance: 100, informalBalance: 0 };
     let overviewCalls = 0;
     vi.stubGlobal(
       'fetch',
@@ -235,6 +265,8 @@ describe('DashboardPage', () => {
         const url = String(input);
         if (url.includes('/summary/budgets')) return ok({ budgets: [] });
         if (url.includes('/savings')) return ok([]);
+        if (url.includes('/summary/expected-income'))
+          return ok({ month: 7, year: 2026, byCurrency: [], sources: [] });
         if (url.includes('/summary/overview')) {
           overviewCalls += 1;
           // primer fetch: dos monedas; refetch: USD ya no existe
@@ -293,7 +325,7 @@ describe('DashboardPage', () => {
         if (url.includes('/summary/overview')) {
           return ok({
             byCurrency: [
-              { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000 },
+              { currency: 'ARS', totalBalance: 200000, monthIncome: 250000, monthExpense: 50000, formalBalance: 200000, informalBalance: 0 },
             ],
           });
         }

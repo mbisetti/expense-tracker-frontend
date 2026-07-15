@@ -5,11 +5,22 @@ import { useIncomeSources } from './useIncomeSources';
 import { useCreateIncomeSource } from './useIncomeMutations';
 import { incomeErrorMessage } from './errorMessages';
 import { DeductionManager } from './DeductionManager';
+import type { IncomeFrequency } from './api';
+
+const FREQUENCY_OPTIONS: { value: IncomeFrequency; label: string }[] = [
+  { value: 'MONTHLY', label: 'Mensual' },
+  { value: 'BIWEEKLY', label: 'Quincenal' },
+  { value: 'WEEKLY', label: 'Semanal' },
+];
 
 export function IncomeSourceList() {
   const [formOpen, setFormOpen] = useState(false);
   const [name, setName] = useState('');
   const [currency, setCurrency] = useState('');
+  const [isRecurrent, setIsRecurrent] = useState(false);
+  const [frequency, setFrequency] = useState<IncomeFrequency>('MONTHLY');
+  const [expectedAmount, setExpectedAmount] = useState('');
+  const [billingDay, setBillingDay] = useState('');
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
 
   const { data: sources, isPending, isError } = useIncomeSources();
@@ -19,12 +30,26 @@ export function IncomeSourceList() {
     setFormOpen(false);
     setName('');
     setCurrency('');
+    setIsRecurrent(false);
+    setFrequency('MONTHLY');
+    setExpectedAmount('');
+    setBillingDay('');
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     createMutation.mutate(
-      { name, currency },
+      {
+        name,
+        currency,
+        ...(isRecurrent
+          ? {
+              frequency,
+              expectedAmount: Number(expectedAmount),
+              billingDay: Number(billingDay),
+            }
+          : {}),
+      },
       { onSuccess: closeForm },
     );
   };
@@ -63,6 +88,60 @@ export function IncomeSourceList() {
             required
             disabled={createMutation.isPending}
           />
+
+          <label htmlFor="source-recurrent">
+            <input
+              id="source-recurrent"
+              type="checkbox"
+              checked={isRecurrent}
+              onChange={(e) => setIsRecurrent(e.target.checked)}
+              disabled={createMutation.isPending}
+            />{' '}
+            ¿Es un ingreso recurrente?
+          </label>
+
+          {isRecurrent && (
+            <>
+              <label htmlFor="source-frequency">Frecuencia</label>
+              <select
+                id="source-frequency"
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as IncomeFrequency)}
+                disabled={createMutation.isPending}
+              >
+                {FREQUENCY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              <label htmlFor="source-expected-amount">Monto esperado</label>
+              <input
+                id="source-expected-amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={expectedAmount}
+                onChange={(e) => setExpectedAmount(e.target.value)}
+                required
+                disabled={createMutation.isPending}
+              />
+
+              <label htmlFor="source-billing-day">Día de cobro (1-28)</label>
+              <input
+                id="source-billing-day"
+                type="number"
+                min="1"
+                max="28"
+                step="1"
+                value={billingDay}
+                onChange={(e) => setBillingDay(e.target.value)}
+                required
+                disabled={createMutation.isPending}
+              />
+            </>
+          )}
 
           {createMutation.isError && (
             <p role="alert">{incomeErrorMessage(createMutation.error)}</p>

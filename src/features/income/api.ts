@@ -1,8 +1,13 @@
+export type IncomeFrequency = 'MONTHLY' | 'BIWEEKLY' | 'WEEKLY';
+
 export type IncomeSourceResponse = {
   id: string;
   name: string;
   currency: string;
   active: boolean;
+  frequency: IncomeFrequency | null;
+  expectedAmount: number | null;
+  billingDay: number | null;
   createdAt: string;
 };
 
@@ -45,4 +50,28 @@ export type IncomeEntryListItem = {
 
 export type IncomeEntryResponse = IncomeEntryListItem & {
   accountBalance: number;
+};
+
+export type ExpectedIncomeByCurrency = {
+  currency: string;
+  expectedTotal: number;
+  pendingTotal: number;
+  pendingCount: number;
+};
+
+export type ExpectedIncomeSource = {
+  sourceId: string;
+  name: string;
+  currency: string;
+  expectedAmount: number;
+  billingDay: number;
+  frequency: IncomeFrequency;
+  received: boolean;
+};
+
+export type ExpectedIncomeResponse = {
+  month: number;
+  year: number;
+  byCurrency: ExpectedIncomeByCurrency[];
+  sources: ExpectedIncomeSource[];
 };

@@ -9,6 +9,7 @@ import { useMonthlySummary } from './useMonthlySummary';
 import { useTransactions } from '../transactions/useTransactions';
 import { BudgetSection } from '../budgets/BudgetSection';
 import { SavingsGoalSection } from '../savings/SavingsGoalSection';
+import { ExpectedIncomeCard } from '../income/ExpectedIncomeCard';
 
 const MonthlyChart = lazy(() =>
   import('./MonthlyChart').then((m) => ({ default: m.MonthlyChart })),
@@ -71,6 +72,7 @@ export function DashboardPage() {
         </>
       )}
 
+      <ExpectedIncomeCard />
       <BudgetSection />
       <SavingsGoalSection />
 

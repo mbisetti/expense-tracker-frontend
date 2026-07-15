@@ -14,6 +14,7 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
   const [name, setName] = useState(account?.name ?? '');
   const [type, setType] = useState<AccountType>(account?.type ?? 'CASH');
   const [currency, setCurrency] = useState(account?.currency ?? 'ARS');
+  const [isInformal, setIsInformal] = useState(account?.isInformal ?? false);
 
   const createMutation = useCreateAccount();
   const updateMutation = useUpdateAccount();
@@ -28,6 +29,7 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
       if (name !== account.name) changes.name = name;
       if (type !== account.type) changes.type = type;
       if (normalizedCurrency !== account.currency) changes.currency = normalizedCurrency;
+      if (isInformal !== account.isInformal) changes.isInformal = isInformal;
 
       if (Object.keys(changes).length === 0) {
         onClose();
@@ -36,7 +38,7 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
       updateMutation.mutate({ id: account.id, changes }, { onSuccess: onClose });
     } else {
       createMutation.mutate(
-        { name, type, currency: normalizedCurrency },
+        { name, type, currency: normalizedCurrency, isInformal },
         { onSuccess: onClose },
       );
     }
@@ -84,6 +86,17 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
         title="Código ISO de 3 letras, ej: ARS, USD"
         disabled={isPending}
       />
+
+      <label htmlFor="acc-informal">
+        <input
+          id="acc-informal"
+          type="checkbox"
+          checked={isInformal}
+          onChange={(e) => setIsInformal(e.target.checked)}
+          disabled={isPending}
+        />{' '}
+        Cuenta informal (efectivo, cripto — fuera del banco)
+      </label>
 
       {mutation.isError && <p role="alert">{accountErrorMessage(mutation.error)}</p>}
 

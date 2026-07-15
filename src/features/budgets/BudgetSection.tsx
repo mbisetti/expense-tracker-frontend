@@ -47,6 +47,13 @@ export function BudgetSection() {
           {data.budgets.map((budget) => {
             const status = budgetStatus(budget.spentAmount, budget.limitAmount);
             const ratio = budget.limitAmount > 0 ? budget.spentAmount / budget.limitAmount : 0;
+            const markerRatio =
+              budget.limitAmount > 0 ? budget.projectedEndOfMonth / budget.limitAmount : 0;
+            // Regla "no alarmar temprano": antes del día 7 del mes, la proyección es
+            // volátil (pocos días de datos), así que se muestra neutra aunque ya
+            // marque will_exceed.
+            const dayOfMonth = new Date().getDate();
+            const isAlarm = budget.projectedStatus === 'will_exceed' && dayOfMonth >= 7;
 
             return (
               <li key={budget.budgetId}>
@@ -60,10 +67,15 @@ export function BudgetSection() {
                   ratio={ratio}
                   tone={STATUS_TONE[status]}
                   label={'Presupuesto ' + budget.categoryName}
+                  markerRatio={markerRatio}
                 />
                 <p className="text-body text-sm tabular-nums">
                   {formatMoney(budget.spentAmount, budget.currency)} de{' '}
                   {formatMoney(budget.limitAmount, budget.currency)}
+                </p>
+                <p className={`text-sm tabular-nums ${isAlarm ? 'text-expense' : 'text-body'}`}>
+                  Proyección fin de mes: {formatMoney(budget.projectedEndOfMonth, budget.currency)}
+                  {isAlarm && ' · va a excederse'}
                 </p>
               </li>
             );

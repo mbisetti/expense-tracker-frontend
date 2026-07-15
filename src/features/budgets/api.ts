@@ -14,6 +14,8 @@ export type BudgetProgress = {
   currency: string;
   limitAmount: number;
   spentAmount: number;
+  projectedEndOfMonth: number;
+  projectedStatus: 'ok' | 'will_exceed';
 };
 
 export type BudgetsSummaryResponse = {

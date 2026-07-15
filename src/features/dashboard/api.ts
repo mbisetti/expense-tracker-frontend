@@ -3,6 +3,8 @@ export type CurrencyOverview = {
   totalBalance: number;
   monthIncome: number;
   monthExpense: number;
+  formalBalance: number;
+  informalBalance: number;
 };
 
 export type ConsolidatedBalance = {
