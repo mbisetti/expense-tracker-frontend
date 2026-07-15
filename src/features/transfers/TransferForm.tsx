@@ -14,12 +14,16 @@ function round2(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
 }
 
-export function TransferForm() {
+type TransferFormProps = {
+  initialToAccountId?: string;
+};
+
+export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
   const { data: accounts } = useAccounts();
   const mutation = useCreateTransfer();
 
   const [fromAccountId, setFromAccountId] = useState('');
-  const [toAccountId, setToAccountId] = useState('');
+  const [toAccountId, setToAccountId] = useState(initialToAccountId ?? '');
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [toAmountTouched, setToAmountTouched] = useState(false);

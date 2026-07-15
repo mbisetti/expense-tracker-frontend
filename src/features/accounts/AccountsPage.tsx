@@ -4,6 +4,7 @@ import { useAccounts } from './useAccounts';
 import { useDeleteAccount } from './useAccountMutations';
 import { accountErrorMessage } from './errorMessages';
 import { AccountForm } from './AccountForm';
+import { CreditCardStatement } from './CreditCardStatement';
 import type { Account, AccountType } from './api';
 
 const TYPE_LABELS: Record<AccountType, string> = {
@@ -124,6 +125,17 @@ export function AccountsPage() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {accounts && accounts.some((a) => a.type === 'CREDIT' && a.statementCloseDay != null) && (
+        <section className="flex flex-col gap-4">
+          <h2>Tarjetas de crédito</h2>
+          {accounts
+            .filter((a) => a.type === 'CREDIT' && a.statementCloseDay != null)
+            .map((card) => (
+              <CreditCardStatement key={card.id} account={card} />
+            ))}
+        </section>
       )}
     </section>
   );

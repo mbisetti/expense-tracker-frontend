@@ -8,6 +8,8 @@ export type CreateAccountInput = {
   type: AccountType;
   currency: string;
   isInformal?: boolean;
+  statementCloseDay?: number;
+  paymentDueDay?: number;
 };
 
 export type UpdateAccountInput = {
@@ -15,6 +17,8 @@ export type UpdateAccountInput = {
   type?: AccountType;
   currency?: string;
   isInformal?: boolean;
+  statementCloseDay?: number;
+  paymentDueDay?: number;
 };
 
 function useInvalidateAccounts() {

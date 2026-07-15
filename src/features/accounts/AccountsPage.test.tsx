@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { AccountsPage } from './AccountsPage';
 import { jsonResponse, ok } from '../../test/mockResponse';
@@ -13,6 +14,8 @@ const account = {
   balance: 1000,
   isInformal: false,
   createdAt: '2026-07-01T00:00:00',
+  statementCloseDay: null,
+  paymentDueDay: null,
 };
 
 const informalAccount = {
@@ -23,6 +26,34 @@ const informalAccount = {
   balance: 500,
   isInformal: true,
   createdAt: '2026-07-01T00:00:00',
+  statementCloseDay: null,
+  paymentDueDay: null,
+};
+
+const creditCard = {
+  id: 'acc-3',
+  name: 'Visa',
+  type: 'CREDIT',
+  currency: 'ARS',
+  balance: -1000,
+  isInformal: false,
+  createdAt: '2026-07-01T00:00:00',
+  statementCloseDay: 10,
+  paymentDueDay: 20,
+};
+
+const statementFixture = {
+  accountId: 'acc-3',
+  offset: 0,
+  statementCloseDay: 10,
+  paymentDueDay: 20,
+  currency: 'ARS',
+  periodStart: '2026-06-11',
+  periodEnd: '2026-07-10',
+  dueDate: '2026-07-20',
+  totalSpent: 5000,
+  payments: 1000,
+  closingBalance: -4000,
 };
 
 function renderPage() {
@@ -34,7 +65,9 @@ function renderPage() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <AccountsPage />
+        <MemoryRouter>
+          <AccountsPage />
+        </MemoryRouter>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -141,5 +174,37 @@ describe('AccountsPage', () => {
 
     await screen.findByText('Caja fuerte');
     expect(postedBody).toMatchObject({ name: 'Caja fuerte', currency: 'USD', isInformal: true });
+  });
+
+  it('sin tarjetas de crédito con ciclo configurado, no muestra la sección', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/accounts')) return ok([account]);
+        return ok([]);
+      }),
+    );
+
+    renderPage();
+
+    await screen.findByText('Billetera');
+    expect(screen.queryByText('Tarjetas de crédito')).not.toBeInTheDocument();
+  });
+
+  it('con una tarjeta de crédito con ciclo configurado, muestra la sección y su resumen', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/statement')) return ok(statementFixture);
+        if (url.includes('/accounts')) return ok([account, creditCard]);
+        return ok([]);
+      }),
+    );
+
+    renderPage();
+
+    expect(await screen.findByText('Tarjetas de crédito')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Visa' })).toBeInTheDocument();
+    expect(screen.getByText(/Consumos del ciclo/)).toBeInTheDocument();
   });
 });

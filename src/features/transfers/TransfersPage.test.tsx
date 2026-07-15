@@ -54,7 +54,7 @@ function stubEndpoints(options?: {
   );
 }
 
-function renderPage() {
+function renderPage(initialEntries: string[] = ['/transfers']) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -63,7 +63,7 @@ function renderPage() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <MemoryRouter>
+        <MemoryRouter initialEntries={initialEntries}>
           <TransfersPage />
         </MemoryRouter>
       </AuthContext.Provider>
@@ -140,5 +140,13 @@ describe('TransfersPage', () => {
     renderPage();
 
     expect(await screen.findByText('Todavía no hiciste transferencias.')).toBeInTheDocument();
+  });
+
+  it('con ?to= en la URL, precarga la cuenta destino', async () => {
+    stubEndpoints();
+    renderPage(['/transfers?to=acc2']);
+
+    const toSelect = (await screen.findByLabelText('Cuenta destino')) as HTMLSelectElement;
+    expect(toSelect.value).toBe('acc2');
   });
 });
