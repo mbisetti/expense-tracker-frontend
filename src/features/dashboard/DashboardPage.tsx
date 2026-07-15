@@ -10,6 +10,7 @@ import { useTransactions } from '../transactions/useTransactions';
 import { BudgetSection } from '../budgets/BudgetSection';
 import { SavingsGoalSection } from '../savings/SavingsGoalSection';
 import { ExpectedIncomeCard } from '../income/ExpectedIncomeCard';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const MonthlyChart = lazy(() =>
   import('./MonthlyChart').then((m) => ({ default: m.MonthlyChart })),
@@ -32,10 +33,17 @@ export function DashboardPage() {
 
       {isPending && <OverviewSkeleton />}
 
-      {isError && <p role="alert">No pudimos cargar el resumen. Intentá de nuevo.</p>}
+      {isError && (
+        <p role="alert" className="text-expense">
+          No pudimos cargar el resumen. Intentá de nuevo.
+        </p>
+      )}
 
       {data && data.byCurrency.length === 0 && (
-        <p>Todavía no hay datos. Creá una cuenta y registrá transacciones para ver el resumen.</p>
+        <EmptyState
+          title="Todavía no hay datos"
+          message="Creá una cuenta y registrá transacciones para ver el resumen."
+        />
       )}
 
       {data && overview && (
@@ -55,7 +63,9 @@ export function DashboardPage() {
 
             {monthly.isPending && <ChartSkeleton />}
             {monthly.isError && (
-              <p role="alert">No pudimos cargar el gráfico. Intentá de nuevo.</p>
+              <p role="alert" className="text-expense">
+                No pudimos cargar el gráfico. Intentá de nuevo.
+              </p>
             )}
             {monthly.data && (
               <Suspense fallback={<ChartSkeleton />}>
@@ -78,7 +88,9 @@ export function DashboardPage() {
 
       {transactions.isPending && <ListSkeleton />}
       {transactions.isError && (
-        <p role="alert">No pudimos cargar los últimos movimientos. Intentá de nuevo.</p>
+        <p role="alert" className="text-expense">
+          No pudimos cargar los últimos movimientos. Intentá de nuevo.
+        </p>
       )}
       {transactions.data && <RecentTransactions transactions={transactions.data.content} />}
     </section>

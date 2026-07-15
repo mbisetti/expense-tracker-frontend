@@ -8,6 +8,11 @@ import {
   type UpdateTransactionInput,
 } from './useTransactionMutations';
 import { transactionErrorMessage } from './errorMessages';
+import { Select } from '../../components/ui/Select';
+import { Input } from '../../components/ui/Input';
+import { DateField } from '../../components/ui/DateField';
+import { Button } from '../../components/ui/Button';
+import { useToast } from '../../components/ui/toastContext';
 import type { TransactionListItem, TransactionType } from './api';
 
 type TransactionFormProps = {
@@ -25,6 +30,7 @@ function todayLocal(): string {
 
 export function TransactionForm({ transaction, onClose }: TransactionFormProps) {
   const isEdit = transaction !== undefined;
+  const toast = useToast();
 
   const [accountId, setAccountId] = useState(transaction?.accountId ?? '');
   const [type, setType] = useState<TransactionType>(transaction?.type ?? 'EXPENSE');
@@ -65,7 +71,16 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
         onClose();
         return;
       }
-      updateMutation.mutate({ id: transaction.id, changes }, { onSuccess: onClose });
+      updateMutation.mutate(
+        { id: transaction.id, changes },
+        {
+          onSuccess: () => {
+            toast.success('Transacción actualizada.');
+            onClose();
+          },
+          onError: (error) => toast.error(transactionErrorMessage(error)),
+        },
+      );
     } else {
       createMutation.mutate(
         {
@@ -77,7 +92,13 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
           paymentMethodId: paymentMethodId || undefined,
           description: description || undefined,
         },
-        { onSuccess: onClose },
+        {
+          onSuccess: () => {
+            toast.success('Transacción guardada.');
+            onClose();
+          },
+          onError: (error) => toast.error(transactionErrorMessage(error)),
+        },
       );
     }
   };
@@ -85,11 +106,17 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
   const isPending = mutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit} aria-label={isEdit ? 'Editar transacción' : 'Nueva transacción'}>
-      <h2>{isEdit ? 'Editar transacción' : 'Nueva transacción'}</h2>
+    <form
+      onSubmit={handleSubmit}
+      aria-label={isEdit ? 'Editar transacción' : 'Nueva transacción'}
+      className="flex flex-col gap-3 rounded-md border border-line bg-surface-elevated p-4"
+    >
+      <h2 className="text-lg font-semibold text-ink">
+        {isEdit ? 'Editar transacción' : 'Nueva transacción'}
+      </h2>
 
-      <label htmlFor="tx-account">Cuenta</label>
-      <select
+      <Select
+        label="Cuenta"
         id="tx-account"
         value={accountId}
         onChange={(e) => setAccountId(e.target.value)}
@@ -102,10 +129,10 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
             {account.name} ({account.currency})
           </option>
         ))}
-      </select>
+      </Select>
 
-      <label htmlFor="tx-type">Tipo</label>
-      <select
+      <Select
+        label="Tipo"
         id="tx-type"
         value={type}
         onChange={(e) => setType(e.target.value as TransactionType)}
@@ -113,12 +140,10 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
       >
         <option value="EXPENSE">Gasto</option>
         <option value="INCOME">Ingreso</option>
-      </select>
+      </Select>
 
-      <label htmlFor="tx-amount">
-        Monto{selectedAccount ? ` (${selectedAccount.currency})` : ''}
-      </label>
-      <input
+      <Input
+        label={`Monto${selectedAccount ? ` (${selectedAccount.currency})` : ''}`}
         id="tx-amount"
         type="number"
         min="0.01"
@@ -129,18 +154,17 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
         disabled={isPending}
       />
 
-      <label htmlFor="tx-date">Fecha</label>
-      <input
+      <DateField
+        label="Fecha"
         id="tx-date"
-        type="date"
         value={date}
         onChange={(e) => setDate(e.target.value)}
         required
         disabled={isPending}
       />
 
-      <label htmlFor="tx-category">Categoría</label>
-      <select
+      <Select
+        label="Categoría"
         id="tx-category"
         value={categoryId}
         onChange={(e) => setCategoryId(e.target.value)}
@@ -152,10 +176,10 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
             {category.name}
           </option>
         ))}
-      </select>
+      </Select>
 
-      <label htmlFor="tx-payment-method">Método de pago</label>
-      <select
+      <Select
+        label="Método de pago"
         id="tx-payment-method"
         value={paymentMethodId}
         onChange={(e) => setPaymentMethodId(e.target.value)}
@@ -167,10 +191,10 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
             {pm.name}
           </option>
         ))}
-      </select>
+      </Select>
 
-      <label htmlFor="tx-description">Descripción</label>
-      <input
+      <Input
+        label="Descripción"
         id="tx-description"
         type="text"
         maxLength={500}
@@ -179,14 +203,14 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
         disabled={isPending}
       />
 
-      {mutation.isError && <p role="alert">{transactionErrorMessage(mutation.error)}</p>}
-
-      <button type="submit" disabled={isPending}>
-        {isPending ? 'Guardando...' : 'Guardar'}
-      </button>
-      <button type="button" onClick={onClose} disabled={isPending}>
-        Cancelar
-      </button>
+      <div className="flex gap-3">
+        <Button type="submit" loading={isPending}>
+          Guardar
+        </Button>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }

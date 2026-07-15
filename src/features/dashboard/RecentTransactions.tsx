@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { Card } from '../../components/Card';
-import { amountSign, amountToneClass, formatMoney } from '../../lib/money';
+import { Card } from '../../components/ui/Card';
+import { Amount } from '../../components/ui/Amount';
+import { EmptyState } from '../../components/ui/EmptyState';
 import type { TransactionListItem } from '../transactions/api';
 
 type RecentTransactionsProps = {
@@ -19,25 +20,30 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
     <Card>
       <div className="flex items-baseline justify-between">
         <h2>Últimos movimientos</h2>
-        <Link to="/transactions" className="text-brand text-sm">
+        <Link to="/transactions" className="text-sm text-brand">
           Ver todas
         </Link>
       </div>
 
       {transactions.length === 0 ? (
-        <p>Todavía no hay transacciones.</p>
+        <EmptyState
+          title="Todavía no hay transacciones"
+          message="Registrá tu primer movimiento para verlo acá."
+        />
       ) : (
-        <ul className="list-none p-0 m-0 divide-y divide-line">
+        <ul className="m-0 list-none divide-y divide-line p-0">
           {transactions.map((t) => (
             <li key={t.id} className="flex items-center justify-between gap-3 py-2">
               <div>
                 <p className="text-ink">{t.description || 'Sin descripción'}</p>
-                <p className="text-body text-sm">{formatDate(t.date)}</p>
+                <p className="text-sm text-body">{formatDate(t.date)}</p>
               </div>
-              <p className={`tabular-nums ${amountToneClass(t.type)}`}>
-                {amountSign(t.type)}
-                {formatMoney(t.amount, t.currency)}
-              </p>
+              <Amount
+                amount={t.amount}
+                currency={t.currency}
+                tone={t.type === 'INCOME' ? 'income' : 'expense'}
+                size="sm"
+              />
             </li>
           ))}
         </ul>

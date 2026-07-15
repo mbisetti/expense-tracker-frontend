@@ -5,6 +5,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { LoginPage } from './LoginPage';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { jsonResponse } from '../../test/mockResponse';
 
 function renderWithRouter(initialEntries: string[]) {
@@ -27,7 +28,9 @@ function renderWithRouter(initialEntries: string[]) {
   render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
+        <ToastProvider>
+          <RouterProvider router={router} />
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>,
   );
@@ -55,8 +58,8 @@ describe('redirect-back tras login', () => {
 
     await screen.findByRole('heading', { name: 'Iniciar sesión' });
 
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'a@a.com' } });
-    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'a@a.com' } });
+    fireEvent.change(screen.getByLabelText(/Contraseña/), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
 
     expect(await screen.findByRole('heading', { name: 'Transacciones' })).toBeInTheDocument();
@@ -79,8 +82,8 @@ describe('redirect-back tras login', () => {
 
     await screen.findByRole('heading', { name: 'Iniciar sesión' });
 
-    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'a@a.com' } });
-    fireEvent.change(screen.getByLabelText('Contraseña'), { target: { value: 'password123' } });
+    fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'a@a.com' } });
+    fireEvent.change(screen.getByLabelText(/Contraseña/), { target: { value: 'password123' } });
     fireEvent.click(screen.getByRole('button', { name: 'Ingresar' }));
 
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();

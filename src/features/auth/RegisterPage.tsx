@@ -1,76 +1,90 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useRegister } from './useRegister';
+import { Card } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { useToast } from '../../components/ui/toastContext';
+import type { ApiError } from '../../lib/http';
+
+function registerErrorMessage(error: ApiError): string {
+  switch (error.code) {
+    case 'EMAIL_ALREADY_EXISTS':
+      return 'Ese email ya está registrado.';
+    case 'VALIDATION_ERROR':
+      return 'Revisá los datos del formulario.';
+    case 'RATE_LIMIT_EXCEEDED':
+      return 'Demasiados intentos. Esperá un momento.';
+    default:
+      return 'Algo salió mal. Intentá de nuevo.';
+  }
+}
 
 export function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const location = useLocation();
-  const { mutate, isPending, isError, error } = useRegister();
+  const toast = useToast();
+  const { mutate, isPending } = useRegister();
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    mutate({ name, email, password });
+    mutate(
+      { name, email, password },
+      { onError: (error) => toast.error(registerErrorMessage(error)) },
+    );
   };
 
-  const errorMessage = (() => {
-    if (!isError || !error) return null;
-    switch (error.code) {
-      case 'EMAIL_ALREADY_EXISTS': return 'Ese email ya está registrado.';
-      case 'VALIDATION_ERROR': return 'Revisá los datos del formulario.';
-      case 'RATE_LIMIT_EXCEEDED': return 'Demasiados intentos. Esperá un momento.';
-      default: return 'Algo salió mal. Intentá de nuevo.';
-    }
-  })();
-
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>Crear cuenta</h1>
+    <div className="flex min-h-svh items-center justify-center p-4">
+      <Card className="w-full max-w-sm">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <h1 className="text-2xl font-semibold text-ink">Crear cuenta</h1>
 
-      <label htmlFor="name">Nombre</label>
-      <input
-        id="name"
-        type="text"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        disabled={isPending}
-      />
+          <Input
+            label="Nombre"
+            id="name"
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+            disabled={isPending}
+          />
 
-      <label htmlFor="email">Email</label>
-      <input
-        id="email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        disabled={isPending}
-      />
+          <Input
+            label="Email"
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isPending}
+          />
 
-      <label htmlFor="password">Contraseña</label>
-      <input
-        id="password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-        minLength={8}
-        disabled={isPending}
-      />
+          <Input
+            label="Contraseña"
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            disabled={isPending}
+          />
 
-      {errorMessage && <p role="alert">{errorMessage}</p>}
+          <Button type="submit" loading={isPending} className="mt-2">
+            {isPending ? 'Creando cuenta...' : 'Crear cuenta'}
+          </Button>
 
-      <button type="submit" disabled={isPending}>
-        {isPending ? 'Creando cuenta...' : 'Crear cuenta'}
-      </button>
-
-      <p>
-        ¿Ya tenés cuenta?{' '}
-        <Link to="/login" state={location.state}>
-          Iniciá sesión
-        </Link>
-      </p>
-    </form>
+          <p className="text-center text-sm text-body">
+            ¿Ya tenés cuenta?{' '}
+            <Link to="/login" state={location.state} className="text-brand">
+              Iniciá sesión
+            </Link>
+          </p>
+        </form>
+      </Card>
+    </div>
   );
 }

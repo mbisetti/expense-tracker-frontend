@@ -15,7 +15,8 @@ export function OverviewCards({ overview }: OverviewCardsProps) {
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <StatCard
         label="Balance total"
-        value={formatMoney(totalBalance, currency)}
+        amount={totalBalance}
+        currency={currency}
         tone="neutral"
         secondary={
           informalBalance !== 0
@@ -23,11 +24,12 @@ export function OverviewCards({ overview }: OverviewCardsProps) {
             : undefined
         }
       />
-      <StatCard label="Ingresos del mes" value={formatMoney(monthIncome, currency)} tone="income" />
-      <StatCard label="Gastos del mes" value={formatMoney(monthExpense, currency)} tone="expense" />
+      <StatCard label="Ingresos del mes" amount={monthIncome} currency={currency} tone="income" />
+      <StatCard label="Gastos del mes" amount={monthExpense} currency={currency} tone="expense" />
       <StatCard
         label="Ahorro del mes"
-        value={formatMoney(savings, currency)}
+        amount={savings}
+        currency={currency}
         tone={savings >= 0 ? 'income' : 'expense'}
       />
     </div>

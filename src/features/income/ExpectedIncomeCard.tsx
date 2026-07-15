@@ -1,5 +1,5 @@
-import { Card } from '../../components/Card';
-import { PlaceholderRow } from '../../components/SectionPlaceholder';
+import { Card } from '../../components/ui/Card';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { formatMoney } from '../../lib/money';
 import { useExpectedIncome } from './useExpectedIncome';
 import type { IncomeFrequency } from './api';
@@ -23,14 +23,13 @@ export function ExpectedIncomeCard() {
     <Card>
       <h2>Ingresos esperados del mes</h2>
 
-      {isPending && (
-        <div role="status" aria-label="Cargando ingresos esperados" className="flex flex-col gap-3 animate-pulse">
-          <PlaceholderRow />
-          <PlaceholderRow />
-        </div>
-      )}
+      {isPending && <Skeleton variant="list" rows={2} />}
 
-      {isError && <p role="alert">No pudimos cargar los ingresos esperados. Intentá de nuevo.</p>}
+      {isError && (
+        <p role="alert" className="text-expense">
+          No pudimos cargar los ingresos esperados. Intentá de nuevo.
+        </p>
+      )}
 
       {data && data.sources.length > 0 && (
         <>

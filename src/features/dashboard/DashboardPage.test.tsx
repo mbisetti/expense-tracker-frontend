@@ -179,10 +179,10 @@ describe('DashboardPage', () => {
 
     renderPage();
 
+    // EmptyState (§5): título + mensaje en nodos separados, no una sola oración.
+    expect(await screen.findByText('Todavía no hay datos')).toBeInTheDocument();
     expect(
-      await screen.findByText(
-        'Todavía no hay datos. Creá una cuenta y registrá transacciones para ver el resumen.',
-      ),
+      screen.getByText('Creá una cuenta y registrá transacciones para ver el resumen.'),
     ).toBeInTheDocument();
   });
 
@@ -312,7 +312,8 @@ describe('DashboardPage', () => {
 
     renderPage();
 
-    expect(screen.getByRole('status', { name: 'Cargando resumen' })).toBeInTheDocument();
+    // OverviewSkeleton compone 4 skeletons de card + 1 de chart (§5: forma del contenido)
+    expect(screen.getAllByRole('status', { name: 'Cargando…' }).length).toBeGreaterThan(0);
   });
 
   it('con overview resuelto pero gráfico y movimientos colgados, muestra ambos skeletons junto con las cards', async () => {
@@ -322,6 +323,8 @@ describe('DashboardPage', () => {
         const url = String(input);
         if (url.includes('/summary/budgets')) return ok({ budgets: [] });
         if (url.includes('/savings')) return ok([]);
+        if (url.includes('/summary/expected-income'))
+          return ok({ month: 7, year: 2026, byCurrency: [], sources: [] });
         if (url.includes('/summary/overview')) {
           return ok({
             byCurrency: [
@@ -337,7 +340,9 @@ describe('DashboardPage', () => {
     renderPage();
 
     expect(await screen.findByRole('article', { name: 'Resumen ARS' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Cargando gráfico' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Cargando movimientos' })).toBeInTheDocument();
+    // Un Skeleton (role=status, "Cargando…") para el gráfico y otro para los movimientos —
+    // ExpectedIncomeCard/BudgetSection ya resolvieron ({budgets: []}, sin fuentes), así que
+    // sólo quedan estos dos pendientes.
+    expect(screen.getAllByRole('status', { name: 'Cargando…' })).toHaveLength(2);
   });
 });

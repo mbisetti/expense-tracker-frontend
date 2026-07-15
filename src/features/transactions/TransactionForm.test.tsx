@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { TransactionForm } from './TransactionForm';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { TransactionListItem } from './api';
 import { jsonResponse } from '../../test/mockResponse';
 
@@ -62,7 +63,9 @@ function renderEditForm() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <TransactionForm transaction={editTx} onClose={onClose} />
+        <ToastProvider>
+          <TransactionForm transaction={editTx} onClose={onClose} />
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );

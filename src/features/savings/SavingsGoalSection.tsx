@@ -1,6 +1,7 @@
-import { Card } from '../../components/Card';
-import { ProgressBar } from '../../components/ProgressBar';
-import { PlaceholderRow } from '../../components/SectionPlaceholder';
+import { Card } from '../../components/ui/Card';
+import { ProgressBar } from '../../components/ui/ProgressBar';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { formatMoney } from '../../lib/money';
 import { useSavingsGoals } from './useSavingsGoals';
 
@@ -25,19 +26,20 @@ export function SavingsGoalSection() {
     <Card>
       <h2>Objetivos de ahorro</h2>
 
-      {isPending && (
-        <div role="status" aria-label="Cargando objetivos" className="flex flex-col gap-3 animate-pulse">
-          <PlaceholderRow />
-          <PlaceholderRow />
-          <PlaceholderRow />
-        </div>
-      )}
+      {isPending && <Skeleton variant="list" rows={3} />}
 
       {isError && (
-        <p role="alert">No pudimos cargar los objetivos de ahorro. Intentá de nuevo.</p>
+        <p role="alert" className="text-expense">
+          No pudimos cargar los objetivos de ahorro. Intentá de nuevo.
+        </p>
       )}
 
-      {data && data.length === 0 && <p>Todavía no tenés objetivos de ahorro.</p>}
+      {data && data.length === 0 && (
+        <EmptyState
+          title="Todavía no tenés objetivos de ahorro."
+          message="Creá un objetivo para ahorrar hacia una meta y seguí el progreso acá."
+        />
+      )}
 
       {data && data.length > 0 && (
         <ul className="list-none p-0 m-0 flex flex-col gap-3">

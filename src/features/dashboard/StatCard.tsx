@@ -1,25 +1,29 @@
+import { Card } from '../../components/ui/Card';
+import { Amount, type AmountTone } from '../../components/ui/Amount';
+
 export type StatCardTone = 'neutral' | 'income' | 'expense';
 
 type StatCardProps = {
   label: string;
-  value: string;
+  amount: number;
+  currency: string;
   tone: StatCardTone;
   /** Línea secundaria muted opcional, ej. desglose formal/informal */
   secondary?: string;
 };
 
-const TONE_CLASS: Record<StatCardTone, string> = {
-  neutral: 'text-ink',
-  income: 'text-income',
-  expense: 'text-expense',
+const AMOUNT_TONE: Record<StatCardTone, AmountTone> = {
+  neutral: 'neutral',
+  income: 'income',
+  expense: 'expense',
 };
 
-export function StatCard({ label, value, tone, secondary }: StatCardProps) {
+export function StatCard({ label, amount, currency, tone, secondary }: StatCardProps) {
   return (
-    <article className="rounded-xl border border-line bg-surface p-4">
+    <Card className="flex flex-col gap-1">
       <p className="text-xs uppercase tracking-wide text-body">{label}</p>
-      <p className={`text-xl font-semibold tabular-nums ${TONE_CLASS[tone]}`}>{value}</p>
-      {secondary && <p className="text-body text-sm">{secondary}</p>}
-    </article>
+      <Amount amount={amount} currency={currency} tone={AMOUNT_TONE[tone]} size="lg" />
+      {secondary && <p className="text-sm text-body">{secondary}</p>}
+    </Card>
   );
 }

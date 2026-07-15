@@ -1,65 +1,79 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLogin } from './useLogin';
+import { Card } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { useToast } from '../../components/ui/toastContext';
+import type { ApiError } from '../../lib/http';
+
+function loginErrorMessage(error: ApiError): string {
+  switch (error.code) {
+    case 'INVALID_CREDENTIALS':
+      return 'Email o contraseña incorrectos.';
+    case 'RATE_LIMIT_EXCEEDED':
+      return 'Demasiados intentos. Esperá un momento.';
+    case 'VALIDATION_ERROR':
+      return 'Revisá los datos del formulario.';
+    default:
+      return 'Algo salió mal. Intentá de nuevo.';
+  }
+}
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const location = useLocation();
-  const { mutate, isPending, isError, error } = useLogin();
+  const toast = useToast();
+  const { mutate, isPending } = useLogin();
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    mutate({ email, password });
+    mutate(
+      { email, password },
+      { onError: (error) => toast.error(loginErrorMessage(error)) },
+    );
   };
 
-  const errorMessage = (() => {
-    if (!isError || !error) return null;
-    switch (error.code) {
-      case 'INVALID_CREDENTIALS': return 'Email o contraseña incorrectos.';
-      case 'RATE_LIMIT_EXCEEDED': return 'Demasiados intentos. Esperá un momento.';
-      case 'VALIDATION_ERROR': return 'Revisá los datos del formulario.';
-      default: return 'Algo salió mal. Intentá de nuevo.';
-    }
-  })();
-
   return (
-    <form onSubmit={handleSubmit}>
-      <h1>Iniciar sesión</h1>
+    <div className="flex min-h-svh items-center justify-center p-4">
+      <Card className="w-full max-w-sm">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <h1 className="text-2xl font-semibold text-ink">Iniciar sesión</h1>
 
-      <label htmlFor="email">Email</label>
-      <input
-        id="email"
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-        disabled={isPending}
-      />
+          <Input
+            label="Email"
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isPending}
+          />
 
-      <label htmlFor="password">Contraseña</label>
-      <input
-        id="password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        required
-        minLength={8}
-        disabled={isPending}
-      />
+          <Input
+            label="Contraseña"
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            disabled={isPending}
+          />
 
-      {errorMessage && <p role="alert">{errorMessage}</p>}
+          <Button type="submit" loading={isPending} className="mt-2">
+            {isPending ? 'Ingresando...' : 'Ingresar'}
+          </Button>
 
-      <button type="submit" disabled={isPending}>
-        {isPending ? 'Ingresando...' : 'Ingresar'}
-      </button>
-
-      <p>
-        ¿No tenés cuenta?{' '}
-        <Link to="/register" state={location.state}>
-          Registrate
-        </Link>
-      </p>
-    </form>
+          <p className="text-center text-sm text-body">
+            ¿No tenés cuenta?{' '}
+            <Link to="/register" state={location.state} className="text-brand">
+              Registrate
+            </Link>
+          </p>
+        </form>
+      </Card>
+    </div>
   );
 }
