@@ -2,10 +2,11 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { DateField } from '../../components/ui/DateField';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
-import { formatMoney } from '../../lib/money';
+import { formatMoney, numberToAmountDisplay, parseAmountInput } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCreateTransfer } from './useTransferMutations';
 import { useExchangeRate } from './useExchangeRate';
@@ -50,7 +51,7 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
   // (lint set-state-in-effect pre-existente — no tocado en esta migración, ver reporte S19 B3)
   useEffect(() => {
     if (crossCurrency && rate?.rate && !toAmountTouched && fromAmount) {
-      setToAmount(round2(Number(fromAmount) * rate.rate).toString());
+      setToAmount(numberToAmountDisplay(round2(parseAmountInput(fromAmount) * rate.rate)));
     }
   }, [crossCurrency, rate, fromAmount, toAmountTouched]);
 
@@ -70,8 +71,8 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const from = Number(fromAmount);
-    const to = crossCurrency ? Number(toAmount) : from;
+    const from = parseAmountInput(fromAmount);
+    const to = crossCurrency ? parseAmountInput(toAmount) : from;
     mutation.mutate(
       {
         fromAccountId,
@@ -138,28 +139,22 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
             ))}
           </Select>
 
-          <Input
+          <MoneyInput
             label={crossCurrency ? `Monto a debitar (${fromAccount!.currency})` : 'Monto'}
             id="transfer-from-amount"
-            type="number"
-            min="0.01"
-            step="0.01"
             value={fromAmount}
-            onChange={(e) => setFromAmount(e.target.value)}
+            onValueChange={setFromAmount}
             required
             disabled={mutation.isPending}
           />
 
           {crossCurrency && (
-            <Input
+            <MoneyInput
               label={`Monto a acreditar (${toAccount!.currency})`}
               id="transfer-to-amount"
-              type="number"
-              min="0.01"
-              step="0.01"
               value={toAmount}
-              onChange={(e) => {
-                setToAmount(e.target.value);
+              onValueChange={(v) => {
+                setToAmount(v);
                 setToAmountTouched(true);
               }}
               required
@@ -184,7 +179,7 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
           />
 
           <Input
-            label="Descripción (opcional)"
+            label="Descripción"
             id="transfer-description"
             type="text"
             maxLength={500}

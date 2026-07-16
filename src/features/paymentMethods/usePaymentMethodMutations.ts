@@ -4,6 +4,7 @@ import type { ApiError } from '../../lib/http';
 import type { PaymentMethod, PaymentMethodType } from './api';
 
 export type CreatePaymentMethodInput = {
+  accountId: string;
   name: string;
   type: PaymentMethodType;
   isDefault: boolean;

@@ -31,6 +31,8 @@ export type TransactionFilters = {
   categoryId?: string;
   paymentMethodId?: string;
   type?: TransactionType;
+  /** Oculta las patas de transfer (feed unificado de Movimientos, Sprint 20 #4). */
+  excludeTransferLegs?: boolean;
   dateFrom?: string;
   dateTo?: string;
   search?: string;

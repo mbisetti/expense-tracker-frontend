@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useLogout } from '../features/auth/useLogout';
+import { useTheme } from '../lib/useTheme';
 import { BottomNav } from './ui/BottomNav';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
-import { MenuIcon } from './ui/icons';
+import { MenuIcon, MoonIcon, SunIcon } from './ui/icons';
 
 const NAV_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
   [
@@ -22,18 +23,21 @@ const DRAWER_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
 
 // Rutas completas de la app (7): el header horizontal (desktop, `lg+`) las muestra todas;
 // el drawer mobile (debajo de `lg`) también, porque el BottomNav de abajo sólo cubre 4.
+// Transferencias ya NO es una ruta propia del nav: se fusionó dentro de Transacciones como
+// el tipo 'Entre cuentas' (Sprint 20 #4). La ruta /transfers sigue existiendo (el link
+// "Registrar pago" de las tarjetas la usa), pero no aparece en el menú.
 const ROUTES = [
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/accounts', label: 'Cuentas' },
   { to: '/transactions', label: 'Transacciones' },
   { to: '/income', label: 'Ingresos' },
-  { to: '/transfers', label: 'Transferencias' },
   { to: '/categories', label: 'Categorías' },
   { to: '/payment-methods', label: 'Métodos de pago' },
 ];
 
 export function AppLayout() {
   const { mutate: logout, isPending } = useLogout();
+  const { theme, toggle: toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const closeMenu = () => setMenuOpen(false);
@@ -70,11 +74,22 @@ export function AppLayout() {
             ))}
           </div>
 
+          {/* Toggle de tema: siempre visible (mobile a la derecha del hamburger, desktop
+              antes de Cerrar sesión). `ml-auto` lo empuja al extremo derecho del header. */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+            className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-ink transition-colors duration-200 ease-out hover:bg-surface-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
+            {theme === 'dark' ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+          </button>
+
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="ml-auto hidden lg:inline-flex"
+            className="hidden lg:inline-flex"
             onClick={() => logout()}
             disabled={isPending}
           >

@@ -162,11 +162,11 @@ describe('AccountsPage', () => {
 
     renderPage();
 
-    const informalRow = (await screen.findByRole('row', { name: /Efectivo dólares/ }));
-    expect(within(informalRow).getByText('Informal')).toBeInTheDocument();
+    const informalCard = await screen.findByRole('group', { name: 'Efectivo dólares' });
+    expect(within(informalCard).getByText('Informal')).toBeInTheDocument();
 
-    const formalRow = screen.getByRole('row', { name: /Billetera/ });
-    expect(within(formalRow).queryByText('Informal')).not.toBeInTheDocument();
+    const formalCard = screen.getByRole('group', { name: 'Billetera' });
+    expect(within(formalCard).queryByText('Informal')).not.toBeInTheDocument();
   });
 
   it('crear cuenta con "Cuenta informal" tildado manda isInformal:true', async () => {

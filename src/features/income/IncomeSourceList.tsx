@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -10,6 +11,7 @@ import { useIncomeSources } from './useIncomeSources';
 import { useCreateIncomeSource } from './useIncomeMutations';
 import { incomeErrorMessage } from './errorMessages';
 import { DeductionManager } from './DeductionManager';
+import { parseAmountInput } from '../../lib/money';
 import type { IncomeFrequency } from './api';
 
 const FREQUENCY_OPTIONS: { value: IncomeFrequency; label: string }[] = [
@@ -51,7 +53,7 @@ export function IncomeSourceList() {
         ...(isRecurrent
           ? {
               frequency,
-              expectedAmount: Number(expectedAmount),
+              expectedAmount: parseAmountInput(expectedAmount),
               billingDay: Number(billingDay),
             }
           : {}),
@@ -129,14 +131,11 @@ export function IncomeSourceList() {
                 ))}
               </Select>
 
-              <Input
+              <MoneyInput
                 label="Monto esperado"
                 id="source-expected-amount"
-                type="number"
-                min="0.01"
-                step="0.01"
                 value={expectedAmount}
-                onChange={(e) => setExpectedAmount(e.target.value)}
+                onValueChange={setExpectedAmount}
                 required
                 disabled={createMutation.isPending}
               />

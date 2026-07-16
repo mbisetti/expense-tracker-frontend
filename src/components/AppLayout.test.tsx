@@ -41,7 +41,7 @@ describe('AppLayout — hamburger mobile', () => {
     expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument();
   });
 
-  it('clic en el hamburger abre el drawer con las 7 rutas + Cerrar sesión', () => {
+  it('clic en el hamburger abre el drawer con las 6 rutas + Cerrar sesión', () => {
     renderLayout();
 
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
@@ -58,12 +58,13 @@ describe('AppLayout — hamburger mobile', () => {
       'Cuentas',
       'Transacciones',
       'Ingresos',
-      'Transferencias',
       'Categorías',
       'Métodos de pago',
     ]) {
       expect(within(nav).getByRole('link', { name: label })).toBeInTheDocument();
     }
+    // Transferencias ya no está en el nav (se fusionó en Transacciones, Sprint 20 #4)
+    expect(within(nav).queryByRole('link', { name: 'Transferencias' })).not.toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument();
   });
 

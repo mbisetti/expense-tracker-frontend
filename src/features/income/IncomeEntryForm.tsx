@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { DateField } from '../../components/ui/DateField';
 import { Button } from '../../components/ui/Button';
 import { Amount } from '../../components/ui/Amount';
 import { useToast } from '../../components/ui/toastContext';
-import { formatMoney } from '../../lib/money';
+import { formatMoney, parseAmountInput } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { useIncomeSources } from './useIncomeSources';
 import { useIncomeDeductions } from './useIncomeDeductions';
@@ -48,10 +49,11 @@ export function IncomeEntryForm() {
   }, [activeDeductions]);
 
   const selectedAccount = accounts?.find((a) => a.id === accountId);
-  const grossNumber = Number(grossAmount) || 0;
+  const grossNumber = parseAmountInput(grossAmount);
   const chosen = activeDeductions.filter((d) => checkedIds.has(d.id));
   const preview = previewNet(grossNumber, chosen);
-  const shownNet = overrideEnabled && netOverride !== '' ? Number(netOverride) : preview.calculatedNet;
+  const shownNet =
+    overrideEnabled && netOverride !== '' ? parseAmountInput(netOverride) : preview.calculatedNet;
 
   const toggle = (id: string) => {
     setCheckedIds((prev) => {
@@ -62,6 +64,17 @@ export function IncomeEntryForm() {
     });
   };
 
+  const resetForm = () => {
+    setIncomeSourceId('');
+    setAccountId('');
+    setGrossAmount('');
+    setDate(todayIso());
+    setNotes('');
+    setCheckedIds(new Set());
+    setOverrideEnabled(false);
+    setNetOverride('');
+  };
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     mutation.mutate(
@@ -70,7 +83,8 @@ export function IncomeEntryForm() {
         accountId,
         grossAmount: grossNumber,
         deductionIds: chosen.map((d) => d.id),
-        netOverride: overrideEnabled && netOverride !== '' ? Number(netOverride) : undefined,
+        netOverride:
+          overrideEnabled && netOverride !== '' ? parseAmountInput(netOverride) : undefined,
         date,
         notes: notes || undefined,
       },
@@ -130,14 +144,11 @@ export function IncomeEntryForm() {
             ))}
           </Select>
 
-          <Input
+          <MoneyInput
             label="Monto bruto"
             id="entry-gross"
-            type="number"
-            min="0.01"
-            step="0.01"
             value={grossAmount}
-            onChange={(e) => setGrossAmount(e.target.value)}
+            onValueChange={setGrossAmount}
             required
             disabled={mutation.isPending}
           />
@@ -181,14 +192,11 @@ export function IncomeEntryForm() {
             Pisar el neto manualmente
           </label>
           {overrideEnabled && (
-            <Input
+            <MoneyInput
               label="Neto manual"
               id="entry-net-override"
-              type="number"
-              min="0.01"
-              step="0.01"
               value={netOverride}
-              onChange={(e) => setNetOverride(e.target.value)}
+              onValueChange={setNetOverride}
               disabled={mutation.isPending}
             />
           )}
@@ -210,7 +218,7 @@ export function IncomeEntryForm() {
           />
 
           <Input
-            label="Descripción (opcional)"
+            label="Descripción"
             id="entry-notes"
             type="text"
             maxLength={500}
@@ -219,9 +227,19 @@ export function IncomeEntryForm() {
             disabled={mutation.isPending}
           />
 
-          <Button type="submit" loading={mutation.isPending} className="self-start">
-            Guardar
-          </Button>
+          <div className="flex gap-3">
+            <Button type="submit" loading={mutation.isPending}>
+              Guardar
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={resetForm}
+              disabled={mutation.isPending}
+            >
+              Cancelar
+            </Button>
+          </div>
         </form>
       )}
     </Card>

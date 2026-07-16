@@ -101,10 +101,8 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
     <form
       onSubmit={handleSubmit}
       aria-label={isEdit ? 'Editar cuenta' : 'Nueva cuenta'}
-      className="flex flex-col gap-3 rounded-md border border-line bg-surface-elevated p-4"
+      className="flex flex-col gap-3"
     >
-      <h2 className="text-lg font-semibold text-ink">{isEdit ? 'Editar cuenta' : 'Nueva cuenta'}</h2>
-
       <Input
         label="Nombre"
         id="acc-name"
@@ -182,7 +180,7 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
           disabled={isPending}
           className="h-5 w-5 rounded-sm border border-line accent-brand"
         />
-        Cuenta informal (efectivo, cripto — fuera del banco)
+        Cuenta informal (efectivo, cripto, fuera del banco)
       </label>
 
       <div className="flex gap-3">

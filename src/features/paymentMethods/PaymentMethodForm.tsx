@@ -9,6 +9,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
+import { useAccounts } from '../accounts/useAccounts';
 import type { PaymentMethod, PaymentMethodType } from './api';
 
 type PaymentMethodFormProps = {
@@ -20,10 +21,12 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
   const isEdit = paymentMethod !== undefined;
   const toast = useToast();
 
+  const [accountId, setAccountId] = useState(paymentMethod?.accountId ?? '');
   const [name, setName] = useState(paymentMethod?.name ?? '');
   const [type, setType] = useState<PaymentMethodType>(paymentMethod?.type ?? 'CASH');
   const [isDefault, setIsDefault] = useState(paymentMethod?.isDefault ?? false);
 
+  const { data: accounts } = useAccounts();
   const createMutation = useCreatePaymentMethod();
   const updateMutation = useUpdatePaymentMethod();
   const mutation = isEdit ? updateMutation : createMutation;
@@ -52,7 +55,7 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
       );
     } else {
       createMutation.mutate(
-        { name, type, isDefault },
+        { accountId, name, type, isDefault },
         {
           onSuccess: () => {
             toast.success('Método de pago creado.');
@@ -75,6 +78,24 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
       <h2 className="text-lg font-semibold text-ink">
         {isEdit ? 'Editar método de pago' : 'Nuevo método de pago'}
       </h2>
+
+      {/* La cuenta a la que pertenece el método. Inmutable en edición (el backend no permite
+          moverlo de cuenta) → se muestra deshabilitado. */}
+      <Select
+        label="Cuenta"
+        id="pm-account"
+        value={accountId}
+        onChange={(e) => setAccountId(e.target.value)}
+        required
+        disabled={isEdit || isPending}
+      >
+        <option value="">Elegí una cuenta</option>
+        {accounts?.map((account) => (
+          <option key={account.id} value={account.id}>
+            {account.name} ({account.currency})
+          </option>
+        ))}
+      </Select>
 
       <Input
         label="Nombre"

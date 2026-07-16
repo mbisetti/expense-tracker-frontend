@@ -10,14 +10,18 @@ import {
 import { transactionErrorMessage } from './errorMessages';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { DateField } from '../../components/ui/DateField';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
+import { numberToAmountDisplay, parseAmountInput } from '../../lib/money';
 import type { TransactionListItem, TransactionType } from './api';
 
 type TransactionFormProps = {
   transaction?: TransactionListItem;
   onClose: () => void;
+  /** Tipo fijado desde afuera (selector de movimiento de la página): oculta el Select de Tipo. */
+  lockedType?: TransactionType;
 };
 
 // Fecha local, no UTC — toISOString() adelanta un día pasadas las 21:00 en UTC-3
@@ -28,13 +32,13 @@ function todayLocal(): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
-export function TransactionForm({ transaction, onClose }: TransactionFormProps) {
+export function TransactionForm({ transaction, onClose, lockedType }: TransactionFormProps) {
   const isEdit = transaction !== undefined;
   const toast = useToast();
 
   const [accountId, setAccountId] = useState(transaction?.accountId ?? '');
-  const [type, setType] = useState<TransactionType>(transaction?.type ?? 'EXPENSE');
-  const [amount, setAmount] = useState(transaction ? String(transaction.amount) : '');
+  const [type, setType] = useState<TransactionType>(transaction?.type ?? lockedType ?? 'EXPENSE');
+  const [amount, setAmount] = useState(transaction ? numberToAmountDisplay(transaction.amount) : '');
   const [date, setDate] = useState(transaction?.date ?? todayLocal());
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? '');
   const [paymentMethodId, setPaymentMethodId] = useState(transaction?.paymentMethodId ?? '');
@@ -42,7 +46,9 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
 
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
-  const { data: paymentMethods } = usePaymentMethods();
+  // Los métodos de pago se filtran por la cuenta elegida (Sprint 20 #6): cada método
+  // pertenece a una cuenta.
+  const { data: paymentMethods } = usePaymentMethods(accountId || undefined);
 
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
@@ -59,7 +65,7 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
       // Solo campos que cambiaron: evita re-validaciones innecesarias del backend.
       // Vaciar un campo no se puede expresar en el PATCH (ausente = sin cambio).
       const changes: UpdateTransactionInput = {};
-      if (Number(amount) !== transaction.amount) changes.amount = Number(amount);
+      if (parseAmountInput(amount) !== transaction.amount) changes.amount = parseAmountInput(amount);
       if (date !== transaction.date) changes.date = date;
       if (categoryId && categoryId !== transaction.categoryId) changes.categoryId = categoryId;
       if (paymentMethodId && paymentMethodId !== transaction.paymentMethodId)
@@ -86,7 +92,7 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
         {
           accountId,
           type,
-          amount: Number(amount),
+          amount: parseAmountInput(amount),
           date,
           categoryId: categoryId || undefined,
           paymentMethodId: paymentMethodId || undefined,
@@ -119,7 +125,10 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
         label="Cuenta"
         id="tx-account"
         value={accountId}
-        onChange={(e) => setAccountId(e.target.value)}
+        onChange={(e) => {
+          setAccountId(e.target.value);
+          setPaymentMethodId(''); // el método depende de la cuenta → se resetea al cambiarla
+        }}
         required
         disabled={isEdit || isPending}
       >
@@ -131,25 +140,27 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
         ))}
       </Select>
 
-      <Select
-        label="Tipo"
-        id="tx-type"
-        value={type}
-        onChange={(e) => setType(e.target.value as TransactionType)}
-        disabled={isEdit || isPending}
-      >
-        <option value="EXPENSE">Gasto</option>
-        <option value="INCOME">Ingreso</option>
-      </Select>
+      {/* Con lockedType (creación desde el selector de movimiento) el tipo ya está fijado
+          afuera → no se muestra el Select para no duplicar la elección. En edición sí se
+          muestra (deshabilitado: el tipo es inmutable). */}
+      {!lockedType && (
+        <Select
+          label="Tipo"
+          id="tx-type"
+          value={type}
+          onChange={(e) => setType(e.target.value as TransactionType)}
+          disabled={isEdit || isPending}
+        >
+          <option value="EXPENSE">Gasto</option>
+          <option value="INCOME">Ingreso</option>
+        </Select>
+      )}
 
-      <Input
+      <MoneyInput
         label={`Monto${selectedAccount ? ` (${selectedAccount.currency})` : ''}`}
         id="tx-amount"
-        type="number"
-        min="0.01"
-        step="0.01"
         value={amount}
-        onChange={(e) => setAmount(e.target.value)}
+        onValueChange={setAmount}
         required
         disabled={isPending}
       />
@@ -183,9 +194,11 @@ export function TransactionForm({ transaction, onClose }: TransactionFormProps) 
         id="tx-payment-method"
         value={paymentMethodId}
         onChange={(e) => setPaymentMethodId(e.target.value)}
-        disabled={isPending}
+        disabled={isPending || !accountId}
       >
-        <option value="">Sin método de pago</option>
+        <option value="">
+          {accountId ? 'Sin método de pago' : 'Elegí una cuenta primero'}
+        </option>
         {paymentMethods?.map((pm) => (
           <option key={pm.id} value={pm.id}>
             {pm.name}

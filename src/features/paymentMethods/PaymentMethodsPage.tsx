@@ -3,6 +3,7 @@ import { usePaymentMethods } from './usePaymentMethods';
 import { useDeletePaymentMethod } from './usePaymentMethodMutations';
 import { paymentMethodErrorMessage } from './errorMessages';
 import { PaymentMethodForm } from './PaymentMethodForm';
+import { useAccounts } from '../accounts/useAccounts';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -25,7 +26,10 @@ export function PaymentMethodsPage() {
 
   const toast = useToast();
   const { data: paymentMethods, isPending, isError } = usePaymentMethods();
+  const { data: accounts } = useAccounts();
   const deleteMutation = useDeletePaymentMethod();
+
+  const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—';
 
   const closeForm = () => {
     setFormOpen(false);
@@ -82,6 +86,7 @@ export function PaymentMethodsPage() {
             <thead>
               <tr className="border-b border-line text-left text-muted">
                 <th className="py-2 pr-2 font-medium">Nombre</th>
+                <th className="py-2 pr-2 font-medium">Cuenta</th>
                 <th className="py-2 pr-2 font-medium">Tipo</th>
                 <th className="py-2 pr-2 font-medium">Por defecto</th>
                 <th className="py-2 pr-2 font-medium"></th>
@@ -91,6 +96,7 @@ export function PaymentMethodsPage() {
               {paymentMethods.map((pm) => (
                 <tr key={pm.id} className="border-b border-line">
                   <td className="py-2 pr-2 text-ink">{pm.name}</td>
+                  <td className="py-2 pr-2 text-body">{accountName(pm.accountId)}</td>
                   <td className="py-2 pr-2 text-body">{TYPE_LABELS[pm.type]}</td>
                   <td className="py-2 pr-2 text-body">{pm.isDefault ? '★ Sí' : '—'}</td>
                   <td className="py-2 pr-2">

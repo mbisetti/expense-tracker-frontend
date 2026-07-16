@@ -71,10 +71,8 @@ export function CategoryForm({ category, onClose }: CategoryFormProps) {
     <form
       onSubmit={handleSubmit}
       aria-label={isEdit ? 'Editar categoría' : 'Nueva categoría'}
-      className="flex flex-col gap-3 rounded-md border border-line bg-surface-elevated p-4"
+      className="flex flex-col gap-3"
     >
-      <h2 className="text-lg font-semibold text-ink">{isEdit ? 'Editar categoría' : 'Nueva categoría'}</h2>
-
       <Input
         label="Nombre"
         id="cat-name"

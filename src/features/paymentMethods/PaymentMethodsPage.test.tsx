@@ -10,6 +10,7 @@ import { jsonResponse } from '../../test/mockResponse';
 const visa: PaymentMethod = {
   id: 'pm-1',
   userId: 'user-1',
+  accountId: 'acc-1',
   name: 'Tarjeta Visa',
   type: 'CREDIT',
   isDefault: true,
@@ -19,11 +20,26 @@ const visa: PaymentMethod = {
 const cash: PaymentMethod = {
   id: 'pm-2',
   userId: 'user-1',
+  accountId: 'acc-1',
   name: 'Plata en mano',
   type: 'CASH',
   isDefault: false,
   createdAt: '2026-07-01T00:00:00',
 };
+
+const accounts = [
+  {
+    id: 'acc-1',
+    name: 'Efectivo',
+    type: 'CASH',
+    currency: 'ARS',
+    balance: 0,
+    isInformal: false,
+    createdAt: '2026-07-01T00:00:00',
+    statementCloseDay: null,
+    paymentDueDay: null,
+  },
+];
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -58,10 +74,13 @@ afterEach(() => {
 });
 
 describe('PaymentMethodsPage', () => {
-  it('lista con badge de default solo en el método por defecto', async () => {
+  it('lista con badge de default y la cuenta a la que pertenece', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(() => jsonResponse(200, [visa, cash])),
+      vi.fn((url: string) => {
+        if (url.includes('/accounts')) return jsonResponse(200, accounts);
+        return jsonResponse(200, [visa, cash]);
+      }),
     );
 
     renderPage();
@@ -69,31 +88,35 @@ describe('PaymentMethodsPage', () => {
     expect(await screen.findByText('Tarjeta Visa')).toBeInTheDocument();
     expect(rowOf('Tarjeta Visa').getByText('★ Sí')).toBeInTheDocument();
     expect(rowOf('Plata en mano').getByText('—')).toBeInTheDocument();
+    // la columna Cuenta resuelve el nombre a partir del accountId
+    expect(rowOf('Tarjeta Visa').getByText('Efectivo')).toBeInTheDocument();
   });
 
-  it('crear manda POST con name/type/isDefault y refresca la lista', async () => {
+  it('crear manda POST con accountId/name/type/isDefault y refresca la lista', async () => {
     let created = false;
     let postBody: Record<string, unknown> | null = null;
     vi.stubGlobal(
       'fetch',
-      vi.fn((_url: string, options?: RequestInit) => {
+      vi.fn((url: string, options?: RequestInit) => {
         if (options?.method === 'POST') {
           created = true;
           postBody = JSON.parse(options.body as string);
           return jsonResponse(201, { ...cash, id: 'pm-new', name: postBody!.name });
         }
+        if (url.includes('/accounts')) return jsonResponse(200, accounts);
         return jsonResponse(200, created ? [visa, { ...cash, id: 'pm-new', name: 'MP' }] : [visa]);
       }),
     );
 
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Nuevo método de pago' }));
+    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-1' } });
     fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'MP' } });
     fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'DIGITAL_WALLET' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(await screen.findByText('MP')).toBeInTheDocument();
-    expect(postBody).toEqual({ name: 'MP', type: 'DIGITAL_WALLET', isDefault: false });
+    expect(postBody).toEqual({ accountId: 'acc-1', name: 'MP', type: 'DIGITAL_WALLET', isDefault: false });
   });
 
   it('default único: marcar default en edición manda PATCH {isDefault:true} y el badge se mueve', async () => {
@@ -108,6 +131,7 @@ describe('PaymentMethodsPage', () => {
           expect(url).toContain('/payment-methods/pm-2');
           return jsonResponse(200, { ...cash, isDefault: true });
         }
+        if (url.includes('/accounts')) return jsonResponse(200, accounts);
         // El backend garantiza default único: al re-fetchear, visa ya no es default
         const list = patched
           ? [{ ...visa, isDefault: false }, { ...cash, isDefault: true }]
@@ -133,11 +157,12 @@ describe('PaymentMethodsPage', () => {
     let deleted = false;
     vi.stubGlobal(
       'fetch',
-      vi.fn((_url: string, options?: RequestInit) => {
+      vi.fn((url: string, options?: RequestInit) => {
         if (options?.method === 'DELETE') {
           deleted = true;
           return Promise.resolve({ ok: true, status: 204 } as Response);
         }
+        if (url.includes('/accounts')) return jsonResponse(200, accounts);
         return jsonResponse(200, deleted ? [visa] : [visa, cash]);
       }),
     );
@@ -157,8 +182,9 @@ describe('PaymentMethodsPage', () => {
   it('cancelar el ConfirmDialog no borra el método de pago', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn((_url: string, options?: RequestInit) => {
+      vi.fn((url: string, options?: RequestInit) => {
         if (options?.method === 'DELETE') throw new Error('no debería llamarse');
+        if (url.includes('/accounts')) return jsonResponse(200, accounts);
         return jsonResponse(200, [visa, cash]);
       }),
     );
@@ -175,10 +201,11 @@ describe('PaymentMethodsPage', () => {
   it('error del server al borrar muestra un toast y la fila sigue con Editar/Borrar', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn((_url: string, options?: RequestInit) => {
+      vi.fn((url: string, options?: RequestInit) => {
         if (options?.method === 'DELETE') {
           return jsonResponse(404, { error: 'PAYMENT_METHOD_NOT_FOUND', message: 'gone' });
         }
+        if (url.includes('/accounts')) return jsonResponse(200, accounts);
         return jsonResponse(200, [cash]);
       }),
     );

@@ -6,7 +6,11 @@ import { queryClient } from './lib/queryClient'
 import { AuthProvider } from './features/auth/AuthContext'
 import { ToastProvider } from './components/ui/ToastProvider'
 import { AppRouter } from './router/AppRouter'
+import { applyStoredTheme } from './lib/useTheme'
 import './index.css'
+
+// Antes del render: aplica el tema guardado (si hay) para no flashear el del sistema.
+applyStoredTheme()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

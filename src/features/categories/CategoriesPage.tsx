@@ -4,6 +4,7 @@ import { useDeleteCategory } from './useCategoryMutations';
 import { categoryErrorMessage } from './errorMessages';
 import { CategoryForm } from './CategoryForm';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -24,6 +25,11 @@ export function CategoriesPage() {
   const toast = useToast();
   const { data: categories, isPending, isError } = useCategories();
   const deleteMutation = useDeleteCategory();
+
+  const openCreate = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
 
   const closeForm = () => {
     setFormOpen(false);
@@ -48,19 +54,9 @@ export function CategoriesPage() {
     <section className="flex flex-col gap-4 text-left">
       <h1>Categorías</h1>
 
-      {!formOpen && (
-        <Button type="button" onClick={() => setFormOpen(true)} className="self-start">
-          Nueva categoría
-        </Button>
-      )}
-
-      {formOpen && (
-        <CategoryForm
-          key={editing?.id ?? 'new'}
-          category={editing ?? undefined}
-          onClose={closeForm}
-        />
-      )}
+      <Button type="button" onClick={openCreate} className="self-start">
+        Nueva categoría
+      </Button>
 
       {isPending && <Skeleton variant="list" rows={4} />}
 
@@ -128,6 +124,14 @@ export function CategoriesPage() {
           </table>
         </div>
       )}
+
+      <Modal
+        open={formOpen}
+        onClose={closeForm}
+        title={editing ? 'Editar categoría' : 'Nueva categoría'}
+      >
+        <CategoryForm key={editing?.id ?? 'new'} category={editing ?? undefined} onClose={closeForm} />
+      </Modal>
 
       <ConfirmDialog
         open={confirmingDeleteId !== null}
