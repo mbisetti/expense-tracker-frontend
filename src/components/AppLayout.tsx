@@ -48,7 +48,7 @@ export function AppLayout() {
       <header className="border-b border-line bg-surface-elevated">
         <nav
           aria-label="Principal"
-          className="mx-auto flex max-w-4xl items-center gap-1 px-4 py-2"
+          className="mx-auto flex max-w-5xl items-center gap-1 px-4 py-2"
         >
           {/* Hamburger: sólo debajo de `lg` (el header horizontal ya cubre desktop). Abre
               el drawer con las 7 rutas + logout, así ninguna queda huérfana en mobile. */}
@@ -98,7 +98,7 @@ export function AppLayout() {
         </div>
       </Modal>
 
-      <main className="pb-16 md:pb-0">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-16 md:pb-0">
         <Outlet />
       </main>
       <BottomNav />

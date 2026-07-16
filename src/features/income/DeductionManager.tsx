@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/toastContext';
 
 export function DeductionManager({ sourceId }: { sourceId: string }) {
@@ -47,7 +48,7 @@ export function DeductionManager({ sourceId }: { sourceId: string }) {
 
   return (
     <div className="mt-2 flex flex-col gap-2 border-l border-line pl-3">
-      {isPending && <p className="text-sm text-body">Cargando deducciones...</p>}
+      {isPending && <Skeleton variant="list" rows={2} />}
 
       {deductions && deductions.length === 0 && (
         <p className="text-sm text-body">Esta fuente no tiene deducciones.</p>

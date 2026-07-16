@@ -195,16 +195,13 @@
     0 10px 15px -3px rgba(28, 25, 23, 0.1), 0 4px 6px -4px rgba(28, 25, 23, 0.06);
 }
 
+/* #root: full-width y sin bordes/centrado (era cruft del template que encajonaba la
+   landing en 1126px con líneas laterales). El ancho del contenido de la APP lo da
+   ahora AppLayout (max-w en header + main); la landing pública va full-bleed. */
 #root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
 }
 
 body {
