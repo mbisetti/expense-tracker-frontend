@@ -11,6 +11,8 @@ type ModalProps = {
   className?: string;
   /** Bloquea Esc, click en backdrop y el botón X (p.ej. mientras una request está en curso). */
   disableClose?: boolean;
+  /** 'center' (default) = diálogo centrado; 'left' = drawer lateral que se desliza de izq a der. */
+  side?: 'center' | 'left';
 };
 
 const FOCUSABLE_SELECTOR =
@@ -27,6 +29,7 @@ export function Modal({
   footer,
   className,
   disableClose = false,
+  side = 'center',
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -115,8 +118,16 @@ export function Modal({
     onClose();
   }
 
+  const isSide = side === 'left';
+
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div
+      className={
+        isSide
+          ? 'fixed inset-0 z-50 flex items-stretch justify-start'
+          : 'fixed inset-0 z-50 flex items-center justify-center p-4'
+      }
+    >
       <div
         aria-hidden="true"
         onClick={handleDismiss}
@@ -129,7 +140,9 @@ export function Modal({
         aria-labelledby={titleId}
         tabIndex={-1}
         className={[
-          'relative z-10 flex w-full max-w-md max-h-[85vh] flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-surface-elevated p-6 shadow-lg',
+          isSide
+            ? 'relative z-10 flex h-full w-full max-w-xs flex-col gap-1 overflow-y-auto rounded-r-lg border-r border-line bg-surface-elevated p-6 shadow-lg animate-drawer-in'
+            : 'relative z-10 flex w-full max-w-md max-h-[85vh] flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-surface-elevated p-6 shadow-lg',
           'transition-all duration-200 ease-out motion-reduce:transition-none',
           className ?? '',
         ]

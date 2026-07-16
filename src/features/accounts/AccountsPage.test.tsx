@@ -98,7 +98,8 @@ describe('AccountsPage', () => {
     );
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Acciones de Billetera' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Borrar' }));
     fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Borrar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -124,7 +125,8 @@ describe('AccountsPage', () => {
     );
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Acciones de Billetera' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Borrar' }));
     fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Borrar' }));
 
     expect(
@@ -144,7 +146,8 @@ describe('AccountsPage', () => {
     );
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Acciones de Billetera' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Borrar' }));
     fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Cancelar' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();

@@ -108,6 +108,42 @@ export function MenuIcon(props: IconProps) {
   );
 }
 
+// Logo de marca (Manguitos): mango minimalista. Colores de IDENTIDAD hardcodeados a
+// propósito (dorado + hoja verde) — excepción admitida a la regla de tokens, igual que el
+// color de una categoría es dato: un logo tiene su color propio, no es chrome tokenizado.
+export function MangoIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden focusable={false} {...props}>
+      <path
+        d="M11.9 5.1c1-.8 2.2-1.3 3.5-1.2-.1 1-.5 1.9-1.2 2.6 1.7 1.6 2.6 3.9 2.5 6.5-.2 4.7-3.5 8.5-7.2 8.5-4.3 0-7.6-3.5-7.6-7.9 0-4.1 2.9-8.3 6.8-9 1.2-.2 2.3 0 3.2.5Z"
+        fill="#F59E0B"
+      />
+      <path
+        d="M18 3.7c.3-.9.3-1.8.1-2.5-.9.3-1.7 1-2.1 1.9.7 0 1.4.2 2 .6Z"
+        fill="#34D399"
+      />
+    </svg>
+  );
+}
+
+export function PencilIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+export function UserIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
 export function SunIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>

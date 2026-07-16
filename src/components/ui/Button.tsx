@@ -15,10 +15,14 @@ type ButtonProps = {
 // El acento de marca (índigo) es SOLO chrome interactivo (§1.5): primary lo usa acá.
 // danger usa `expense` — única excepción admitida a la regla chrome↔dato, porque acá el
 // semántico no describe un monto/estado financiero sino la severidad de la acción (borrar).
+//
+// Hover con `brand-bg` (tinte de marca, definido en ambos temas) en vez de `surface-sunken`:
+// en dark, surface-sunken es MÁS oscuro que el fondo del botón → el hover lo oscurecía y
+// perdía contraste (reporte 8a de Marko). brand-bg es un realce sutil y legible en light y dark.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'bg-brand text-on-brand hover:bg-brand-hover',
-  secondary: 'border border-line bg-surface-elevated text-ink hover:bg-surface-sunken',
-  ghost: 'text-ink hover:bg-surface-sunken',
+  secondary: 'border border-line bg-surface-elevated text-ink hover:border-brand hover:bg-brand-bg',
+  ghost: 'text-ink hover:bg-brand-bg',
   danger: 'bg-expense text-on-brand hover:brightness-90',
 };
 

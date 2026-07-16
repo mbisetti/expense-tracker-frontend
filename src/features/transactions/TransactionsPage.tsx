@@ -14,11 +14,11 @@ import { DateField } from '../../components/ui/DateField';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { Amount } from '../../components/ui/Amount';
-import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../components/ui/toastContext';
+import { formatDate, useDateFormat } from '../../lib/dateFormat';
 import type { TransactionFilters, TransactionListItem, TransactionType } from './api';
 import type { TransferListItem } from '../transfers/api';
 
@@ -57,6 +57,7 @@ export function TransactionsPage() {
   );
 
   const toast = useToast();
+  const { pref: dateFmt } = useDateFormat();
   const deleteTx = useDeleteTransaction();
   const deleteTransfer = useDeleteTransfer();
 
@@ -328,7 +329,9 @@ export function TransactionsPage() {
                 {pageRows.map((row) =>
                   row.kind === 'tx' ? (
                     <tr key={`tx-${row.item.id}`} className="border-b border-line">
-                      <td className="py-2 pr-2 tabular-nums text-ink">{row.item.date}</td>
+                      <td className="py-2 pr-2 tabular-nums text-ink">
+                        {formatDate(row.item.date, dateFmt)}
+                      </td>
                       <td className="py-2 pr-2 text-body">
                         {row.item.type === 'INCOME' ? 'Ingreso' : 'Gasto'}
                       </td>
@@ -361,10 +364,10 @@ export function TransactionsPage() {
                     </tr>
                   ) : (
                     <tr key={`tr-${row.item.id}`} className="border-b border-line">
-                      <td className="py-2 pr-2 tabular-nums text-ink">{row.item.date}</td>
-                      <td className="py-2 pr-2">
-                        <Badge status="info" label="Entre cuentas" />
+                      <td className="py-2 pr-2 tabular-nums text-ink">
+                        {formatDate(row.item.date, dateFmt)}
                       </td>
+                      <td className="py-2 pr-2 text-body">Entre cuentas</td>
                       <td className="py-2 pr-2 text-ink">{row.item.description ?? '—'}</td>
                       <td className="py-2 pr-2 text-body">—</td>
                       <td className="py-2 pr-2 text-body">
