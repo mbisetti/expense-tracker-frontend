@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { AccountsPage } from './AccountsPage';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { jsonResponse, ok } from '../../test/mockResponse';
 
 const account = {
@@ -65,12 +66,18 @@ function renderPage() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <MemoryRouter>
-          <AccountsPage />
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter>
+            <AccountsPage />
+          </MemoryRouter>
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
+}
+
+function deleteDialog() {
+  return screen.getByRole('dialog', { name: 'Borrar cuenta' });
 }
 
 afterEach(() => {
@@ -78,7 +85,7 @@ afterEach(() => {
 });
 
 describe('AccountsPage', () => {
-  it('borrar cuenta con transacciones: 409 muestra mensaje y la cuenta sigue listada', async () => {
+  it('borrar cuenta con transacciones: 409 muestra un toast de error y la cuenta sigue listada', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string, options?: RequestInit) => {
@@ -92,7 +99,7 @@ describe('AccountsPage', () => {
 
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sí' }));
+    fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Borrar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'No se puede borrar: la cuenta tiene transacciones.',
@@ -118,14 +125,30 @@ describe('AccountsPage', () => {
 
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sí' }));
+    fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Borrar' }));
 
     expect(
-      await screen.findByText(
-        'Todavía no tenés cuentas. Creá la primera para empezar a registrar transacciones.',
-      ),
+      await screen.findByText('Todavía no tenés cuentas.'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('cancelar el ConfirmDialog no borra la cuenta', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, options?: RequestInit) => {
+        if (options?.method === 'DELETE') throw new Error('no debería llamarse');
+        if (url.includes('/accounts')) return jsonResponse(200, [account]);
+        return jsonResponse(200, []);
+      }),
+    );
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
+    fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Billetera')).toBeInTheDocument();
   });
 
   it('cuenta informal muestra la insignia "Informal" y la formal no', async () => {
@@ -165,8 +188,9 @@ describe('AccountsPage', () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Nueva cuenta' }));
-    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Caja fuerte' } });
-    fireEvent.change(screen.getByLabelText('Moneda (código de 3 letras)'), {
+    // Nombre/Moneda son required: el label agrega un "*" (aria-hidden) → exact:false.
+    fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'Caja fuerte' } });
+    fireEvent.change(screen.getByLabelText('Moneda (código de 3 letras)', { exact: false }), {
       target: { value: 'USD' },
     });
     fireEvent.click(screen.getByLabelText(/Cuenta informal/));

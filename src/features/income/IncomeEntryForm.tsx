@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Card } from '../../components/Card';
+import { Card } from '../../components/ui/Card';
+import { Select } from '../../components/ui/Select';
+import { Input } from '../../components/ui/Input';
+import { DateField } from '../../components/ui/DateField';
+import { Button } from '../../components/ui/Button';
+import { Amount } from '../../components/ui/Amount';
+import { useToast } from '../../components/ui/toastContext';
 import { formatMoney } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { useIncomeSources } from './useIncomeSources';
@@ -13,6 +19,7 @@ function todayIso(): string {
 }
 
 export function IncomeEntryForm() {
+  const toast = useToast();
   const { data: sources } = useIncomeSources();
   const { data: accounts } = useAccounts();
   const mutation = useCreateIncomeEntry();
@@ -35,6 +42,7 @@ export function IncomeEntryForm() {
   );
 
   // al cambiar de fuente (o al cargar sus deducciones) se tildan todas las activas
+  // (lint set-state-in-effect pre-existente — no tocado en esta migración, ver reporte S19 B3)
   useEffect(() => {
     setCheckedIds(new Set(activeDeductions.map((d) => d.id)));
   }, [activeDeductions]);
@@ -67,12 +75,15 @@ export function IncomeEntryForm() {
         notes: notes || undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          const balanceCurrency = selectedAccount?.currency ?? '';
+          toast.success(`Ingreso registrado. Nuevo balance: ${formatMoney(data.accountBalance, balanceCurrency)}`);
           setGrossAmount('');
           setNotes('');
           setOverrideEnabled(false);
           setNetOverride('');
         },
+        onError: (error) => toast.error(incomeErrorMessage(error)),
       },
     );
   };
@@ -84,11 +95,11 @@ export function IncomeEntryForm() {
       <h2>Registrar ingreso</h2>
 
       {activeSources.length === 0 ? (
-        <p>Creá una fuente de ingreso activa para registrar ingresos.</p>
+        <p className="text-body">Creá una fuente de ingreso activa para registrar ingresos.</p>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="entry-source">Fuente</label>
-          <select
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <Select
+            label="Fuente"
             id="entry-source"
             value={incomeSourceId}
             onChange={(e) => setIncomeSourceId(e.target.value)}
@@ -101,10 +112,10 @@ export function IncomeEntryForm() {
                 {source.name} ({source.currency})
               </option>
             ))}
-          </select>
+          </Select>
 
-          <label htmlFor="entry-account">Cuenta destino</label>
-          <select
+          <Select
+            label="Cuenta destino"
             id="entry-account"
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
@@ -117,10 +128,10 @@ export function IncomeEntryForm() {
                 {account.name} ({account.currency})
               </option>
             ))}
-          </select>
+          </Select>
 
-          <label htmlFor="entry-gross">Monto bruto</label>
-          <input
+          <Input
+            label="Monto bruto"
             id="entry-gross"
             type="number"
             min="0.01"
@@ -132,23 +143,24 @@ export function IncomeEntryForm() {
           />
 
           {activeDeductions.length > 0 && (
-            <fieldset className="border border-line rounded p-2 my-2">
-              <legend className="text-sm">Deducciones</legend>
+            <fieldset className="flex flex-col gap-1 rounded-sm border border-line p-3">
+              <legend className="px-1 text-sm text-ink">Deducciones</legend>
               {activeDeductions.map((d) => {
                 const line = preview.lines.find((l) => l.name === d.name);
                 return (
-                  <label key={d.id} className="flex justify-between items-center gap-2 text-sm py-1">
+                  <label key={d.id} className="flex items-center justify-between gap-2 py-1 text-sm">
                     <span className="flex items-center gap-2">
                       <input
                         type="checkbox"
                         checked={checkedIds.has(d.id)}
                         onChange={() => toggle(d.id)}
                         disabled={mutation.isPending}
+                        className="h-5 w-5 rounded-sm border border-line accent-brand"
                       />
                       {d.name} ({d.type === 'PERCENTAGE' ? `${d.value}%` : formatMoney(d.value, currency)})
                     </span>
                     {checkedIds.has(d.id) && line && (
-                      <span className="text-expense tabular-nums">
+                      <span className="tabular-nums text-expense">
                         −{formatMoney(line.appliedAmount, currency)}
                       </span>
                     )}
@@ -158,50 +170,47 @@ export function IncomeEntryForm() {
             </fieldset>
           )}
 
-          <label className="flex items-center gap-2 text-sm my-1">
+          <label className="flex items-center gap-2 text-sm text-ink">
             <input
               type="checkbox"
               checked={overrideEnabled}
               onChange={(e) => setOverrideEnabled(e.target.checked)}
               disabled={mutation.isPending}
+              className="h-5 w-5 rounded-sm border border-line accent-brand"
             />
             Pisar el neto manualmente
           </label>
           {overrideEnabled && (
-            <>
-              <label htmlFor="entry-net-override">Neto manual</label>
-              <input
-                id="entry-net-override"
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={netOverride}
-                onChange={(e) => setNetOverride(e.target.value)}
-                disabled={mutation.isPending}
-              />
-            </>
+            <Input
+              label="Neto manual"
+              id="entry-net-override"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={netOverride}
+              onChange={(e) => setNetOverride(e.target.value)}
+              disabled={mutation.isPending}
+            />
           )}
 
           {grossNumber > 0 && (
-            <p className="text-body text-sm my-1">
-              Neto a acreditar:{' '}
-              <span className="text-income tabular-nums">{formatMoney(shownNet, currency)}</span>
+            <p className="text-sm text-body">
+              Neto a acreditar: <Amount amount={shownNet} currency={currency} tone="income" size="sm" />
               {overrideEnabled && ' (manual)'}
             </p>
           )}
 
-          <label htmlFor="entry-date">Fecha</label>
-          <input
+          <DateField
+            label="Fecha"
             id="entry-date"
-            type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
             disabled={mutation.isPending}
           />
 
-          <label htmlFor="entry-notes">Descripción (opcional)</label>
-          <input
+          <Input
+            label="Descripción (opcional)"
             id="entry-notes"
             type="text"
             maxLength={500}
@@ -210,18 +219,9 @@ export function IncomeEntryForm() {
             disabled={mutation.isPending}
           />
 
-          {mutation.isError && <p role="alert">{incomeErrorMessage(mutation.error)}</p>}
-
-          {mutation.isSuccess && selectedAccount && (
-            <p className="text-income">
-              Ingreso registrado. Nuevo balance:{' '}
-              {formatMoney(mutation.data.accountBalance, selectedAccount.currency)}
-            </p>
-          )}
-
-          <button type="submit" disabled={mutation.isPending}>
-            {mutation.isPending ? 'Guardando...' : 'Guardar'}
-          </button>
+          <Button type="submit" loading={mutation.isPending} className="self-start">
+            Guardar
+          </Button>
         </form>
       )}
     </Card>

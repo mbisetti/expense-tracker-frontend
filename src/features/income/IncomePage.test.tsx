@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { IncomePage } from './IncomePage';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
 
 const activeSource = {
@@ -94,9 +95,11 @@ function renderPage() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <MemoryRouter>
-          <IncomePage />
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter>
+            <IncomePage />
+          </MemoryRouter>
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -127,7 +130,7 @@ describe('IncomePage', () => {
     expect(await screen.findByText('Freelance viejo')).toBeInTheDocument();
     expect(screen.getByText('(inactiva)')).toBeInTheDocument();
 
-    const sourceSelect = screen.getByLabelText('Fuente') as HTMLSelectElement;
+    const sourceSelect = screen.getByLabelText('Fuente', { exact: false }) as HTMLSelectElement;
     const optionLabels = Array.from(sourceSelect.options).map((o) => o.textContent);
     expect(optionLabels.some((label) => label?.includes('Freelance viejo'))).toBe(false);
     expect(optionLabels.some((label) => label?.includes('Sueldo'))).toBe(true);
@@ -144,9 +147,16 @@ describe('IncomePage', () => {
     renderPage();
 
     // el select existe recién cuando las fuentes cargaron — esperar el label, no el heading
-    fireEvent.change(await screen.findByLabelText('Fuente'), { target: { value: 'src1' } });
-    fireEvent.change(screen.getByLabelText('Cuenta destino'), { target: { value: 'acc1' } });
-    fireEvent.change(screen.getByLabelText('Monto bruto'), { target: { value: '10000' } });
+    // (Fuente/Cuenta destino/Monto bruto son required: el label agrega "*" → exact:false)
+    fireEvent.change(await screen.findByLabelText('Fuente', { exact: false }), {
+      target: { value: 'src1' },
+    });
+    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
+      target: { value: 'acc1' },
+    });
+    fireEvent.change(screen.getByLabelText('Monto bruto', { exact: false }), {
+      target: { value: '10000' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(await screen.findByText(/Ingreso registrado/)).toBeInTheDocument();
@@ -175,9 +185,9 @@ describe('IncomePage', () => {
     });
     renderPage();
 
-    expect(
-      await screen.findByText('Todavía no tenés fuentes de ingreso. Creá una para registrar ingresos.'),
-    ).toBeInTheDocument();
+    // EmptyState separa título (h3) y mensaje (p) en vez de una única oración.
+    expect(await screen.findByText('Todavía no tenés fuentes de ingreso.')).toBeInTheDocument();
+    expect(screen.getByText('Creá una para registrar ingresos.')).toBeInTheDocument();
     expect(await screen.findByText('Todavía no registraste ingresos.')).toBeInTheDocument();
   });
 });

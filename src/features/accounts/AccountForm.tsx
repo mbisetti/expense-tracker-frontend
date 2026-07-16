@@ -6,6 +6,10 @@ import {
   type UpdateAccountInput,
 } from './useAccountMutations';
 import { accountErrorMessage } from './errorMessages';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { Button } from '../../components/ui/Button';
+import { useToast } from '../../components/ui/toastContext';
 import type { Account, AccountType } from './api';
 
 type AccountFormProps = {
@@ -15,6 +19,7 @@ type AccountFormProps = {
 
 export function AccountForm({ account, onClose }: AccountFormProps) {
   const isEdit = account !== undefined;
+  const toast = useToast();
 
   const [name, setName] = useState(account?.name ?? '');
   const [type, setType] = useState<AccountType>(account?.type ?? 'CASH');
@@ -63,7 +68,16 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
         onClose();
         return;
       }
-      updateMutation.mutate({ id: account.id, changes }, { onSuccess: onClose });
+      updateMutation.mutate(
+        { id: account.id, changes },
+        {
+          onSuccess: () => {
+            toast.success('Cuenta actualizada.');
+            onClose();
+          },
+          onError: (error) => toast.error(accountErrorMessage(error)),
+        },
+      );
     } else {
       const input: CreateAccountInput = { name, type, currency: normalizedCurrency, isInformal };
       // Atómico: en alta, solo se manda el par completo; si falta uno, no se manda ninguno.
@@ -71,18 +85,28 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
         input.statementCloseDay = closeDayNum;
         input.paymentDueDay = dueDayNum;
       }
-      createMutation.mutate(input, { onSuccess: onClose });
+      createMutation.mutate(input, {
+        onSuccess: () => {
+          toast.success('Cuenta creada.');
+          onClose();
+        },
+        onError: (error) => toast.error(accountErrorMessage(error)),
+      });
     }
   };
 
   const isPending = mutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit} aria-label={isEdit ? 'Editar cuenta' : 'Nueva cuenta'}>
-      <h2>{isEdit ? 'Editar cuenta' : 'Nueva cuenta'}</h2>
+    <form
+      onSubmit={handleSubmit}
+      aria-label={isEdit ? 'Editar cuenta' : 'Nueva cuenta'}
+      className="flex flex-col gap-3 rounded-md border border-line bg-surface-elevated p-4"
+    >
+      <h2 className="text-lg font-semibold text-ink">{isEdit ? 'Editar cuenta' : 'Nueva cuenta'}</h2>
 
-      <label htmlFor="acc-name">Nombre</label>
-      <input
+      <Input
+        label="Nombre"
         id="acc-name"
         type="text"
         value={name}
@@ -92,8 +116,8 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
         disabled={isPending}
       />
 
-      <label htmlFor="acc-type">Tipo</label>
-      <select
+      <Select
+        label="Tipo"
         id="acc-type"
         value={type}
         onChange={(e) => setType(e.target.value as AccountType)}
@@ -102,10 +126,10 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
         <option value="CASH">Efectivo</option>
         <option value="DEBIT">Débito</option>
         <option value="CREDIT">Crédito</option>
-      </select>
+      </Select>
 
-      <label htmlFor="acc-currency">Moneda (código de 3 letras)</label>
-      <input
+      <Input
+        label="Moneda (código de 3 letras)"
         id="acc-currency"
         type="text"
         value={currency}
@@ -123,8 +147,8 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
           {/* required para CREDIT: fuerza el par completo (o los dos o ninguno) y evita
               tanto el PATCH parcial como el "blanquear = no-op silencioso". Una CREDIT sin
               ciclo es válida en el backend pero no se crea desde el form (decisión de UI). */}
-          <label htmlFor="acc-statement-close-day">Día de cierre (1-28)</label>
-          <input
+          <Input
+            label="Día de cierre (1-28)"
             id="acc-statement-close-day"
             type="number"
             min={1}
@@ -135,8 +159,8 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
             disabled={isPending}
           />
 
-          <label htmlFor="acc-payment-due-day">Día de vencimiento (1-28)</label>
-          <input
+          <Input
+            label="Día de vencimiento (1-28)"
             id="acc-payment-due-day"
             type="number"
             min={1}
@@ -149,25 +173,26 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
         </>
       )}
 
-      <label htmlFor="acc-informal">
+      <label htmlFor="acc-informal" className="flex items-center gap-2 text-sm text-ink">
         <input
           id="acc-informal"
           type="checkbox"
           checked={isInformal}
           onChange={(e) => setIsInformal(e.target.checked)}
           disabled={isPending}
-        />{' '}
+          className="h-5 w-5 rounded-sm border border-line accent-brand"
+        />
         Cuenta informal (efectivo, cripto — fuera del banco)
       </label>
 
-      {mutation.isError && <p role="alert">{accountErrorMessage(mutation.error)}</p>}
-
-      <button type="submit" disabled={isPending}>
-        {isPending ? 'Guardando...' : 'Guardar'}
-      </button>
-      <button type="button" onClick={onClose} disabled={isPending}>
-        Cancelar
-      </button>
+      <div className="flex gap-3">
+        <Button type="submit" loading={isPending}>
+          Guardar
+        </Button>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }

@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { AccountForm } from './AccountForm';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
 import type { Account } from './api';
 
@@ -27,7 +28,9 @@ function renderForm(account?: Account) {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <AccountForm account={account} onClose={() => {}} />
+        <ToastProvider>
+          <AccountForm account={account} onClose={() => {}} />
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -50,8 +53,8 @@ describe('AccountForm', () => {
 
     fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'CREDIT' } });
 
-    expect(screen.getByLabelText('Día de cierre (1-28)')).toBeInTheDocument();
-    expect(screen.getByLabelText('Día de vencimiento (1-28)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Día de cierre (1-28)', { exact: false })).toBeInTheDocument();
+    expect(screen.getByLabelText('Día de vencimiento (1-28)', { exact: false })).toBeInTheDocument();
   });
 
   it('alta de tarjeta con ambos días completos los manda atómicamente', async () => {
@@ -69,13 +72,18 @@ describe('AccountForm', () => {
 
     renderForm();
 
-    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Visa' } });
+    // Nombre/Moneda/día de cierre/día de vencimiento son required: el label del design
+    // system les agrega un "*" visual (aria-hidden), así que el texto exacto del <label>
+    // deja de ser sólo "Nombre" — se matchea con exact:false (mismo criterio que TransactionForm.test.tsx).
+    fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'Visa' } });
     fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'CREDIT' } });
-    fireEvent.change(screen.getByLabelText('Moneda (código de 3 letras)'), {
+    fireEvent.change(screen.getByLabelText('Moneda (código de 3 letras)', { exact: false }), {
       target: { value: 'ARS' },
     });
-    fireEvent.change(screen.getByLabelText('Día de cierre (1-28)'), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Día de vencimiento (1-28)'), { target: { value: '20' } });
+    fireEvent.change(screen.getByLabelText('Día de cierre (1-28)', { exact: false }), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Día de vencimiento (1-28)', { exact: false }), {
+      target: { value: '20' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await vi.waitFor(() => expect(postedBody).toBeDefined());
@@ -89,15 +97,15 @@ describe('AccountForm', () => {
 
     // required fuerza el par completo: el navegador no deja submitear con uno solo,
     // así el form nunca produce un payload parcial ni un "blanquear = no-op".
-    expect(screen.getByLabelText('Día de cierre (1-28)')).toBeRequired();
-    expect(screen.getByLabelText('Día de vencimiento (1-28)')).toBeRequired();
+    expect(screen.getByLabelText('Día de cierre (1-28)', { exact: false })).toBeRequired();
+    expect(screen.getByLabelText('Día de vencimiento (1-28)', { exact: false })).toBeRequired();
   });
 
   it('editar cuenta de crédito ya configurada precarga los días', () => {
     renderForm(creditAccount);
 
-    expect(screen.getByLabelText('Día de cierre (1-28)')).toHaveValue(10);
-    expect(screen.getByLabelText('Día de vencimiento (1-28)')).toHaveValue(20);
+    expect(screen.getByLabelText('Día de cierre (1-28)', { exact: false })).toHaveValue(10);
+    expect(screen.getByLabelText('Día de vencimiento (1-28)', { exact: false })).toHaveValue(20);
   });
 
   it('editar y cambiar un solo día manda LOS DOS juntos (atómico, no PATCH parcial)', async () => {
@@ -115,7 +123,9 @@ describe('AccountForm', () => {
 
     renderForm(creditAccount);
 
-    fireEvent.change(screen.getByLabelText('Día de cierre (1-28)'), { target: { value: '12' } });
+    fireEvent.change(screen.getByLabelText('Día de cierre (1-28)', { exact: false }), {
+      target: { value: '12' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await vi.waitFor(() => expect(patchBody).toBeDefined());
@@ -138,7 +148,7 @@ describe('AccountForm', () => {
 
     renderForm(creditAccount);
 
-    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Visa Gold' } });
+    fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'Visa Gold' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await vi.waitFor(() => expect(patchBody).toBeDefined());

@@ -3,6 +3,11 @@ import { usePaymentMethods } from './usePaymentMethods';
 import { useDeletePaymentMethod } from './usePaymentMethodMutations';
 import { paymentMethodErrorMessage } from './errorMessages';
 import { PaymentMethodForm } from './PaymentMethodForm';
+import { Button } from '../../components/ui/Button';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useToast } from '../../components/ui/toastContext';
 import type { PaymentMethod, PaymentMethodType } from './api';
 
 const TYPE_LABELS: Record<PaymentMethodType, string> = {
@@ -18,6 +23,7 @@ export function PaymentMethodsPage() {
   const [editing, setEditing] = useState<PaymentMethod | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
+  const toast = useToast();
   const { data: paymentMethods, isPending, isError } = usePaymentMethods();
   const deleteMutation = useDeletePaymentMethod();
 
@@ -31,18 +37,23 @@ export function PaymentMethodsPage() {
     setFormOpen(true);
   };
 
-  const confirmDelete = (id: string) => {
-    deleteMutation.mutate(id, { onSettled: () => setConfirmingDeleteId(null) });
+  const confirmDelete = () => {
+    if (!confirmingDeleteId) return;
+    deleteMutation.mutate(confirmingDeleteId, {
+      onSuccess: () => toast.success('Método de pago borrado.'),
+      onError: (error) => toast.error(paymentMethodErrorMessage(error)),
+      onSettled: () => setConfirmingDeleteId(null),
+    });
   };
 
   return (
-    <section>
+    <section className="flex flex-col gap-4 text-left">
       <h1>Métodos de pago</h1>
 
       {!formOpen && (
-        <button type="button" onClick={() => setFormOpen(true)}>
+        <Button type="button" onClick={() => setFormOpen(true)} className="self-start">
           Nuevo método de pago
-        </button>
+        </Button>
       )}
 
       {formOpen && (
@@ -53,69 +64,67 @@ export function PaymentMethodsPage() {
         />
       )}
 
-      {isPending && <p>Cargando métodos de pago...</p>}
+      {isPending && <Skeleton variant="list" rows={4} />}
 
-      {isError && <p role="alert">No pudimos cargar los métodos de pago. Intentá de nuevo.</p>}
-
-      {deleteMutation.isError && (
-        <p role="alert">{paymentMethodErrorMessage(deleteMutation.error)}</p>
+      {isError && (
+        <p role="alert" className="text-expense">
+          No pudimos cargar los métodos de pago. Intentá de nuevo.
+        </p>
       )}
 
       {paymentMethods && paymentMethods.length === 0 && (
-        <p>No hay métodos de pago todavía. Creá el primero.</p>
+        <EmptyState title="No hay métodos de pago todavía." message="Creá el primero." />
       )}
 
       {paymentMethods && paymentMethods.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Por defecto</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {paymentMethods.map((pm) => (
-              <tr key={pm.id}>
-                <td>{pm.name}</td>
-                <td>{TYPE_LABELS[pm.type]}</td>
-                <td>{pm.isDefault ? '★ Sí' : '—'}</td>
-                <td>
-                  {confirmingDeleteId === pm.id ? (
-                    <>
-                      ¿Borrar?{' '}
-                      <button
-                        type="button"
-                        onClick={() => confirmDelete(pm.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        Sí
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingDeleteId(null)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        No
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button type="button" onClick={() => startEdit(pm)}>
-                        Editar
-                      </button>
-                      <button type="button" onClick={() => setConfirmingDeleteId(pm.id)}>
-                        Borrar
-                      </button>
-                    </>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-muted">
+                <th className="py-2 pr-2 font-medium">Nombre</th>
+                <th className="py-2 pr-2 font-medium">Tipo</th>
+                <th className="py-2 pr-2 font-medium">Por defecto</th>
+                <th className="py-2 pr-2 font-medium"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paymentMethods.map((pm) => (
+                <tr key={pm.id} className="border-b border-line">
+                  <td className="py-2 pr-2 text-ink">{pm.name}</td>
+                  <td className="py-2 pr-2 text-body">{TYPE_LABELS[pm.type]}</td>
+                  <td className="py-2 pr-2 text-body">{pm.isDefault ? '★ Sí' : '—'}</td>
+                  <td className="py-2 pr-2">
+                    <div className="flex gap-2">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(pm)}>
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmingDeleteId(pm.id)}
+                      >
+                        Borrar
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
+
+      <ConfirmDialog
+        open={confirmingDeleteId !== null}
+        danger
+        title="Borrar método de pago"
+        message="Esta acción no se puede deshacer."
+        confirmLabel="Borrar"
+        loading={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmingDeleteId(null)}
+      />
     </section>
   );
 }

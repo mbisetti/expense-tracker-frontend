@@ -96,6 +96,18 @@ export function EmptyBoxIcon(props: IconProps) {
   );
 }
 
+// Hamburger del header mobile (§ Sprint 19 B1) — abre el drawer con las rutas que no
+// entran en el BottomNav (4 tabs) ni en el header horizontal (oculto debajo de `lg`).
+export function MenuIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M4 6h16" />
+      <path d="M4 12h16" />
+      <path d="M4 18h16" />
+    </svg>
+  );
+}
+
 export function SpinnerIcon(props: IconProps) {
   const { className, ...rest } = props;
   return (

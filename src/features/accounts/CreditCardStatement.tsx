@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Card } from '../../components/Card';
-import { formatMoney } from '../../lib/money';
+import { Card } from '../../components/ui/Card';
+import { Amount } from '../../components/ui/Amount';
+import { Button } from '../../components/ui/Button';
+import { Skeleton } from '../../components/ui/Skeleton';
 import { useStatement } from './useStatement';
 import type { Account } from './api';
 
@@ -32,52 +34,72 @@ export function CreditCardStatement({ account }: CreditCardStatementProps) {
 
   return (
     <Card>
-      <div className="flex items-baseline justify-between gap-2">
-        <h3>{account.name}</h3>
-        {data && (
-          <span className="text-body text-sm">
-            Ciclo {formatDate(data.periodStart)}–{formatDate(data.periodEnd)}
-            {offset < 0 && ` (hace ${Math.abs(offset)} ciclo${Math.abs(offset) === 1 ? '' : 's'})`}
-          </span>
-        )}
-      </div>
-
-      {isPending && <p>Cargando resumen...</p>}
-
-      {isError && <p role="alert">No pudimos cargar el resumen de la tarjeta. Intentá de nuevo.</p>}
-
-      {data && (
-        <div className="flex flex-col gap-1">
-          <p className="text-body">Consumos del ciclo: {formatMoney(data.totalSpent, data.currency)}</p>
-          <p className="text-body">Pagos: {formatMoney(data.payments, data.currency)}</p>
-          <p className="text-ink">Saldo al cierre: {formatMoney(data.closingBalance, data.currency)}</p>
-          <p className={isPastDue(data.dueDate) ? 'text-expense' : 'text-body'}>
-            {isPastDue(data.dueDate) ? 'Vencido el ' : 'Vence el '}
-            {formatDate(data.dueDate)}
-          </p>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="text-lg font-semibold text-ink">{account.name}</h3>
+          {data && (
+            <span className="text-sm text-body">
+              Ciclo {formatDate(data.periodStart)}–{formatDate(data.periodEnd)}
+              {offset < 0 && ` (hace ${Math.abs(offset)} ciclo${Math.abs(offset) === 1 ? '' : 's'})`}
+            </span>
+          )}
         </div>
-      )}
 
-      <div className="flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={() => setOffset((o) => Math.max(MIN_OFFSET, o - 1))}
-          disabled={offset <= MIN_OFFSET}
+        {isPending && <Skeleton variant="card" />}
+
+        {isError && (
+          <p role="alert" className="text-expense">
+            No pudimos cargar el resumen de la tarjeta. Intentá de nuevo.
+          </p>
+        )}
+
+        {data && (
+          <div className="flex flex-col gap-1 text-sm">
+            <p className="flex items-center gap-2 text-body">
+              Consumos del ciclo: <Amount amount={data.totalSpent} currency={data.currency} tone="neutral" size="sm" />
+            </p>
+            <p className="flex items-center gap-2 text-body">
+              Pagos: <Amount amount={data.payments} currency={data.currency} tone="neutral" size="sm" />
+            </p>
+            <p className="flex items-center gap-2 text-ink">
+              Saldo al cierre:{' '}
+              <Amount amount={data.closingBalance} currency={data.currency} tone="neutral" size="sm" />
+            </p>
+            <p className={isPastDue(data.dueDate) ? 'text-expense' : 'text-body'}>
+              {isPastDue(data.dueDate) ? 'Vencido el ' : 'Vence el '}
+              {formatDate(data.dueDate)}
+            </p>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setOffset((o) => Math.max(MIN_OFFSET, o - 1))}
+            disabled={offset <= MIN_OFFSET}
+          >
+            ← Anterior
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setOffset((o) => Math.min(MAX_OFFSET, o + 1))}
+            disabled={offset >= MAX_OFFSET}
+          >
+            Siguiente →
+          </Button>
+        </div>
+
+        <Link
+          to={`/transfers?to=${account.id}`}
+          className="text-sm font-medium text-brand transition-colors duration-200 ease-out hover:text-brand-hover"
         >
-          ← Anterior
-        </button>
-        <button
-          type="button"
-          onClick={() => setOffset((o) => Math.min(MAX_OFFSET, o + 1))}
-          disabled={offset >= MAX_OFFSET}
-        >
-          Siguiente →
-        </button>
+          Registrar pago
+        </Link>
       </div>
-
-      <Link to={`/transfers?to=${account.id}`} className="text-brand text-sm">
-        Registrar pago
-      </Link>
     </Card>
   );
 }

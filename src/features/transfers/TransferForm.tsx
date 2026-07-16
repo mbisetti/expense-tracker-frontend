@@ -1,5 +1,10 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Card } from '../../components/Card';
+import { Card } from '../../components/ui/Card';
+import { Select } from '../../components/ui/Select';
+import { Input } from '../../components/ui/Input';
+import { DateField } from '../../components/ui/DateField';
+import { Button } from '../../components/ui/Button';
+import { useToast } from '../../components/ui/toastContext';
 import { formatMoney } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCreateTransfer } from './useTransferMutations';
@@ -19,6 +24,7 @@ type TransferFormProps = {
 };
 
 export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
+  const toast = useToast();
   const { data: accounts } = useAccounts();
   const mutation = useCreateTransfer();
 
@@ -41,6 +47,7 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
 
   // Pre-llena el monto de destino con la cotización sugerida, salvo que el usuario lo
   // haya editado: el monto real lo pone el usuario (el rate es sugerencia, no verdad).
+  // (lint set-state-in-effect pre-existente — no tocado en esta migración, ver reporte S19 B3)
   useEffect(() => {
     if (crossCurrency && rate?.rate && !toAmountTouched && fromAmount) {
       setToAmount(round2(Number(fromAmount) * rate.rate).toString());
@@ -75,12 +82,16 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
         description: description || undefined,
       },
       {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          toast.success(
+            `Transferencia realizada. Nuevo saldo — ${fromAccount!.name}: ${formatMoney(data.fromAccountBalance, fromAccount!.currency)} · ${toAccount!.name}: ${formatMoney(data.toAccountBalance, toAccount!.currency)}`,
+          );
           setFromAmount('');
           setToAmount('');
           setToAmountTouched(false);
           setDescription('');
         },
+        onError: (error) => toast.error(transferErrorMessage(error)),
       },
     );
   };
@@ -92,11 +103,11 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
       <h2>Nueva transferencia</h2>
 
       {!hasTwoAccounts ? (
-        <p>Necesitás al menos dos cuentas para transferir.</p>
+        <p className="text-body">Necesitás al menos dos cuentas para transferir.</p>
       ) : (
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="transfer-from">Cuenta origen</label>
-          <select
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <Select
+            label="Cuenta origen"
             id="transfer-from"
             value={fromAccountId}
             onChange={(e) => handleFromChange(e.target.value)}
@@ -109,10 +120,10 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
                 {account.name} ({account.currency})
               </option>
             ))}
-          </select>
+          </Select>
 
-          <label htmlFor="transfer-to">Cuenta destino</label>
-          <select
+          <Select
+            label="Cuenta destino"
             id="transfer-to"
             value={toAccountId}
             onChange={(e) => handleToChange(e.target.value)}
@@ -125,12 +136,10 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
                 {account.name} ({account.currency})
               </option>
             ))}
-          </select>
+          </Select>
 
-          <label htmlFor="transfer-from-amount">
-            {crossCurrency ? `Monto a debitar (${fromAccount!.currency})` : 'Monto'}
-          </label>
-          <input
+          <Input
+            label={crossCurrency ? `Monto a debitar (${fromAccount!.currency})` : 'Monto'}
             id="transfer-from-amount"
             type="number"
             min="0.01"
@@ -142,43 +151,40 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
           />
 
           {crossCurrency && (
-            <>
-              <label htmlFor="transfer-to-amount">Monto a acreditar ({toAccount!.currency})</label>
-              <input
-                id="transfer-to-amount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={toAmount}
-                onChange={(e) => {
-                  setToAmount(e.target.value);
-                  setToAmountTouched(true);
-                }}
-                required
-                disabled={mutation.isPending}
-              />
-              <p className="text-body text-sm">
-                {rate?.unavailable
+            <Input
+              label={`Monto a acreditar (${toAccount!.currency})`}
+              id="transfer-to-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={toAmount}
+              onChange={(e) => {
+                setToAmount(e.target.value);
+                setToAmountTouched(true);
+              }}
+              required
+              disabled={mutation.isPending}
+              helper={
+                rate?.unavailable
                   ? 'Cotización no disponible — ingresá el monto de destino a mano.'
                   : rate?.rate
                     ? `Cotización sugerida: 1 ${fromAccount!.currency} ≈ ${rate.rate} ${toAccount!.currency} (editable).`
-                    : 'Buscando cotización...'}
-              </p>
-            </>
+                    : 'Buscando cotización...'
+              }
+            />
           )}
 
-          <label htmlFor="transfer-date">Fecha</label>
-          <input
+          <DateField
+            label="Fecha"
             id="transfer-date"
-            type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
             required
             disabled={mutation.isPending}
           />
 
-          <label htmlFor="transfer-description">Descripción (opcional)</label>
-          <input
+          <Input
+            label="Descripción (opcional)"
             id="transfer-description"
             type="text"
             maxLength={500}
@@ -187,19 +193,9 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
             disabled={mutation.isPending}
           />
 
-          {mutation.isError && <p role="alert">{transferErrorMessage(mutation.error)}</p>}
-
-          {mutation.isSuccess && fromAccount && toAccount && (
-            <p className="text-income">
-              Transferencia realizada. Nuevo saldo — {fromAccount.name}:{' '}
-              {formatMoney(mutation.data.fromAccountBalance, fromAccount.currency)} · {toAccount.name}:{' '}
-              {formatMoney(mutation.data.toAccountBalance, toAccount.currency)}
-            </p>
-          )}
-
-          <button type="submit" disabled={mutation.isPending}>
+          <Button type="submit" loading={mutation.isPending} className="self-start">
             {mutation.isPending ? 'Transfiriendo...' : 'Transferir'}
-          </button>
+          </Button>
         </form>
       )}
     </Card>

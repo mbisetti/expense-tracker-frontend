@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { formatMoney } from '../../lib/money';
 import { useAccounts } from './useAccounts';
 import { useDeleteAccount } from './useAccountMutations';
 import { accountErrorMessage } from './errorMessages';
 import { AccountForm } from './AccountForm';
 import { CreditCardStatement } from './CreditCardStatement';
+import { Button } from '../../components/ui/Button';
+import { Amount } from '../../components/ui/Amount';
+import { Badge } from '../../components/ui/Badge';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useToast } from '../../components/ui/toastContext';
 import type { Account, AccountType } from './api';
 
 const TYPE_LABELS: Record<AccountType, string> = {
@@ -18,6 +24,7 @@ export function AccountsPage() {
   const [editing, setEditing] = useState<Account | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
+  const toast = useToast();
   const { data: accounts, isPending, isError } = useAccounts();
   const deleteMutation = useDeleteAccount();
 
@@ -31,19 +38,23 @@ export function AccountsPage() {
     setFormOpen(true);
   };
 
-  const confirmDelete = (id: string) => {
-    // onSettled: también en error, para que la fila no quede clavada en ¿Borrar? Sí/No
-    deleteMutation.mutate(id, { onSettled: () => setConfirmingDeleteId(null) });
+  const confirmDelete = () => {
+    if (!confirmingDeleteId) return;
+    deleteMutation.mutate(confirmingDeleteId, {
+      onSuccess: () => toast.success('Cuenta borrada.'),
+      onError: (error) => toast.error(accountErrorMessage(error)),
+      onSettled: () => setConfirmingDeleteId(null),
+    });
   };
 
   return (
-    <section>
+    <section className="flex flex-col gap-4 text-left">
       <h1>Cuentas</h1>
 
       {!formOpen && (
-        <button type="button" onClick={() => setFormOpen(true)}>
+        <Button type="button" onClick={() => setFormOpen(true)} className="self-start">
           Nueva cuenta
-        </button>
+        </Button>
       )}
 
       {formOpen && (
@@ -54,77 +65,67 @@ export function AccountsPage() {
         />
       )}
 
-      {isPending && <p>Cargando cuentas...</p>}
+      {isPending && <Skeleton variant="list" rows={4} />}
 
-      {isError && <p role="alert">No pudimos cargar las cuentas. Intentá de nuevo.</p>}
-
-      {deleteMutation.isError && (
-        <p role="alert">{accountErrorMessage(deleteMutation.error)}</p>
+      {isError && (
+        <p role="alert" className="text-expense">
+          No pudimos cargar las cuentas. Intentá de nuevo.
+        </p>
       )}
 
       {accounts && accounts.length === 0 && (
-        <p>Todavía no tenés cuentas. Creá la primera para empezar a registrar transacciones.</p>
+        <EmptyState
+          title="Todavía no tenés cuentas."
+          message="Creá la primera para empezar a registrar transacciones."
+        />
       )}
 
       {accounts && accounts.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Moneda</th>
-              <th>Balance</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {accounts.map((account) => (
-              <tr key={account.id}>
-                <td>
-                  {account.name}
-                  {account.isInformal && (
-                    <span className="ml-2 text-xs text-body border border-line rounded-full px-2 py-0.5">
-                      Informal
-                    </span>
-                  )}
-                </td>
-                <td>{TYPE_LABELS[account.type]}</td>
-                <td>{account.currency}</td>
-                <td>{formatMoney(account.balance, account.currency)}</td>
-                <td>
-                  {confirmingDeleteId === account.id ? (
-                    <>
-                      ¿Borrar?{' '}
-                      <button
-                        type="button"
-                        onClick={() => confirmDelete(account.id)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        Sí
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingDeleteId(null)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        No
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button type="button" onClick={() => startEdit(account)}>
-                        Editar
-                      </button>
-                      <button type="button" onClick={() => setConfirmingDeleteId(account.id)}>
-                        Borrar
-                      </button>
-                    </>
-                  )}
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-line text-left text-muted">
+                <th className="py-2 pr-2 font-medium">Nombre</th>
+                <th className="py-2 pr-2 font-medium">Tipo</th>
+                <th className="py-2 pr-2 font-medium">Moneda</th>
+                <th className="py-2 pr-2 font-medium">Balance</th>
+                <th className="py-2 pr-2 font-medium"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {accounts.map((account) => (
+                <tr key={account.id} className="border-b border-line">
+                  <td className="py-2 pr-2 text-ink">
+                    <span className="flex items-center gap-2">
+                      {account.name}
+                      {account.isInformal && <Badge status="info" label="Informal" />}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-2 text-body">{TYPE_LABELS[account.type]}</td>
+                  <td className="py-2 pr-2 text-body">{account.currency}</td>
+                  <td className="py-2 pr-2">
+                    <Amount amount={account.balance} currency={account.currency} tone="neutral" size="sm" />
+                  </td>
+                  <td className="py-2 pr-2">
+                    <div className="flex gap-2">
+                      <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(account)}>
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmingDeleteId(account.id)}
+                      >
+                        Borrar
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {accounts && accounts.some((a) => a.type === 'CREDIT' && a.statementCloseDay != null) && (
@@ -137,6 +138,17 @@ export function AccountsPage() {
             ))}
         </section>
       )}
+
+      <ConfirmDialog
+        open={confirmingDeleteId !== null}
+        danger
+        title="Borrar cuenta"
+        message="Esta acción no se puede deshacer."
+        confirmLabel="Borrar"
+        loading={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmingDeleteId(null)}
+      />
     </section>
   );
 }

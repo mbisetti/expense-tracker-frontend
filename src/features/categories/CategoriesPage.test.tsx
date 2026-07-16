@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { CategoriesPage } from './CategoriesPage';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { jsonResponse } from '../../test/mockResponse';
 
 const userCategory = {
@@ -36,7 +37,9 @@ function renderPage() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <CategoriesPage />
+        <ToastProvider>
+          <CategoriesPage />
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -62,7 +65,7 @@ describe('CategoriesPage', () => {
     expect(screen.getAllByRole('button', { name: 'Borrar' })).toHaveLength(1);
   });
 
-  it('403 CATEGORY_NOT_EDITABLE al borrar muestra mensaje claro', async () => {
+  it('403 CATEGORY_NOT_EDITABLE al borrar muestra un toast con mensaje claro', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((_url: string, options?: RequestInit) => {
@@ -75,10 +78,29 @@ describe('CategoriesPage', () => {
 
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Sí' }));
+    const dialog = screen.getByRole('dialog', { name: 'Borrar categoría' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Las categorías del sistema no se pueden modificar ni borrar.',
     );
+  });
+
+  it('cancelar el ConfirmDialog no borra la categoría', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, options?: RequestInit) => {
+        if (options?.method === 'DELETE') throw new Error('no debería llamarse');
+        return jsonResponse(200, [userCategory]);
+      }),
+    );
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
+    const dialog = screen.getByRole('dialog', { name: 'Borrar categoría' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Mascotas')).toBeInTheDocument();
   });
 });

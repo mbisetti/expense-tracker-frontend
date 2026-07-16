@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { IncomeSourceList } from './IncomeSourceList';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
 
 // Captura los bodies de los POST a /income-sources para verificar el payload atómico.
@@ -27,7 +28,9 @@ function setup() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <IncomeSourceList />
+        <ToastProvider>
+          <IncomeSourceList />
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -43,10 +46,11 @@ describe('IncomeSourceList — recurrencia', () => {
     const posts = setup();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Nueva fuente' }));
-    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Freelance' } });
-    fireEvent.change(screen.getByLabelText('Moneda'), { target: { value: 'ARS' } });
+    // Nombre/Moneda son required: el label agrega un "*" (aria-hidden) → exact:false.
+    fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'Freelance' } });
+    fireEvent.change(screen.getByLabelText('Moneda', { exact: false }), { target: { value: 'ARS' } });
     // sin togglear recurrencia, los campos no existen
-    expect(screen.queryByLabelText('Monto esperado')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Monto esperado', { exact: false })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await waitFor(() => expect(posts).toHaveLength(1));
@@ -57,14 +61,18 @@ describe('IncomeSourceList — recurrencia', () => {
     const posts = setup();
 
     fireEvent.click(await screen.findByRole('button', { name: 'Nueva fuente' }));
-    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'Sueldo' } });
-    fireEvent.change(screen.getByLabelText('Moneda'), { target: { value: 'ARS' } });
+    fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'Sueldo' } });
+    fireEvent.change(screen.getByLabelText('Moneda', { exact: false }), { target: { value: 'ARS' } });
 
     fireEvent.click(screen.getByLabelText('¿Es un ingreso recurrente?'));
 
     fireEvent.change(screen.getByLabelText('Frecuencia'), { target: { value: 'BIWEEKLY' } });
-    fireEvent.change(screen.getByLabelText('Monto esperado'), { target: { value: '500000' } });
-    fireEvent.change(screen.getByLabelText('Día de cobro (1-28)'), { target: { value: '5' } });
+    fireEvent.change(screen.getByLabelText('Monto esperado', { exact: false }), {
+      target: { value: '500000' },
+    });
+    fireEvent.change(screen.getByLabelText('Día de cobro (1-28)', { exact: false }), {
+      target: { value: '5' },
+    });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await waitFor(() => expect(posts).toHaveLength(1));

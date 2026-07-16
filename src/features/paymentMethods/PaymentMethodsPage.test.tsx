@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { PaymentMethodsPage } from './PaymentMethodsPage';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { PaymentMethod } from './api';
 import { jsonResponse } from '../../test/mockResponse';
 
@@ -33,7 +34,9 @@ function renderPage() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <PaymentMethodsPage />
+        <ToastProvider>
+          <PaymentMethodsPage />
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -44,6 +47,10 @@ function rowOf(name: string) {
   const row = cell.closest('tr');
   if (!row) throw new Error(`no row for ${name}`);
   return within(row);
+}
+
+function deleteDialog() {
+  return screen.getByRole('dialog', { name: 'Borrar método de pago' });
 }
 
 afterEach(() => {
@@ -81,7 +88,7 @@ describe('PaymentMethodsPage', () => {
 
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Nuevo método de pago' }));
-    fireEvent.change(screen.getByLabelText('Nombre'), { target: { value: 'MP' } });
+    fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'MP' } });
     fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'DIGITAL_WALLET' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -122,7 +129,7 @@ describe('PaymentMethodsPage', () => {
     expect(patchBody).toEqual({ isDefault: true });
   });
 
-  it('borrar con confirmación maneja el 204 sin body y saca la fila', async () => {
+  it('borrar con confirmación en el ConfirmDialog maneja el 204 sin body y saca la fila', async () => {
     let deleted = false;
     vi.stubGlobal(
       'fetch',
@@ -138,7 +145,7 @@ describe('PaymentMethodsPage', () => {
     renderPage();
     await screen.findByText('Plata en mano');
     fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Borrar' }));
-    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Sí' }));
+    fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Borrar' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Plata en mano')).not.toBeInTheDocument();
@@ -147,7 +154,25 @@ describe('PaymentMethodsPage', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('error del server al borrar muestra mensaje y la fila vuelve a estado normal', async () => {
+  it('cancelar el ConfirmDialog no borra el método de pago', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, options?: RequestInit) => {
+        if (options?.method === 'DELETE') throw new Error('no debería llamarse');
+        return jsonResponse(200, [visa, cash]);
+      }),
+    );
+
+    renderPage();
+    await screen.findByText('Plata en mano');
+    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Borrar' }));
+    fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Cancelar' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Plata en mano')).toBeInTheDocument();
+  });
+
+  it('error del server al borrar muestra un toast y la fila sigue con Editar/Borrar', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((_url: string, options?: RequestInit) => {
@@ -161,12 +186,13 @@ describe('PaymentMethodsPage', () => {
     renderPage();
     await screen.findByText('Plata en mano');
     fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Borrar' }));
-    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Sí' }));
+    fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Borrar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'El método de pago no existe o fue borrado.',
     );
-    // onSettled resetea la confirmación (fix 8-2): vuelven Editar/Borrar
+    // onSettled cierra el ConfirmDialog: la fila vuelve a Editar/Borrar
     expect(rowOf('Plata en mano').getByRole('button', { name: 'Borrar' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

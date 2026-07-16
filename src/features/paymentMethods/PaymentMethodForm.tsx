@@ -5,6 +5,10 @@ import {
   type UpdatePaymentMethodInput,
 } from './usePaymentMethodMutations';
 import { paymentMethodErrorMessage } from './errorMessages';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { Button } from '../../components/ui/Button';
+import { useToast } from '../../components/ui/toastContext';
 import type { PaymentMethod, PaymentMethodType } from './api';
 
 type PaymentMethodFormProps = {
@@ -14,6 +18,7 @@ type PaymentMethodFormProps = {
 
 export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormProps) {
   const isEdit = paymentMethod !== undefined;
+  const toast = useToast();
 
   const [name, setName] = useState(paymentMethod?.name ?? '');
   const [type, setType] = useState<PaymentMethodType>(paymentMethod?.type ?? 'CASH');
@@ -35,9 +40,27 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
         onClose();
         return;
       }
-      updateMutation.mutate({ id: paymentMethod.id, changes }, { onSuccess: onClose });
+      updateMutation.mutate(
+        { id: paymentMethod.id, changes },
+        {
+          onSuccess: () => {
+            toast.success('Método de pago actualizado.');
+            onClose();
+          },
+          onError: (error) => toast.error(paymentMethodErrorMessage(error)),
+        },
+      );
     } else {
-      createMutation.mutate({ name, type, isDefault }, { onSuccess: onClose });
+      createMutation.mutate(
+        { name, type, isDefault },
+        {
+          onSuccess: () => {
+            toast.success('Método de pago creado.');
+            onClose();
+          },
+          onError: (error) => toast.error(paymentMethodErrorMessage(error)),
+        },
+      );
     }
   };
 
@@ -47,11 +70,14 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
     <form
       onSubmit={handleSubmit}
       aria-label={isEdit ? 'Editar método de pago' : 'Nuevo método de pago'}
+      className="flex flex-col gap-3 rounded-md border border-line bg-surface-elevated p-4"
     >
-      <h2>{isEdit ? 'Editar método de pago' : 'Nuevo método de pago'}</h2>
+      <h2 className="text-lg font-semibold text-ink">
+        {isEdit ? 'Editar método de pago' : 'Nuevo método de pago'}
+      </h2>
 
-      <label htmlFor="pm-name">Nombre</label>
-      <input
+      <Input
+        label="Nombre"
         id="pm-name"
         type="text"
         value={name}
@@ -61,8 +87,8 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
         disabled={isPending}
       />
 
-      <label htmlFor="pm-type">Tipo</label>
-      <select
+      <Select
+        label="Tipo"
         id="pm-type"
         value={type}
         onChange={(e) => setType(e.target.value as PaymentMethodType)}
@@ -73,27 +99,28 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
         <option value="CREDIT">Crédito</option>
         <option value="DIGITAL_WALLET">Billetera digital</option>
         <option value="TRANSFER">Transferencia</option>
-      </select>
+      </Select>
 
-      <label htmlFor="pm-default">
+      <label htmlFor="pm-default" className="flex items-center gap-2 text-sm text-ink">
         <input
           id="pm-default"
           type="checkbox"
           checked={isDefault}
           onChange={(e) => setIsDefault(e.target.checked)}
           disabled={isPending}
+          className="h-5 w-5 rounded-sm border border-line accent-brand"
         />
         Usar como método por defecto
       </label>
 
-      {mutation.isError && <p role="alert">{paymentMethodErrorMessage(mutation.error)}</p>}
-
-      <button type="submit" disabled={isPending}>
-        {isPending ? 'Guardando...' : 'Guardar'}
-      </button>
-      <button type="button" onClick={onClose} disabled={isPending}>
-        Cancelar
-      </button>
+      <div className="flex gap-3">
+        <Button type="submit" loading={isPending}>
+          Guardar
+        </Button>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }

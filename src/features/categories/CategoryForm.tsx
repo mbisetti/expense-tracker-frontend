@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useCreateCategory, useUpdateCategory, type UpdateCategoryInput } from './useCategoryMutations';
 import { categoryErrorMessage } from './errorMessages';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { Button } from '../../components/ui/Button';
+import { useToast } from '../../components/ui/toastContext';
+import { FIELD_LABEL_CLASS, FIELD_WRAPPER_CLASS } from '../../components/ui/fieldStyles';
 import type { Category, CategoryType } from './api';
 
 type CategoryFormProps = {
@@ -10,6 +15,7 @@ type CategoryFormProps = {
 
 export function CategoryForm({ category, onClose }: CategoryFormProps) {
   const isEdit = category !== undefined;
+  const toast = useToast();
 
   const [name, setName] = useState(category?.name ?? '');
   const [type, setType] = useState<CategoryType>(category?.type ?? 'EXPENSE');
@@ -35,20 +41,42 @@ export function CategoryForm({ category, onClose }: CategoryFormProps) {
         onClose();
         return;
       }
-      updateMutation.mutate({ id: category.id, changes }, { onSuccess: onClose });
+      updateMutation.mutate(
+        { id: category.id, changes },
+        {
+          onSuccess: () => {
+            toast.success('Categoría actualizada.');
+            onClose();
+          },
+          onError: (error) => toast.error(categoryErrorMessage(error)),
+        },
+      );
     } else {
-      createMutation.mutate({ name, type, color }, { onSuccess: onClose });
+      createMutation.mutate(
+        { name, type, color },
+        {
+          onSuccess: () => {
+            toast.success('Categoría creada.');
+            onClose();
+          },
+          onError: (error) => toast.error(categoryErrorMessage(error)),
+        },
+      );
     }
   };
 
   const isPending = mutation.isPending;
 
   return (
-    <form onSubmit={handleSubmit} aria-label={isEdit ? 'Editar categoría' : 'Nueva categoría'}>
-      <h2>{isEdit ? 'Editar categoría' : 'Nueva categoría'}</h2>
+    <form
+      onSubmit={handleSubmit}
+      aria-label={isEdit ? 'Editar categoría' : 'Nueva categoría'}
+      className="flex flex-col gap-3 rounded-md border border-line bg-surface-elevated p-4"
+    >
+      <h2 className="text-lg font-semibold text-ink">{isEdit ? 'Editar categoría' : 'Nueva categoría'}</h2>
 
-      <label htmlFor="cat-name">Nombre</label>
-      <input
+      <Input
+        label="Nombre"
         id="cat-name"
         type="text"
         value={name}
@@ -58,8 +86,8 @@ export function CategoryForm({ category, onClose }: CategoryFormProps) {
         disabled={isPending}
       />
 
-      <label htmlFor="cat-type">Tipo</label>
-      <select
+      <Select
+        label="Tipo"
         id="cat-type"
         value={type}
         onChange={(e) => setType(e.target.value as CategoryType)}
@@ -68,25 +96,32 @@ export function CategoryForm({ category, onClose }: CategoryFormProps) {
         <option value="EXPENSE">Gasto</option>
         <option value="INCOME">Ingreso</option>
         <option value="BOTH">Ambos</option>
-      </select>
+      </Select>
 
-      <label htmlFor="cat-color">Color</label>
-      <input
-        id="cat-color"
-        type="color"
-        value={color}
-        onChange={(e) => setColor(e.target.value)}
-        disabled={isPending}
-      />
+      {/* Color: dato del usuario, no chrome (excepción explícita de design-principles.md
+          §1.1) — el picker crudo <input type=color> queda tal cual, sin tokenizar. */}
+      <div className={FIELD_WRAPPER_CLASS}>
+        <label htmlFor="cat-color" className={FIELD_LABEL_CLASS}>
+          Color
+        </label>
+        <input
+          id="cat-color"
+          type="color"
+          value={color}
+          onChange={(e) => setColor(e.target.value)}
+          disabled={isPending}
+          className="h-11 w-16 cursor-pointer rounded-sm border border-line bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
+        />
+      </div>
 
-      {mutation.isError && <p role="alert">{categoryErrorMessage(mutation.error)}</p>}
-
-      <button type="submit" disabled={isPending}>
-        {isPending ? 'Guardando...' : 'Guardar'}
-      </button>
-      <button type="button" onClick={onClose} disabled={isPending}>
-        Cancelar
-      </button>
+      <div className="flex gap-3">
+        <Button type="submit" loading={isPending}>
+          Guardar
+        </Button>
+        <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }

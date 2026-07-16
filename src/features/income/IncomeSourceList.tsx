@@ -1,6 +1,11 @@
 import { useState, type FormEvent } from 'react';
-import { Card } from '../../components/Card';
-import { PlaceholderRow } from '../../components/SectionPlaceholder';
+import { Card } from '../../components/ui/Card';
+import { Input } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import { Button } from '../../components/ui/Button';
+import { Skeleton } from '../../components/ui/Skeleton';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { useToast } from '../../components/ui/toastContext';
 import { useIncomeSources } from './useIncomeSources';
 import { useCreateIncomeSource } from './useIncomeMutations';
 import { incomeErrorMessage } from './errorMessages';
@@ -23,6 +28,7 @@ export function IncomeSourceList() {
   const [billingDay, setBillingDay] = useState('');
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
 
+  const toast = useToast();
   const { data: sources, isPending, isError } = useIncomeSources();
   const createMutation = useCreateIncomeSource();
 
@@ -50,25 +56,31 @@ export function IncomeSourceList() {
             }
           : {}),
       },
-      { onSuccess: closeForm },
+      {
+        onSuccess: () => {
+          toast.success('Fuente de ingreso creada.');
+          closeForm();
+        },
+        onError: (error) => toast.error(incomeErrorMessage(error)),
+      },
     );
   };
 
   return (
     <Card>
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <h2>Fuentes de ingreso</h2>
         {!formOpen && (
-          <button type="button" onClick={() => setFormOpen(true)}>
+          <Button type="button" size="sm" onClick={() => setFormOpen(true)}>
             Nueva fuente
-          </button>
+          </Button>
         )}
       </div>
 
       {formOpen && (
-        <form onSubmit={handleSubmit} aria-label="Nueva fuente">
-          <label htmlFor="source-name">Nombre</label>
-          <input
+        <form onSubmit={handleSubmit} aria-label="Nueva fuente" className="mt-3 flex flex-col gap-3">
+          <Input
+            label="Nombre"
             id="source-name"
             type="text"
             value={name}
@@ -77,8 +89,8 @@ export function IncomeSourceList() {
             disabled={createMutation.isPending}
           />
 
-          <label htmlFor="source-currency">Moneda</label>
-          <input
+          <Input
+            label="Moneda"
             id="source-currency"
             type="text"
             className="uppercase"
@@ -89,21 +101,22 @@ export function IncomeSourceList() {
             disabled={createMutation.isPending}
           />
 
-          <label htmlFor="source-recurrent">
+          <label htmlFor="source-recurrent" className="flex items-center gap-2 text-sm text-ink">
             <input
               id="source-recurrent"
               type="checkbox"
               checked={isRecurrent}
               onChange={(e) => setIsRecurrent(e.target.checked)}
               disabled={createMutation.isPending}
-            />{' '}
+              className="h-5 w-5 rounded-sm border border-line accent-brand"
+            />
             ¿Es un ingreso recurrente?
           </label>
 
           {isRecurrent && (
             <>
-              <label htmlFor="source-frequency">Frecuencia</label>
-              <select
+              <Select
+                label="Frecuencia"
                 id="source-frequency"
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as IncomeFrequency)}
@@ -114,10 +127,10 @@ export function IncomeSourceList() {
                     {option.label}
                   </option>
                 ))}
-              </select>
+              </Select>
 
-              <label htmlFor="source-expected-amount">Monto esperado</label>
-              <input
+              <Input
+                label="Monto esperado"
                 id="source-expected-amount"
                 type="number"
                 min="0.01"
@@ -128,8 +141,8 @@ export function IncomeSourceList() {
                 disabled={createMutation.isPending}
               />
 
-              <label htmlFor="source-billing-day">Día de cobro (1-28)</label>
-              <input
+              <Input
+                label="Día de cobro (1-28)"
                 id="source-billing-day"
                 type="number"
                 min="1"
@@ -143,60 +156,63 @@ export function IncomeSourceList() {
             </>
           )}
 
-          {createMutation.isError && (
-            <p role="alert">{incomeErrorMessage(createMutation.error)}</p>
-          )}
-
-          <button type="submit" disabled={createMutation.isPending}>
-            Guardar
-          </button>
-          <button type="button" onClick={closeForm} disabled={createMutation.isPending}>
-            Cancelar
-          </button>
+          <div className="flex gap-3">
+            <Button type="submit" loading={createMutation.isPending}>
+              Guardar
+            </Button>
+            <Button type="button" variant="secondary" onClick={closeForm} disabled={createMutation.isPending}>
+              Cancelar
+            </Button>
+          </div>
         </form>
       )}
 
-      {isPending && (
-        <div role="status" aria-label="Cargando fuentes" className="flex flex-col gap-3">
-          <PlaceholderRow />
-          <PlaceholderRow />
-        </div>
-      )}
+      <div className="mt-3">
+        {isPending && <Skeleton variant="list" rows={2} />}
 
-      {isError && <p role="alert">No pudimos cargar las fuentes. Intentá de nuevo.</p>}
+        {isError && (
+          <p role="alert" className="text-expense">
+            No pudimos cargar las fuentes. Intentá de nuevo.
+          </p>
+        )}
 
-      {sources && sources.length === 0 && (
-        <p>Todavía no tenés fuentes de ingreso. Creá una para registrar ingresos.</p>
-      )}
+        {sources && sources.length === 0 && (
+          <EmptyState
+            title="Todavía no tenés fuentes de ingreso."
+            message="Creá una para registrar ingresos."
+          />
+        )}
 
-      {sources && sources.length > 0 && (
-        <ul className="list-none p-0 m-0 divide-y divide-line">
-          {sources.map((source) => (
-            <li key={source.id} className="py-2">
-              <div className="flex justify-between items-center">
-                <span className={`text-ink${!source.active ? ' opacity-60' : ''}`}>
-                  {source.name}
-                  {!source.active && <span className="text-body text-sm"> (inactiva)</span>}
-                </span>
-                <span className="flex items-center gap-3">
-                  <span className="text-body text-sm">{source.currency}</span>
-                  <button
-                    type="button"
-                    className="text-sm"
-                    aria-expanded={expandedSourceId === source.id}
-                    onClick={() =>
-                      setExpandedSourceId(expandedSourceId === source.id ? null : source.id)
-                    }
-                  >
-                    {expandedSourceId === source.id ? 'Ocultar' : 'Deducciones'}
-                  </button>
-                </span>
-              </div>
-              {expandedSourceId === source.id && <DeductionManager sourceId={source.id} />}
-            </li>
-          ))}
-        </ul>
-      )}
+        {sources && sources.length > 0 && (
+          <ul className="list-none p-0 m-0 divide-y divide-line">
+            {sources.map((source) => (
+              <li key={source.id} className="py-2">
+                <div className="flex items-center justify-between">
+                  <span className={source.active ? 'text-ink' : 'text-ink opacity-60'}>
+                    {source.name}
+                    {!source.active && <span className="text-sm text-body"> (inactiva)</span>}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    <span className="text-sm text-body">{source.currency}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-expanded={expandedSourceId === source.id}
+                      onClick={() =>
+                        setExpandedSourceId(expandedSourceId === source.id ? null : source.id)
+                      }
+                    >
+                      {expandedSourceId === source.id ? 'Ocultar' : 'Deducciones'}
+                    </Button>
+                  </span>
+                </div>
+                {expandedSourceId === source.id && <DeductionManager sourceId={source.id} />}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </Card>
   );
 }

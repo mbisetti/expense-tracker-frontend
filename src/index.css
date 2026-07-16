@@ -5,6 +5,15 @@
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities);
 
+/* Reset mínimo de box-sizing (el proyecto es utilities-only SIN preflight, así los
+   controles de form serían content-box y `w-full` + padding + border desbordaría el
+   contenedor → scroll horizontal en mobile). No es el preflight completo, sólo esto. */
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}
+
 @theme inline {
   /* Neutros cálidos */
   --color-ink: var(--text-h);
