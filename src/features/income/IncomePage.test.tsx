@@ -23,6 +23,14 @@ const inactiveSource = {
   createdAt: '2026-01-01T00:00:00',
 };
 
+const usdSource = {
+  id: 'src3',
+  name: 'Cliente USD',
+  currency: 'USD',
+  active: true,
+  createdAt: '2026-01-01T00:00:00',
+};
+
 const account = {
   id: 'acc1',
   name: 'Cuenta Ahorro',
@@ -166,6 +174,34 @@ describe('IncomePage', () => {
       grossAmount: 10000,
     });
     expect(postedBody?.date).toBeTruthy();
+  });
+
+  it('source USD a cuenta ARS: el toast usa la moneda de la SOURCE, no la de la cuenta (Sprint 22 FR-10)', async () => {
+    stubEndpoints({
+      sources: [activeSource, usdSource],
+      postResponse: {
+        ...entry,
+        incomeSourceId: 'src3',
+        sourceName: 'Cliente USD',
+        currency: 'USD',
+        accountBalance: 320,
+      },
+    });
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText('Fuente', { exact: false }), {
+      target: { value: 'src3' },
+    });
+    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
+      target: { value: 'acc1' }, // cuenta ARS
+    });
+    fireEvent.change(screen.getByLabelText('Monto bruto', { exact: false }), {
+      target: { value: '320' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    // US$ (USD de la source) — NO "$ 320" a secas (ARS de la cuenta)
+    expect(await screen.findByText(/Nuevo balance: US\$/)).toBeInTheDocument();
   });
 
   it('sin fuentes activas: muestra el mensaje y no el select', async () => {

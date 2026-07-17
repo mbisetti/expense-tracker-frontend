@@ -13,6 +13,23 @@ const account = {
   type: 'CASH',
   currency: 'ARS',
   balance: 1000,
+  isInformal: false,
+  statementCloseDay: null,
+  paymentDueDay: null,
+  balances: [{ currency: 'ARS', balance: 1000 }],
+  createdAt: '2026-07-01T00:00:00',
+};
+
+const creditAccount = {
+  id: 'acc-2',
+  name: 'Visa',
+  type: 'CREDIT',
+  currency: 'ARS',
+  balance: -100,
+  isInformal: false,
+  statementCloseDay: 10,
+  paymentDueDay: 20,
+  balances: [{ currency: 'ARS', balance: -100 }],
   createdAt: '2026-07-01T00:00:00',
 };
 
@@ -32,9 +49,11 @@ const editTx: TransactionListItem = {
 
 let patchCalls: { url: string; body: Record<string, unknown> }[];
 let patchResponse: { status: number; body: unknown };
+let postCalls: { url: string; body: Record<string, unknown> }[];
 
 beforeEach(() => {
   patchCalls = [];
+  postCalls = [];
   patchResponse = { status: 200, body: { ...editTx, accountBalance: 900 } };
   vi.stubGlobal(
     'fetch',
@@ -43,7 +62,12 @@ beforeEach(() => {
         patchCalls.push({ url, body: JSON.parse(options.body as string) });
         return jsonResponse(patchResponse.status, patchResponse.body);
       }
-      if (url.includes('/accounts')) return jsonResponse(200, [account]);
+      if (options?.method === 'POST') {
+        const body = JSON.parse(options.body as string);
+        postCalls.push({ url, body });
+        return jsonResponse(201, { ...editTx, ...body, id: 'tx-new', accountBalance: 1100 });
+      }
+      if (url.includes('/accounts')) return jsonResponse(200, [account, creditAccount]);
       return jsonResponse(200, []);
     }),
   );
@@ -120,5 +144,70 @@ describe('TransactionForm en edición', () => {
     await waitFor(() => expect(patchCalls).toHaveLength(1));
     expect(patchCalls[0].body).toEqual({ amount: 150 });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+});
+
+// Sprint 22: selector de moneda discreto en alta.
+describe('TransactionForm en alta (Sprint 22, moneda)', () => {
+  function renderCreateForm() {
+    const onClose = vi.fn();
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider
+          value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
+        >
+          <ToastProvider>
+            <TransactionForm onClose={onClose} lockedType="INCOME" />
+          </ToastProvider>
+        </AuthContext.Provider>
+      </QueryClientProvider>,
+    );
+    return onClose;
+  }
+
+  it('cuenta no-CREDIT: muestra el selector con la principal por defecto y manda esa moneda', async () => {
+    renderCreateForm();
+
+    // esperar a que las cuentas carguen (la option existe) antes de seleccionar
+    await screen.findByRole('option', { name: /Efectivo/ });
+    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-1' } });
+    const currencySelect = (await screen.findByLabelText('Moneda', { exact: false })) as HTMLSelectElement;
+    expect(currencySelect.value).toBe('ARS'); // principal por defecto
+
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '500' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(postCalls).toHaveLength(1));
+    expect(postCalls[0].body).toMatchObject({ accountId: 'acc-1', currency: 'ARS', amount: 500 });
+  });
+
+  it('cuenta CREDIT: NO muestra el selector de moneda (mono-moneda)', async () => {
+    renderCreateForm();
+
+    await screen.findByRole('option', { name: /Visa/ });
+    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-2' } });
+
+    // aparece el selector solo si NO es CREDIT: acá no debe estar
+    expect(await screen.findByLabelText(/Monto/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Moneda', { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('"Otra…": permite cargar una moneda nueva (uppercase) y la manda', async () => {
+    renderCreateForm();
+
+    await screen.findByRole('option', { name: /Efectivo/ });
+    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-1' } });
+    fireEvent.change(await screen.findByLabelText('Moneda', { exact: false }), { target: { value: '__other__' } });
+    fireEvent.change(await screen.findByLabelText('Moneda (3 letras)', { exact: false }), {
+      target: { value: 'eur' },
+    });
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '80' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(postCalls).toHaveLength(1));
+    expect(postCalls[0].body).toMatchObject({ accountId: 'acc-1', currency: 'EUR', amount: 80 });
   });
 });

@@ -5,7 +5,10 @@ import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EditButton } from '../../components/ui/ActionsMenu';
 import { useTransactions } from '../transactions/useTransactions';
+import { useMe } from '../auth/useMe';
 import { BalanceSparkline } from './BalanceSparkline';
+import { SubBalanceChip } from './SubBalanceChip';
+import { CreditCardStatement } from './CreditCardStatement';
 import type { Account, AccountType } from './api';
 
 const TYPE_LABELS: Record<AccountType, string> = {
@@ -55,14 +58,24 @@ export function AccountCard({ account, onEdit }: AccountCardProps) {
     direction: 'DESC',
   });
 
+  const { data: me } = useMe();
+
   const txs = data?.content;
   const recent = (txs ?? []).slice(0, 3);
+
+  // Sprint 22: chips de sub-balances no-principales con saldo ≠ 0. Con una sola moneda,
+  // `balances` trae solo la principal → no se renderiza ningún chip (idéntico a antes).
+  const subBalances = (account.balances ?? []).filter(
+    (b) => b.currency !== account.currency && b.balance !== 0,
+  );
 
   // Serie de saldos reconstruida hacia atrás desde el balance ACTUAL: el saldo después de la
   // tx más nueva es el balance de la cuenta; retrocediendo, saldo_antes = saldo_después − Δ
   // (INCOME suma, EXPENSE resta). Se invierte para quedar en orden cronológico ascendente.
+  // Sprint 22: SOLO la moneda principal (account.balance es su sub-balance) — mezclar montos
+  // de varias monedas daría una serie sin sentido. v1: sparkline solo de la principal.
   const points = useMemo(() => {
-    const list = txs ?? [];
+    const list = (txs ?? []).filter((tx) => tx.currency === account.currency);
     if (list.length === 0) return [];
     let running = account.balance;
     const desc: { date: string; balance: number }[] = [];
@@ -75,7 +88,7 @@ export function AccountCard({ account, onEdit }: AccountCardProps) {
     const today = todayIso();
     if (asc[asc.length - 1].date < today) asc.push({ date: today, balance: account.balance });
     return asc;
-  }, [txs, account.balance]);
+  }, [txs, account.balance, account.currency]);
 
   return (
     <Card role="group" aria-label={account.name}>
@@ -90,7 +103,21 @@ export function AccountCard({ account, onEdit }: AccountCardProps) {
               {TYPE_LABELS[account.type]} · {account.currency}
             </span>
           </div>
-          <Amount amount={account.balance} currency={account.currency} tone="neutral" size="lg" />
+          <div className="flex flex-col items-end gap-1">
+            <Amount amount={account.balance} currency={account.currency} tone="neutral" size="lg" />
+            {subBalances.length > 0 && (
+              <div className="flex flex-wrap justify-end gap-1.5">
+                {subBalances.map((b) => (
+                  <SubBalanceChip
+                    key={b.currency}
+                    currency={b.currency}
+                    balance={b.balance}
+                    favoriteCurrency={me?.defaultCurrency}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {points.length >= 2 && <BalanceSparkline points={points} />}
@@ -126,6 +153,12 @@ export function AccountCard({ account, onEdit }: AccountCardProps) {
             </ul>
           )}
         </div>
+
+        {/* Sprint 22.1: el resumen del ciclo vive DENTRO de la card de la tarjeta,
+            debajo de los movimientos (antes era una sección aparte al final de la página). */}
+        {account.type === 'CREDIT' && account.statementCloseDay != null && (
+          <CreditCardStatement account={account} />
+        )}
 
         <div className="flex justify-end border-t border-line pt-3">
           <EditButton label={account.name} onClick={onEdit} />

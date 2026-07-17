@@ -7,9 +7,9 @@ import { TransfersPage } from './TransfersPage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
 
-const accArs1 = { id: 'acc1', name: 'Banco ARS', type: 'DEBIT', currency: 'ARS', balance: 5000, createdAt: '2026-01-01T00:00:00' };
-const accArs2 = { id: 'acc2', name: 'Ahorro ARS', type: 'DEBIT', currency: 'ARS', balance: 0, createdAt: '2026-01-01T00:00:00' };
-const accUsd = { id: 'acc3', name: 'Dolares', type: 'DEBIT', currency: 'USD', balance: 100, createdAt: '2026-01-01T00:00:00' };
+const accArs1 = { id: 'acc1', name: 'Banco ARS', type: 'DEBIT', currency: 'ARS', balance: 5000, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'ARS', balance: 5000 }], createdAt: '2026-01-01T00:00:00' };
+const accArs2 = { id: 'acc2', name: 'Ahorro ARS', type: 'DEBIT', currency: 'ARS', balance: 0, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'ARS', balance: 0 }], createdAt: '2026-01-01T00:00:00' };
+const accUsd = { id: 'acc3', name: 'Dolares', type: 'DEBIT', currency: 'USD', balance: 100, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'USD', balance: 100 }], createdAt: '2026-01-01T00:00:00' };
 
 const transfer = {
   id: 'tr1',
@@ -17,6 +17,8 @@ const transfer = {
   toAccountId: 'acc2',
   fromAmount: 1500,
   toAmount: 1500,
+  fromCurrency: 'ARS',
+  toCurrency: 'ARS',
   fee: null,
   exchangeRate: 1,
   date: '2026-07-10',
@@ -89,7 +91,7 @@ describe('TransfersPage', () => {
     expect(screen.getByText('$ 1.500,00')).toBeInTheDocument();
   });
 
-  it('el destino excluye solo el origen (cross-currency habilitado)', async () => {
+  it('el destino incluye TODAS las cuentas, incluida la misma que el origen (Sprint 22 D3)', async () => {
     stubEndpoints();
     renderPage();
 
@@ -101,8 +103,9 @@ describe('TransfersPage', () => {
     const toSelect = screen.getByLabelText('Cuenta destino', { exact: false }) as HTMLSelectElement;
     const labels = Array.from(toSelect.options).map((o) => o.textContent ?? '');
     expect(labels.some((l) => l.includes('Ahorro ARS'))).toBe(true);   // otra ARS
-    expect(labels.some((l) => l.includes('Dolares'))).toBe(true);      // USD ahora SÍ (cross-currency)
-    expect(labels.some((l) => l.includes('Banco ARS'))).toBe(false);   // es el origen
+    expect(labels.some((l) => l.includes('Dolares'))).toBe(true);      // USD (cross-currency)
+    // Sprint 22: el origen ahora SÍ está (transfer intra-cuenta), marcado "misma cuenta"
+    expect(labels.some((l) => l.includes('Banco ARS') && l.includes('misma cuenta'))).toBe(true);
   });
 
   it('cross-currency: aparece el segundo monto y la cotización sugerida', async () => {
@@ -141,12 +144,19 @@ describe('TransfersPage', () => {
     expect(postedBody?.date).toBeTruthy();
   });
 
-  it('con menos de dos cuentas: muestra el mensaje y no el form', async () => {
+  it('sin cuentas: muestra el mensaje y no el form', async () => {
+    stubEndpoints({ accounts: [] });
+    renderPage();
+
+    expect(await screen.findByText('Necesitás al menos una cuenta para transferir.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Cuenta origen', { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('con UNA sola cuenta: el form se muestra (transfer intra-cuenta, Sprint 22)', async () => {
     stubEndpoints({ accounts: [accArs1] });
     renderPage();
 
-    expect(await screen.findByText('Necesitás al menos dos cuentas para transferir.')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Cuenta origen', { exact: false })).not.toBeInTheDocument();
+    expect(await screen.findByLabelText('Cuenta origen', { exact: false })).toBeInTheDocument();
   });
 
   it('empty state de transferencias', async () => {
@@ -164,6 +174,80 @@ describe('TransfersPage', () => {
       exact: false,
     })) as HTMLSelectElement;
     expect(toSelect.value).toBe('acc2');
+  });
+
+  it('intra-cuenta cross-currency: permite la misma cuenta con monedas distintas y manda ambas', async () => {
+    let postedBody: Record<string, unknown> | undefined;
+    stubEndpoints({ onPost: (body) => { postedBody = body; } });
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText('Cuenta origen', { exact: false }), {
+      target: { value: 'acc1' },
+    });
+    // misma cuenta en el destino (comprar USD dentro de Banco ARS)
+    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
+      target: { value: 'acc1' },
+    });
+    // moneda destino → "Otra…" → USD
+    fireEvent.change(screen.getByLabelText('Moneda destino', { exact: false }), {
+      target: { value: '__other__' },
+    });
+    fireEvent.change(screen.getByLabelText('Moneda (3 letras)', { exact: false }), {
+      target: { value: 'USD' },
+    });
+
+    fireEvent.change(screen.getByLabelText(/Monto a debitar/), { target: { value: '100000' } });
+    fireEvent.change(screen.getByLabelText(/Monto a acreditar/), { target: { value: '95' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Transferir' }));
+
+    expect(await screen.findByText(/Transferencia realizada/)).toBeInTheDocument();
+    expect(postedBody).toMatchObject({
+      fromAccountId: 'acc1',
+      toAccountId: 'acc1',
+      fromCurrency: 'ARS',
+      toCurrency: 'USD',
+      fromAmount: 100000,
+      toAmount: 95,
+    });
+  });
+
+  it('misma cuenta + misma moneda: error inline y submit deshabilitado', async () => {
+    stubEndpoints();
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText('Cuenta origen', { exact: false }), {
+      target: { value: 'acc1' },
+    });
+    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
+      target: { value: 'acc1' },
+    });
+
+    expect(
+      await screen.findByText('Elegí cuentas distintas, o monedas distintas dentro de la misma cuenta.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Transferir' })).toBeDisabled();
+  });
+
+  it('lista: transfer intra-cuenta muestra la cuenta con sus dos monedas y ambos montos', async () => {
+    const intra = {
+      ...transfer,
+      id: 'tr2',
+      fromAccountId: 'acc1',
+      toAccountId: 'acc1',
+      fromCurrency: 'ARS',
+      toCurrency: 'USD',
+      fromAmount: 100000,
+      toAmount: 95,
+      exchangeRate: 0.00095,
+    };
+    stubEndpoints({
+      transfersPage: { content: [intra], page: 0, size: 20, totalElements: 1, totalPages: 1 },
+    });
+    renderPage();
+
+    expect(await screen.findByText('Banco ARS · ARS → USD')).toBeInTheDocument();
+    expect(screen.getByText(/100\.000,00/)).toBeInTheDocument(); // ARS debitado
+    expect(screen.getByText(/95,00/)).toBeInTheDocument();       // USD acreditado
   });
 
   it('borrar transferencia pide confirmación en un ConfirmDialog', async () => {

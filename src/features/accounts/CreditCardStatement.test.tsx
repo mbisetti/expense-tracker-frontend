@@ -17,6 +17,7 @@ const card: Account = {
   createdAt: '2026-07-01T00:00:00',
   statementCloseDay: 10,
   paymentDueDay: 20,
+  balances: [{ currency: 'ARS', balance: -1000 }],
 };
 
 function statementFor(offset: number, overrides?: Partial<Record<string, unknown>>) {

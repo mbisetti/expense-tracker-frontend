@@ -8,7 +8,10 @@ export function accountErrorMessage(error: unknown): string {
     case 'ACCOUNT_HAS_TRANSACTIONS':
       return 'No se puede borrar: la cuenta tiene transacciones. Borrá o mové las transacciones primero.';
     case 'CURRENCY_LOCKED':
-      return 'No se puede cambiar la moneda: la cuenta ya tiene transacciones.';
+      return 'No se puede cambiar la moneda: la tarjeta de crédito ya tiene transacciones.';
+    case 'CURRENCY_MISMATCH':
+      // Convertir a crédito una cuenta con movimientos fuera de su moneda principal (S22 FR-14).
+      return 'No se puede volver tarjeta de crédito: tiene movimientos en otra moneda.';
     case 'ACCOUNT_NOT_FOUND':
       return 'La cuenta no existe.';
     case 'VALIDATION_ERROR':

@@ -5,7 +5,7 @@ import { transactionErrorMessage } from './errorMessages';
 describe('transactionErrorMessage', () => {
   it.each([
     ['INSUFFICIENT_BALANCE', 'Saldo insuficiente en la cuenta para este gasto.'],
-    ['CURRENCY_MISMATCH', 'La moneda no coincide con la de la cuenta.'],
+    ['CURRENCY_MISMATCH', 'Las tarjetas de crédito solo aceptan su propia moneda.'],
     ['VALIDATION_ERROR', 'Revisá los datos del formulario.'],
     ['IMMUTABLE_FIELD', 'La cuenta, el tipo y la moneda no se pueden modificar.'],
     ['TRANSACTION_NOT_FOUND', 'La transacción no existe o fue borrada.'],

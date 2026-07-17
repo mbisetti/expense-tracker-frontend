@@ -3,6 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { MoneyInput } from '../../components/ui/MoneyInput';
+import { CurrencySelect } from '../../components/ui/CurrencySelect';
 import { DateField } from '../../components/ui/DateField';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
@@ -31,6 +32,8 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
 
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState(initialToAccountId ?? '');
+  const [fromCurrency, setFromCurrency] = useState('');
+  const [toCurrency, setToCurrency] = useState('');
   const [fromAmount, setFromAmount] = useState('');
   const [toAmount, setToAmount] = useState('');
   const [toAmountTouched, setToAmountTouched] = useState(false);
@@ -39,11 +42,24 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
 
   const fromAccount = accounts?.find((a) => a.id === fromAccountId);
   const toAccount = accounts?.find((a) => a.id === toAccountId);
-  const crossCurrency = !!fromAccount && !!toAccount && fromAccount.currency !== toAccount.currency;
+
+  // CREDIT es mono-moneda (D2): su pata queda fija en la moneda de la cuenta.
+  const fromIsCredit = fromAccount?.type === 'CREDIT';
+  const toIsCredit = toAccount?.type === 'CREDIT';
+  // Moneda resuelta de cada pata (Sprint 22): la elegida, o la principal si aún no se tocó.
+  const resolvedFromCcy = fromIsCredit ? fromAccount!.currency : fromCurrency || fromAccount?.currency || '';
+  const resolvedToCcy = toIsCredit ? toAccount!.currency : toCurrency || toAccount?.currency || '';
+
+  // crossCurrency ahora depende de las monedas RESUELTAS (no de las cuentas): habilita el
+  // caso intra-cuenta (comprar USD dentro de una cuenta) y el override de moneda por pata.
+  const crossCurrency = !!resolvedFromCcy && !!resolvedToCcy && resolvedFromCcy !== resolvedToCcy;
+  // Misma cuenta + misma moneda no mueve nada → error inline (el backend también lo rechaza).
+  const sameAccountSameCurrency =
+    !!fromAccountId && fromAccountId === toAccountId && resolvedFromCcy === resolvedToCcy;
 
   const { data: rate } = useExchangeRate(
-    crossCurrency ? fromAccount!.currency : undefined,
-    crossCurrency ? toAccount!.currency : undefined,
+    crossCurrency ? resolvedFromCcy : undefined,
+    crossCurrency ? resolvedToCcy : undefined,
   );
 
   // Pre-llena el monto de destino con la cotización sugerida, salvo que el usuario lo
@@ -55,22 +71,26 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
     }
   }, [crossCurrency, rate, fromAmount, toAmountTouched]);
 
-  // El destino puede ser cualquier otra cuenta (cross-currency habilitado en Sprint 15).
-  const toOptions = (accounts ?? []).filter((a) => a.id !== fromAccountId);
+  // Sprint 22: el destino puede ser CUALQUIER cuenta, incluida la misma que el origen
+  // (conversión intra-cuenta entre monedas distintas).
+  const toOptions = accounts ?? [];
 
   const handleFromChange = (id: string) => {
     setFromAccountId(id);
     setToAmountTouched(false);
-    if (toAccountId === id) setToAccountId('');
+    // la moneda de la pata vuelve a la principal de la cuenta elegida
+    setFromCurrency(accounts?.find((a) => a.id === id)?.currency ?? '');
   };
 
   const handleToChange = (id: string) => {
     setToAccountId(id);
     setToAmountTouched(false);
+    setToCurrency(accounts?.find((a) => a.id === id)?.currency ?? '');
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (sameAccountSameCurrency) return; // guard cliente (el botón ya está deshabilitado)
     const from = parseAmountInput(fromAmount);
     const to = crossCurrency ? parseAmountInput(toAmount) : from;
     mutation.mutate(
@@ -79,13 +99,15 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
         toAccountId,
         fromAmount: from,
         toAmount: to,
+        fromCurrency: resolvedFromCcy || undefined,
+        toCurrency: resolvedToCcy || undefined,
         date,
         description: description || undefined,
       },
       {
         onSuccess: (data) => {
           toast.success(
-            `Transferencia realizada. Nuevo saldo — ${fromAccount!.name}: ${formatMoney(data.fromAccountBalance, fromAccount!.currency)} · ${toAccount!.name}: ${formatMoney(data.toAccountBalance, toAccount!.currency)}`,
+            `Transferencia realizada. Nuevo saldo — ${fromAccount!.name} (${resolvedFromCcy}): ${formatMoney(data.fromAccountBalance, resolvedFromCcy)} · ${toAccount!.name} (${resolvedToCcy}): ${formatMoney(data.toAccountBalance, resolvedToCcy)}`,
           );
           setFromAmount('');
           setToAmount('');
@@ -97,14 +119,15 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
     );
   };
 
-  const hasTwoAccounts = (accounts?.length ?? 0) >= 2;
+  // Sprint 22: con transfers intra-cuenta alcanza UNA cuenta (comprar USD dentro de ella).
+  const hasAccounts = (accounts?.length ?? 0) >= 1;
 
   return (
     <Card>
       <h2>Nueva transferencia</h2>
 
-      {!hasTwoAccounts ? (
-        <p className="text-body">Necesitás al menos dos cuentas para transferir.</p>
+      {!hasAccounts ? (
+        <p className="text-body">Necesitás al menos una cuenta para transferir.</p>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <Select
@@ -123,6 +146,19 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
             ))}
           </Select>
 
+          {/* Chip de moneda de la pata origen (Sprint 22 D4). CREDIT → fija, sin selector. */}
+          {fromAccount && !fromIsCredit && (
+            <CurrencySelect
+              key={`from-${fromAccountId}`}
+              id="transfer-from-currency"
+              label="Moneda origen"
+              options={(fromAccount.balances ?? []).map((b) => b.currency)}
+              value={fromCurrency}
+              onChange={setFromCurrency}
+              disabled={mutation.isPending}
+            />
+          )}
+
           <Select
             label="Cuenta destino"
             id="transfer-to"
@@ -135,12 +171,32 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
             {toOptions.map((account) => (
               <option key={account.id} value={account.id}>
                 {account.name} ({account.currency})
+                {account.id === fromAccountId ? ' — misma cuenta' : ''}
               </option>
             ))}
           </Select>
 
+          {/* Chip de moneda de la pata destino (Sprint 22 D4). CREDIT → fija, sin selector. */}
+          {toAccount && !toIsCredit && (
+            <CurrencySelect
+              key={`to-${toAccountId}`}
+              id="transfer-to-currency"
+              label="Moneda destino"
+              options={(toAccount.balances ?? []).map((b) => b.currency)}
+              value={toCurrency}
+              onChange={setToCurrency}
+              disabled={mutation.isPending}
+            />
+          )}
+
+          {sameAccountSameCurrency && (
+            <p role="alert" className="text-sm text-expense">
+              Elegí cuentas distintas, o monedas distintas dentro de la misma cuenta.
+            </p>
+          )}
+
           <MoneyInput
-            label={crossCurrency ? `Monto a debitar (${fromAccount!.currency})` : 'Monto'}
+            label={crossCurrency ? `Monto a debitar (${resolvedFromCcy})` : `Monto${resolvedFromCcy ? ` (${resolvedFromCcy})` : ''}`}
             id="transfer-from-amount"
             value={fromAmount}
             onValueChange={setFromAmount}
@@ -150,7 +206,7 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
 
           {crossCurrency && (
             <MoneyInput
-              label={`Monto a acreditar (${toAccount!.currency})`}
+              label={`Monto a acreditar (${resolvedToCcy})`}
               id="transfer-to-amount"
               value={toAmount}
               onValueChange={(v) => {
@@ -163,7 +219,7 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
                 rate?.unavailable
                   ? 'Cotización no disponible — ingresá el monto de destino a mano.'
                   : rate?.rate
-                    ? `Cotización sugerida: 1 ${fromAccount!.currency} ≈ ${rate.rate} ${toAccount!.currency} (editable).`
+                    ? `Cotización sugerida: 1 ${resolvedFromCcy} ≈ ${rate.rate} ${resolvedToCcy} (editable).`
                     : 'Buscando cotización...'
               }
             />
@@ -188,7 +244,12 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
             disabled={mutation.isPending}
           />
 
-          <Button type="submit" loading={mutation.isPending} className="self-start">
+          <Button
+            type="submit"
+            loading={mutation.isPending}
+            disabled={sameAccountSameCurrency}
+            className="self-start"
+          >
             {mutation.isPending ? 'Transfiriendo...' : 'Transferir'}
           </Button>
         </form>

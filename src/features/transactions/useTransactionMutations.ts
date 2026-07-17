@@ -11,6 +11,8 @@ export type CreateTransactionInput = {
   categoryId?: string;
   paymentMethodId?: string;
   description?: string;
+  // Sprint 22: moneda de la tx (null/undefined → principal de la cuenta). Solo CREDIT la fija.
+  currency?: string;
 };
 
 export type UpdateTransactionInput = {

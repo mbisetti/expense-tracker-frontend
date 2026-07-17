@@ -11,7 +11,17 @@ import { useDateFormat, type DateFormatPref } from '../../lib/dateFormat';
 import { useCalendar, type CalendarPref } from '../../lib/useCalendar';
 import { useAuth } from '../auth/useAuth';
 import { useDeleteAccount } from '../auth/useDeleteAccount';
+import { useMe, useUpdateMe } from '../auth/useMe';
 import { MoonIcon, SunIcon } from '../../components/ui/icons';
+
+// Moneda favorita: opciones curadas (Sprint 22.1). Si el usuario tuviera otra guardada,
+// se agrega al principio para no perderla del selector.
+const FAV_CURRENCIES = ['ARS', 'USD', 'EUR'];
+const CURRENCY_LABEL: Record<string, string> = {
+  ARS: 'Peso argentino (ARS)',
+  USD: 'Dólar (USD)',
+  EUR: 'Euro (EUR)',
+};
 
 // "Ajustes y preferencias" — segunda entrada del menú de la persona. Tema, formato de fecha y
 // calendario de feriados; abajo, en la misma pantalla, la acción destructiva de borrar cuenta.
@@ -20,12 +30,30 @@ export function SettingsPage() {
   const { pref: dateFmt, set: setDateFmt } = useDateFormat();
   const { calendar, set: setCalendar } = useCalendar();
 
+  const { data: me } = useMe();
+  const updateMe = useUpdateMe();
+
   const { setAccessToken } = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const toast = useToast();
   const deleteAccount = useDeleteAccount();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const favCurrencyOptions =
+    me && !FAV_CURRENCIES.includes(me.defaultCurrency)
+      ? [me.defaultCurrency, ...FAV_CURRENCIES]
+      : FAV_CURRENCIES;
+
+  const changeFavCurrency = (defaultCurrency: string) => {
+    updateMe.mutate(
+      { defaultCurrency },
+      {
+        onSuccess: () => toast.success('Moneda favorita actualizada.'),
+        onError: () => toast.error('No se pudo actualizar la moneda favorita.'),
+      },
+    );
+  };
 
   const handleDelete = () => {
     deleteAccount.mutate(undefined, {
@@ -67,6 +95,21 @@ export function SettingsPage() {
               {theme === 'dark' ? 'Cambiar a claro' : 'Cambiar a oscuro'}
             </Button>
           </div>
+
+          <Select
+            label="Moneda favorita"
+            id="favorite-currency"
+            value={me?.defaultCurrency ?? ''}
+            disabled={!me || updateMe.isPending}
+            onChange={(e) => changeFavCurrency(e.target.value)}
+            helper="Se usa para el total consolidado y para estimar equivalencias de otras monedas."
+          >
+            {favCurrencyOptions.map((c) => (
+              <option key={c} value={c}>
+                {CURRENCY_LABEL[c] ?? c}
+              </option>
+            ))}
+          </Select>
 
           <Select
             label="Formato de fecha"

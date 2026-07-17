@@ -16,6 +16,15 @@ export type AuthResponse = {
   accessToken: string;
 };
 
+// Perfil propio (GET/PATCH /users/me). defaultCurrency = moneda favorita.
+export type Me = {
+  id: string;
+  email: string;
+  name: string;
+  defaultCurrency: string;
+  createdAt: string;
+};
+
 export function login(payload: LoginRequest): Promise<AuthResponse> {
   return http<AuthResponse>('/auth/login', {
     method: 'POST',

@@ -8,7 +8,7 @@ export function transactionErrorMessage(error: unknown): string {
     case 'INSUFFICIENT_BALANCE':
       return 'Saldo insuficiente en la cuenta para este gasto.';
     case 'CURRENCY_MISMATCH':
-      return 'La moneda no coincide con la de la cuenta.';
+      return 'Las tarjetas de crédito solo aceptan su propia moneda.';
     case 'VALIDATION_ERROR':
       return 'Revisá los datos del formulario.';
     case 'IMMUTABLE_FIELD':

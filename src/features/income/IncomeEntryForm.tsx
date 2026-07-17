@@ -48,7 +48,6 @@ export function IncomeEntryForm() {
     setCheckedIds(new Set(activeDeductions.map((d) => d.id)));
   }, [activeDeductions]);
 
-  const selectedAccount = accounts?.find((a) => a.id === accountId);
   const grossNumber = parseAmountInput(grossAmount);
   const chosen = activeDeductions.filter((d) => checkedIds.has(d.id));
   const preview = previewNet(grossNumber, chosen);
@@ -90,8 +89,9 @@ export function IncomeEntryForm() {
       },
       {
         onSuccess: (data) => {
-          const balanceCurrency = selectedAccount?.currency ?? '';
-          toast.success(`Ingreso registrado. Nuevo balance: ${formatMoney(data.accountBalance, balanceCurrency)}`);
+          // Sprint 22: accountBalance es el sub-balance de la moneda de la TX (= la de la
+          // source), no la de la cuenta — un sueldo USD a una cuenta ARS mostraría "ARS" mal.
+          toast.success(`Ingreso registrado. Nuevo balance: ${formatMoney(data.accountBalance, data.currency)}`);
           setGrossAmount('');
           setNotes('');
           setOverrideEnabled(false);

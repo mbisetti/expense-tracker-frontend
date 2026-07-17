@@ -43,6 +43,24 @@ const creditCard = {
   paymentDueDay: 20,
 };
 
+// Sprint 22: cuenta mixta — principal ARS + sub-balance USD (≠0) + EUR (0, oculto).
+const mixedAccount = {
+  id: 'acc-mix',
+  name: 'Mercado Pago',
+  type: 'CASH',
+  currency: 'ARS',
+  balance: 1000,
+  isInformal: false,
+  createdAt: '2026-07-01T00:00:00',
+  statementCloseDay: null,
+  paymentDueDay: null,
+  balances: [
+    { currency: 'ARS', balance: 1000 },
+    { currency: 'EUR', balance: 0 },
+    { currency: 'USD', balance: 320.5 },
+  ],
+};
+
 const statementFixture = {
   accountId: 'acc-3',
   offset: 0,
@@ -203,6 +221,47 @@ describe('AccountsPage', () => {
     expect(postedBody).toMatchObject({ name: 'Caja fuerte', currency: 'USD', isInformal: true });
   });
 
+  it('cuenta mixta: muestra chip del sub-balance no-principal (≠0) y oculta el de 0', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/accounts')) return ok([mixedAccount]);
+        return ok([]); // useTransactions → sin movimientos
+      }),
+    );
+
+    renderPage();
+
+    const card = await screen.findByRole('group', { name: 'Mercado Pago' });
+    // chip USD (US$ 320,50) visible
+    expect(within(card).getByText(/320,50/)).toBeInTheDocument();
+    // EUR en 0 → sin chip (no aparece el símbolo €)
+    expect(within(card).queryByText(/€/)).not.toBeInTheDocument();
+  });
+
+  it('chip de moneda secundaria: expone el equivalente estimado en la moneda favorita', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const u = String(url);
+        if (u.includes('/users/me'))
+          return ok({ id: 'u1', email: 'a@a.com', name: 'A', defaultCurrency: 'ARS', createdAt: '2026-01-01T00:00:00' });
+        if (u.includes('/exchange-rates'))
+          return ok({ base: 'USD', target: 'ARS', rate: 1000, asOf: null, unavailable: false });
+        if (u.includes('/accounts')) return ok([mixedAccount]);
+        return ok([]); // useTransactions
+      }),
+    );
+
+    renderPage();
+
+    const card = await screen.findByRole('group', { name: 'Mercado Pago' });
+    // el chip USD (≠ favorita ARS) trae el botón info… (espera a que cargue la moneda favorita)
+    expect(await within(card).findByRole('button', { name: /Equivalente estimado en ARS/ })).toBeInTheDocument();
+    // …y el equivalente estimado (320,5 × 1000 = 320.500)
+    expect(await within(card).findByText(/320\.500,00.*estimado/)).toBeInTheDocument();
+  });
+
   it('sin tarjetas de crédito con ciclo configurado, no muestra la sección', async () => {
     vi.stubGlobal(
       'fetch',
@@ -218,7 +277,7 @@ describe('AccountsPage', () => {
     expect(screen.queryByText('Tarjetas de crédito')).not.toBeInTheDocument();
   });
 
-  it('con una tarjeta de crédito con ciclo configurado, muestra la sección y su resumen', async () => {
+  it('tarjeta de crédito con ciclo: el resumen aparece DENTRO de la card, no como sección aparte', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn((url: string) => {
@@ -230,8 +289,11 @@ describe('AccountsPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Tarjetas de crédito')).toBeInTheDocument();
-    expect(await screen.findByRole('heading', { name: 'Visa' })).toBeInTheDocument();
-    expect(screen.getByText(/Consumos del ciclo/)).toBeInTheDocument();
+    // el resumen del ciclo vive dentro de la card de la Visa (Sprint 22.1)
+    const card = await screen.findByRole('group', { name: 'Visa' });
+    expect(within(card).getByText('Resumen del ciclo')).toBeInTheDocument();
+    expect(await within(card).findByText(/Consumos del ciclo/)).toBeInTheDocument();
+    // ya no hay una sección separada al final de la página
+    expect(screen.queryByRole('heading', { name: 'Tarjetas de crédito' })).not.toBeInTheDocument();
   });
 });

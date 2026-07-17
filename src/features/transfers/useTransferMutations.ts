@@ -8,6 +8,9 @@ export type CreateTransferInput = {
   toAccountId: string;
   fromAmount: number;
   toAmount: number;
+  // Sprint 22: moneda por pata (undefined → principal de cada cuenta).
+  fromCurrency?: string;
+  toCurrency?: string;
   date: string;
   description?: string;
 };

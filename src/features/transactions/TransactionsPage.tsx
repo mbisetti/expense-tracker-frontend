@@ -104,7 +104,6 @@ export function TransactionsPage() {
   const { data: categories } = useCategories();
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—';
-  const accountCurrency = (id: string) => accounts?.find((a) => a.id === id)?.currency ?? '';
   const categoryName = (id: string | null) =>
     id ? categories?.find((c) => c.id === id)?.name ?? '—' : '—';
 
@@ -371,15 +370,32 @@ export function TransactionsPage() {
                       <td className="py-2 pr-2 text-ink">{row.item.description ?? '—'}</td>
                       <td className="py-2 pr-2 text-body">—</td>
                       <td className="py-2 pr-2 text-body">
-                        {accountName(row.item.fromAccountId)} → {accountName(row.item.toAccountId)}
+                        {/* Sprint 22: intra-cuenta → una cuenta con sus dos monedas; el resto,
+                            origen → destino. Monedas del transfer, no derivadas de la cuenta. */}
+                        {row.item.fromAccountId === row.item.toAccountId
+                          ? `${accountName(row.item.fromAccountId)} · ${row.item.fromCurrency} → ${row.item.toCurrency}`
+                          : `${accountName(row.item.fromAccountId)} → ${accountName(row.item.toAccountId)}`}
                       </td>
                       <td className="py-2 pr-2">
-                        <Amount
-                          amount={row.item.fromAmount}
-                          currency={accountCurrency(row.item.fromAccountId)}
-                          tone="neutral"
-                          size="sm"
-                        />
+                        <span className="tabular-nums">
+                          <Amount
+                            amount={row.item.fromAmount}
+                            currency={row.item.fromCurrency}
+                            tone="neutral"
+                            size="sm"
+                          />
+                          {row.item.fromCurrency !== row.item.toCurrency && (
+                            <>
+                              {' → '}
+                              <Amount
+                                amount={row.item.toAmount}
+                                currency={row.item.toCurrency}
+                                tone="neutral"
+                                size="sm"
+                              />
+                            </>
+                          )}
+                        </span>
                       </td>
                       <td className="py-2 pr-2">
                         <Button

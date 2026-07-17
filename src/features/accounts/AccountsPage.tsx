@@ -4,7 +4,6 @@ import { useDeleteAccount } from './useAccountMutations';
 import { accountErrorMessage } from './errorMessages';
 import { AccountForm } from './AccountForm';
 import { AccountCard } from './AccountCard';
-import { CreditCardStatement } from './CreditCardStatement';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -46,9 +45,6 @@ export function AccountsPage() {
     });
   };
 
-  const creditCards =
-    accounts?.filter((a) => a.type === 'CREDIT' && a.statementCloseDay != null) ?? [];
-
   return (
     <section className="flex flex-col gap-4 text-left">
       <h1>Cuentas</h1>
@@ -77,15 +73,6 @@ export function AccountsPage() {
               <AccountCard key={account.id} account={account} onEdit={() => openEdit(account)} />
             ))}
           </div>
-
-          {creditCards.length > 0 && (
-            <section className="flex flex-col gap-4">
-              <h2>Tarjetas de crédito</h2>
-              {creditCards.map((card) => (
-                <CreditCardStatement key={card.id} account={card} />
-              ))}
-            </section>
-          )}
 
           <div className="flex justify-center pt-2">
             <Button type="button" onClick={openCreate}>

@@ -47,6 +47,30 @@ describe('SettingsPage', () => {
     expect(screen.queryByRole('link', { name: 'Métodos de pago' })).not.toBeInTheDocument();
   });
 
+  it('moneda favorita: muestra la actual (server) y al cambiarla pega PATCH /users/me', async () => {
+    const me = { id: 'u1', email: 'a@a.com', name: 'A', defaultCurrency: 'ARS', createdAt: '2026-01-01T00:00:00' };
+    const patchBodies: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, opts?: RequestInit) => {
+        if (opts?.method === 'PATCH') {
+          const body = JSON.parse(opts.body as string);
+          patchBodies.push(body);
+          return jsonResponse(200, { ...me, defaultCurrency: body.defaultCurrency });
+        }
+        if (String(url).includes('/users/me')) return jsonResponse(200, me);
+        return jsonResponse(200, {});
+      }),
+    );
+    renderSettings();
+
+    const select = (await screen.findByLabelText('Moneda favorita', { exact: false })) as HTMLSelectElement;
+    await waitFor(() => expect(select.value).toBe('ARS'));
+
+    fireEvent.change(select, { target: { value: 'USD' } });
+    await waitFor(() => expect(patchBodies).toContainEqual({ defaultCurrency: 'USD' }));
+  });
+
   it('elegir formato de fecha yankee lo persiste en localStorage', () => {
     renderSettings();
 

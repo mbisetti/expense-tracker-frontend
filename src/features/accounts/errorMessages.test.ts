@@ -8,7 +8,8 @@ describe('accountErrorMessage', () => {
       'ACCOUNT_HAS_TRANSACTIONS',
       'No se puede borrar: la cuenta tiene transacciones. Borrá o mové las transacciones primero.',
     ],
-    ['CURRENCY_LOCKED', 'No se puede cambiar la moneda: la cuenta ya tiene transacciones.'],
+    ['CURRENCY_LOCKED', 'No se puede cambiar la moneda: la tarjeta de crédito ya tiene transacciones.'],
+    ['CURRENCY_MISMATCH', 'No se puede volver tarjeta de crédito: tiene movimientos en otra moneda.'],
     ['ACCOUNT_NOT_FOUND', 'La cuenta no existe.'],
     ['VALIDATION_ERROR', 'Revisá los datos del formulario.'],
   ])('mapea %s a mensaje claro', (code, expected) => {

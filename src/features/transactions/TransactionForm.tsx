@@ -11,6 +11,7 @@ import { transactionErrorMessage } from './errorMessages';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { MoneyInput } from '../../components/ui/MoneyInput';
+import { CurrencySelect } from '../../components/ui/CurrencySelect';
 import { DateField } from '../../components/ui/DateField';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
@@ -39,6 +40,8 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
   const [accountId, setAccountId] = useState(transaction?.accountId ?? '');
   const [type, setType] = useState<TransactionType>(transaction?.type ?? lockedType ?? 'EXPENSE');
   const [amount, setAmount] = useState(transaction ? numberToAmountDisplay(transaction.amount) : '');
+  // Sprint 22: moneda de la tx. Default a la principal de la cuenta; se resetea al cambiar cuenta.
+  const [currency, setCurrency] = useState(transaction?.currency ?? '');
   const [date, setDate] = useState(transaction?.date ?? todayLocal());
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? '');
   const [paymentMethodId, setPaymentMethodId] = useState(transaction?.paymentMethodId ?? '');
@@ -58,6 +61,12 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
     (c) => c.type === type || c.type === 'BOTH',
   );
   const selectedAccount = accounts?.find((a) => a.id === accountId);
+  // CREDIT es mono-moneda (D2): no se muestra el selector, la moneda es la de la cuenta.
+  const isCredit = selectedAccount?.type === 'CREDIT';
+  // Monedas conocidas de la cuenta (principal primera) + "Otra…" para una moneda nueva.
+  const currencyOptions = selectedAccount?.balances?.map((b) => b.currency) ?? [];
+  // Moneda efectiva: la elegida, o la principal si aún no se tocó / es CREDIT.
+  const effectiveCurrency = isCredit ? selectedAccount!.currency : currency || selectedAccount?.currency || '';
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -97,6 +106,8 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
           categoryId: categoryId || undefined,
           paymentMethodId: paymentMethodId || undefined,
           description: description || undefined,
+          // Sprint 22: manda la moneda resuelta (principal si no se tocó el selector).
+          currency: effectiveCurrency || undefined,
         },
         {
           onSuccess: () => {
@@ -126,8 +137,11 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         id="tx-account"
         value={accountId}
         onChange={(e) => {
-          setAccountId(e.target.value);
+          const newId = e.target.value;
+          setAccountId(newId);
           setPaymentMethodId(''); // el método depende de la cuenta → se resetea al cambiarla
+          // la moneda vuelve a la principal de la cuenta elegida (Sprint 22 D4)
+          setCurrency(accounts?.find((a) => a.id === newId)?.currency ?? '');
         }}
         required
         disabled={isEdit || isPending}
@@ -157,13 +171,27 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
       )}
 
       <MoneyInput
-        label={`Monto${selectedAccount ? ` (${selectedAccount.currency})` : ''}`}
+        label={`Monto${effectiveCurrency ? ` (${effectiveCurrency})` : ''}`}
         id="tx-amount"
         value={amount}
         onValueChange={setAmount}
         required
         disabled={isPending}
       />
+
+      {/* Selector de moneda discreto (Sprint 22 D4): solo en alta y solo si la cuenta no es
+          CREDIT (mono-moneda). Se remonta con key={accountId} para resetear el modo "Otra…". */}
+      {!isEdit && selectedAccount && !isCredit && (
+        <CurrencySelect
+          key={accountId}
+          id="tx-currency"
+          label="Moneda"
+          options={currencyOptions}
+          value={currency}
+          onChange={setCurrency}
+          disabled={isPending}
+        />
+      )}
 
       <DateField
         label="Fecha"

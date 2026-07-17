@@ -26,7 +26,6 @@ export function TransferList() {
   const deleteMutation = useDeleteTransfer();
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—';
-  const currencyOf = (id: string) => accounts?.find((a) => a.id === id)?.currency;
 
   const confirmDelete = () => {
     if (!confirmingDeleteId) return;
@@ -56,14 +55,18 @@ export function TransferList() {
       {data && data.content.length > 0 && (
         <ul className="list-none p-0 m-0 divide-y divide-line">
           {data.content.map((transfer) => {
-            const fromCcy = currencyOf(transfer.fromAccountId);
-            const toCcy = currencyOf(transfer.toAccountId);
-            const crossCurrency = !!fromCcy && !!toCcy && fromCcy !== toCcy;
+            // Sprint 22: la moneda sale del transfer, no de la cuenta (un transfer intra-cuenta
+            // tiene ambas patas en la misma cuenta pero monedas distintas — derivar de la
+            // cuenta escondería la segunda moneda).
+            const crossCurrency = transfer.fromCurrency !== transfer.toCurrency;
+            const intraAccount = transfer.fromAccountId === transfer.toAccountId;
             return (
               <li key={transfer.id} className="flex items-center justify-between gap-3 py-2">
                 <div>
                   <p className="text-ink">
-                    {accountName(transfer.fromAccountId)} → {accountName(transfer.toAccountId)}
+                    {intraAccount
+                      ? `${accountName(transfer.fromAccountId)} · ${transfer.fromCurrency} → ${transfer.toCurrency}`
+                      : `${accountName(transfer.fromAccountId)} → ${accountName(transfer.toAccountId)}`}
                   </p>
                   <p className="text-sm text-body">
                     {formatDate(transfer.date)}
@@ -72,15 +75,11 @@ export function TransferList() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="tabular-nums text-ink">
-                    {fromCcy ? (
-                      <Amount amount={transfer.fromAmount} currency={fromCcy} tone="neutral" size="sm" />
-                    ) : (
-                      transfer.fromAmount.toLocaleString('es-AR')
-                    )}
+                    <Amount amount={transfer.fromAmount} currency={transfer.fromCurrency} tone="neutral" size="sm" />
                     {crossCurrency && (
                       <>
                         {' → '}
-                        <Amount amount={transfer.toAmount} currency={toCcy!} tone="neutral" size="sm" />
+                        <Amount amount={transfer.toAmount} currency={transfer.toCurrency} tone="neutral" size="sm" />
                       </>
                     )}
                   </span>
