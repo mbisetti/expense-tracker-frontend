@@ -50,7 +50,7 @@ afterEach(() => {
 });
 
 describe('CategoriesPage', () => {
-  it('las categorías del sistema no muestran acciones de edición', async () => {
+  it('agrupa por tipo con subtítulo; la del sistema no tiene acciones, la del usuario tiene el lápiz', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(() => jsonResponse(200, [userCategory, systemCategory])),
@@ -59,10 +59,14 @@ describe('CategoriesPage', () => {
     renderPage();
 
     expect(await screen.findByText('Alimentación')).toBeInTheDocument();
+    // subtítulo del grupo (ambas son EXPENSE)
+    expect(screen.getByRole('heading', { name: 'Gasto' })).toBeInTheDocument();
     expect(screen.getByText('Sistema')).toBeInTheDocument();
-    // Solo la categoría del usuario tiene botones
-    expect(screen.getAllByRole('button', { name: 'Editar' })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: 'Borrar' })).toHaveLength(1);
+    // solo la categoría del usuario tiene el menú de acciones (lápiz)
+    expect(screen.getByRole('button', { name: 'Acciones de Mascotas' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Acciones de Alimentación' }),
+    ).not.toBeInTheDocument();
   });
 
   it('403 CATEGORY_NOT_EDITABLE al borrar muestra un toast con mensaje claro', async () => {
@@ -77,7 +81,8 @@ describe('CategoriesPage', () => {
     );
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Acciones de Mascotas' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Borrar' }));
     const dialog = screen.getByRole('dialog', { name: 'Borrar categoría' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
 
@@ -96,7 +101,8 @@ describe('CategoriesPage', () => {
     );
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Acciones de Mascotas' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Borrar' }));
     const dialog = screen.getByRole('dialog', { name: 'Borrar categoría' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
 

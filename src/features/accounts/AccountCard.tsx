@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Amount } from '../../components/ui/Amount';
 import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { PencilIcon } from '../../components/ui/icons';
+import { ActionsMenu } from '../../components/ui/ActionsMenu';
 import { useTransactions } from '../transactions/useTransactions';
 import { BalanceSparkline } from './BalanceSparkline';
 import type { Account, AccountType } from './api';
@@ -78,26 +78,6 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
     return asc;
   }, [txs, account.balance]);
 
-  // Menú de acciones (lápiz): editar/borrar quedan detrás de un click para que "Borrar" no
-  // esté tan a mano (reporte de Marko). Cierra al clickear afuera o con Esc.
-  const [menuOpen, setMenuOpen] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!menuOpen) return;
-    const onPointerDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setMenuOpen(false);
-    };
-    document.addEventListener('mousedown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [menuOpen]);
-
   return (
     <Card role="group" aria-label={account.name}>
       <div className="flex flex-col gap-4">
@@ -148,46 +128,8 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
           )}
         </div>
 
-        <div ref={menuRef} className="relative flex justify-end border-t border-line pt-3">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-            aria-label={`Acciones de ${account.name}`}
-            className="flex h-11 w-11 items-center justify-center rounded-sm text-body transition-colors duration-200 ease-out hover:bg-brand-bg hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </button>
-          {menuOpen && (
-            <div
-              role="menu"
-              className="absolute bottom-full right-0 z-20 mb-1 w-40 rounded-md border border-line bg-surface-elevated p-1 shadow-md"
-            >
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onEdit();
-                }}
-                className="flex min-h-11 w-full items-center rounded-sm px-3 text-sm text-ink transition-colors duration-200 ease-out hover:bg-brand-bg"
-              >
-                Editar
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMenuOpen(false);
-                  onDelete();
-                }}
-                className="flex min-h-11 w-full items-center rounded-sm px-3 text-sm text-ink transition-colors duration-200 ease-out hover:bg-expense/10 hover:text-expense"
-              >
-                Borrar
-              </button>
-            </div>
-          )}
+        <div className="flex justify-end border-t border-line pt-3">
+          <ActionsMenu label={account.name} onEdit={onEdit} onDelete={onDelete} />
         </div>
       </div>
     </Card>

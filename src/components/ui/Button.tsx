@@ -21,7 +21,7 @@ type ButtonProps = {
 // perdía contraste (reporte 8a de Marko). brand-bg es un realce sutil y legible en light y dark.
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'bg-brand text-on-brand hover:bg-brand-hover',
-  secondary: 'border border-line bg-surface-elevated text-ink hover:border-brand hover:bg-brand-bg',
+  secondary: 'border border-line bg-surface-elevated text-ink hover:bg-brand-bg',
   ghost: 'text-ink hover:bg-brand-bg',
   danger: 'bg-expense text-on-brand hover:brightness-90',
 };
@@ -62,7 +62,7 @@ export function Button({
       className={[
         'inline-flex items-center justify-center rounded-md font-medium',
         'cursor-pointer transition-colors duration-200 ease-out',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand',
         'disabled:cursor-not-allowed disabled:opacity-50',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],

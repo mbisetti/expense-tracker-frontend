@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useLogout } from '../features/auth/useLogout';
-import { BottomNav } from './ui/BottomNav';
 import { Modal } from './ui/Modal';
 import { MangoIcon, MenuIcon, UserIcon } from './ui/icons';
 
@@ -19,7 +18,7 @@ const DRAWER_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
   ].join(' ');
 
 const ICON_BTN_CLASS =
-  'flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-ink transition-colors duration-200 ease-out hover:bg-brand-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
+  'flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-ink transition-colors duration-200 ease-out hover:bg-brand-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 
 // Nav principal CORTO (Sprint 21): Overview (ex-Dashboard), Cuentas, Transacciones, Ingresos.
 // Categorías y Métodos de pago se movieron a Ajustes; el tema y Cerrar sesión, al menú de la
@@ -146,16 +145,12 @@ export function AppLayout() {
               {route.label}
             </NavLink>
           ))}
-          <NavLink to="/settings" onClick={closeMenu} className={DRAWER_LINK_CLASS}>
-            Ajustes
-          </NavLink>
         </nav>
       </Modal>
 
-      <main className="mx-auto w-full max-w-5xl px-4 pb-16 md:pb-0">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-8">
         <Outlet />
       </main>
-      <BottomNav />
     </>
   );
 }

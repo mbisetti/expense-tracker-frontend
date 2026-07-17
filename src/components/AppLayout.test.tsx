@@ -43,17 +43,18 @@ describe('AppLayout — nav', () => {
     expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument();
   });
 
-  it('el hamburger abre el drawer lateral con las 4 rutas + Ajustes (sin Categorías/Métodos)', () => {
+  it('el hamburger abre el drawer lateral con las 4 rutas (sin Ajustes/Categorías/Métodos)', () => {
     renderLayout();
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
 
     const dialog = screen.getByRole('dialog', { name: 'Menú' });
     const nav = within(dialog).getByRole('navigation', { name: 'Menú' });
-    for (const label of ['Overview', 'Cuentas', 'Transacciones', 'Ingresos', 'Ajustes']) {
+    for (const label of ['Overview', 'Cuentas', 'Transacciones', 'Ingresos']) {
       expect(within(nav).getByRole('link', { name: label })).toBeInTheDocument();
     }
+    // Ajustes vive en el menú de la persona, no en el drawer; Categorías/Métodos en Ajustes
+    expect(within(nav).queryByRole('link', { name: 'Ajustes' })).not.toBeInTheDocument();
     expect(within(nav).queryByRole('link', { name: 'Categorías' })).not.toBeInTheDocument();
-    expect(within(nav).queryByRole('link', { name: 'Métodos de pago' })).not.toBeInTheDocument();
   });
 
   it('la ruta activa lleva aria-current="page" en el drawer', () => {
@@ -71,9 +72,9 @@ describe('AppLayout — nav', () => {
     renderLayout(['/dashboard']);
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
     const dialog = screen.getByRole('dialog', { name: 'Menú' });
-    fireEvent.click(within(dialog).getByRole('link', { name: 'Ajustes' }));
+    fireEvent.click(within(dialog).getByRole('link', { name: 'Cuentas' }));
 
-    expect(await screen.findByText('Página Ajustes')).toBeInTheDocument();
+    expect(await screen.findByText('Página Cuentas')).toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument();
   });
 
