@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { DashboardPage } from './DashboardPage';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { TransactionListItem } from '../transactions/api';
 import { jsonResponse, ok } from '../../test/mockResponse';
 
@@ -85,9 +86,11 @@ function renderPage() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <MemoryRouter>
-          <DashboardPage />
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter>
+            <DashboardPage />
+          </MemoryRouter>
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -286,9 +289,11 @@ describe('DashboardPage', () => {
         <AuthContext.Provider
           value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
         >
-          <MemoryRouter>
-            <DashboardPage />
-          </MemoryRouter>
+          <ToastProvider>
+            <MemoryRouter>
+              <DashboardPage />
+            </MemoryRouter>
+          </ToastProvider>
         </AuthContext.Provider>
       </QueryClientProvider>,
     );

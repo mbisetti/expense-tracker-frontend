@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { BudgetSection } from './BudgetSection';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { jsonResponse, ok } from '../../test/mockResponse';
 
 const fail = () => jsonResponse(500, { error: 'INTERNAL', message: 'boom' });
@@ -16,7 +17,9 @@ function renderSection() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <BudgetSection />
+        <ToastProvider>
+          <BudgetSection />
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -28,6 +31,89 @@ afterEach(() => {
 });
 
 describe('BudgetSection', () => {
+  it('crear presupuesto abre el form, manda POST con los datos y refresca la lista', async () => {
+    let created = false;
+    let postBody: Record<string, unknown> | null = null;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, options?: RequestInit) => {
+        if (options?.method === 'POST') {
+          created = true;
+          postBody = JSON.parse(options.body as string);
+          return jsonResponse(201, {
+            id: 'b-new',
+            categoryId: 'c1',
+            limitAmount: 50000,
+            currency: 'ARS',
+            month: 7,
+            year: 2026,
+          });
+        }
+        if (url.includes('/summary/budgets'))
+          return ok({
+            budgets: created
+              ? [
+                  {
+                    budgetId: 'b-new',
+                    categoryId: 'c1',
+                    categoryName: 'Comida',
+                    currency: 'ARS',
+                    limitAmount: 50000,
+                    spentAmount: 0,
+                    projectedEndOfMonth: 0,
+                    projectedStatus: 'ok',
+                  },
+                ]
+              : [],
+          });
+        if (url.includes('/categories'))
+          return ok([
+            {
+              id: 'c1',
+              userId: 'u1',
+              name: 'Comida',
+              type: 'EXPENSE',
+              color: null,
+              icon: null,
+              sourceDefaultCategoryId: null,
+              createdAt: '2026-07-01T00:00:00',
+            },
+          ]);
+        if (url.includes('/accounts'))
+          return ok([
+            {
+              id: 'a1',
+              name: 'Efectivo',
+              type: 'CASH',
+              currency: 'ARS',
+              balance: 0,
+              isInformal: false,
+              createdAt: '2026-07-01T00:00:00',
+              statementCloseDay: null,
+              paymentDueDay: null,
+            },
+          ]);
+        return ok([]);
+      }),
+    );
+
+    renderSection();
+    fireEvent.click(await screen.findByRole('button', { name: 'Nuevo' }));
+    // las opciones de categoría/moneda cargan async: esperar antes de elegir
+    await screen.findByRole('option', { name: 'Comida' });
+    await screen.findByRole('option', { name: 'ARS' });
+    fireEvent.change(screen.getByLabelText('Categoría', { exact: false }), { target: { value: 'c1' } });
+    fireEvent.change(screen.getByLabelText('Moneda', { exact: false }), { target: { value: 'ARS' } });
+    fireEvent.change(screen.getByLabelText('Límite mensual', { exact: false }), {
+      target: { value: '50000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() =>
+      expect(postBody).toMatchObject({ categoryId: 'c1', limitAmount: 50000, currency: 'ARS' }),
+    );
+  });
+
   it('muestra los estados ok, warning y exceeded según el gasto', async () => {
     vi.stubGlobal(
       'fetch',

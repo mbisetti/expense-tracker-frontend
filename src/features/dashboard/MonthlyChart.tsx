@@ -57,7 +57,20 @@ export function MonthlyChart({ months, currency }: MonthlyChartProps) {
               tickFormatter={(value: number) => compact.format(value)}
               width={48}
             />
-            <Tooltip formatter={(value) => formatMoney(Number(value), currency)} />
+            {/* cursor + contentStyle tematizados: el default de Recharts era un cuadrado
+                blanco/gris que no combinaba (9b). Ahora el resalte y la cajita siguen los tokens. */}
+            <Tooltip
+              cursor={{ fill: 'var(--surface-sunken)', opacity: 0.6 }}
+              contentStyle={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                borderRadius: '10px',
+                color: 'var(--text-h)',
+              }}
+              labelStyle={{ color: 'var(--text-h)' }}
+              itemStyle={{ color: 'var(--text-h)' }}
+              formatter={(value) => formatMoney(Number(value), currency)}
+            />
             <Legend />
             <Bar dataKey="income" name="Ingresos" fill="var(--income)" radius={[4, 4, 0, 0]} />
             <Bar dataKey="expense" name="Gastos" fill="var(--expense)" radius={[4, 4, 0, 0]} />

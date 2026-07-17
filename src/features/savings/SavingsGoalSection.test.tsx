@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { SavingsGoalSection } from './SavingsGoalSection';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
 
 function renderSection() {
@@ -14,7 +15,9 @@ function renderSection() {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <SavingsGoalSection />
+        <ToastProvider>
+          <SavingsGoalSection />
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
