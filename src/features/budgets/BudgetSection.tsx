@@ -42,6 +42,10 @@ export function BudgetSection() {
   const toast = useToast();
   const deleteMutation = useDeleteBudget();
 
+  // Vacío: el CTA vive en el centro (EmptyState); escondemos el "Nuevo" de arriba a la
+  // derecha para no duplicarlo. Con datos, el de arriba es el único.
+  const isEmpty = !!data && data.budgets.length === 0;
+
   const openCreate = () => {
     setEditing(null);
     setFormOpen(true);
@@ -63,9 +67,11 @@ export function BudgetSection() {
     <Card>
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="m-0">Presupuestos del mes</h2>
-        <Button type="button" size="sm" onClick={openCreate}>
-          Nuevo
-        </Button>
+        {!isEmpty && (
+          <Button type="button" size="sm" onClick={openCreate}>
+            Nuevo
+          </Button>
+        )}
       </div>
 
       {isPending && <Skeleton variant="list" rows={3} />}

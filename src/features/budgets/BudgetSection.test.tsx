@@ -98,7 +98,8 @@ describe('BudgetSection', () => {
     );
 
     renderSection();
-    fireEvent.click(await screen.findByRole('button', { name: 'Nuevo' }));
+    // arranca vacío: el CTA es el del centro (EmptyState), no el de arriba a la derecha
+    fireEvent.click(await screen.findByRole('button', { name: 'Nuevo presupuesto' }));
     // las opciones de categoría/moneda cargan async: esperar antes de elegir
     await screen.findByRole('option', { name: 'Comida' });
     await screen.findByRole('option', { name: 'ARS' });

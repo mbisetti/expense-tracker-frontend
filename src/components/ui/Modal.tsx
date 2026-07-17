@@ -131,7 +131,7 @@ export function Modal({
       <div
         aria-hidden="true"
         onClick={handleDismiss}
-        className="absolute inset-0 bg-ink/50 transition-opacity duration-200 ease-out motion-reduce:transition-none"
+        className="absolute inset-0 bg-overlay transition-opacity duration-200 ease-out motion-reduce:transition-none"
       />
       <div
         ref={dialogRef}
