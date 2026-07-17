@@ -142,7 +142,7 @@ describe('PaymentMethodsPage', () => {
 
     renderPage();
     await screen.findByText('Plata en mano');
-    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Editar' }));
+    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Editar Plata en mano' }));
     fireEvent.click(screen.getByLabelText(/método por defecto/));
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
@@ -169,7 +169,8 @@ describe('PaymentMethodsPage', () => {
 
     renderPage();
     await screen.findByText('Plata en mano');
-    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Borrar' }));
+    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Editar Plata en mano' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar' }));
     fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Borrar' }));
 
     await waitFor(() => {
@@ -191,7 +192,8 @@ describe('PaymentMethodsPage', () => {
 
     renderPage();
     await screen.findByText('Plata en mano');
-    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Borrar' }));
+    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Editar Plata en mano' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar' }));
     fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Cancelar' }));
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -212,14 +214,17 @@ describe('PaymentMethodsPage', () => {
 
     renderPage();
     await screen.findByText('Plata en mano');
-    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Borrar' }));
+    fireEvent.click(rowOf('Plata en mano').getByRole('button', { name: 'Editar Plata en mano' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar' }));
     fireEvent.click(within(deleteDialog()).getByRole('button', { name: 'Borrar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'El método de pago no existe o fue borrado.',
     );
-    // onSettled cierra el ConfirmDialog: la fila vuelve a Editar/Borrar
-    expect(rowOf('Plata en mano').getByRole('button', { name: 'Borrar' })).toBeInTheDocument();
+    // onSettled cierra el ConfirmDialog: la fila vuelve a mostrar el lápiz de acciones
+    expect(
+      rowOf('Plata en mano').getByRole('button', { name: 'Editar Plata en mano' }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

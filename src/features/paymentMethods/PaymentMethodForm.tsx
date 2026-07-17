@@ -15,9 +15,11 @@ import type { PaymentMethod, PaymentMethodType } from './api';
 type PaymentMethodFormProps = {
   paymentMethod?: PaymentMethod;
   onClose: () => void;
+  /** En edición: dispara el borrado (con confirmación en la página). */
+  onDelete?: () => void;
 };
 
-export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormProps) {
+export function PaymentMethodForm({ paymentMethod, onClose, onDelete }: PaymentMethodFormProps) {
   const isEdit = paymentMethod !== undefined;
   const toast = useToast();
 
@@ -73,12 +75,8 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
     <form
       onSubmit={handleSubmit}
       aria-label={isEdit ? 'Editar método de pago' : 'Nuevo método de pago'}
-      className="flex flex-col gap-3 rounded-md border border-line bg-surface-elevated p-4"
+      className="flex flex-col gap-3"
     >
-      <h2 className="text-lg font-semibold text-ink">
-        {isEdit ? 'Editar método de pago' : 'Nuevo método de pago'}
-      </h2>
-
       {/* La cuenta a la que pertenece el método. Inmutable en edición (el backend no permite
           moverlo de cuenta) → se muestra deshabilitado. */}
       <Select
@@ -134,13 +132,24 @@ export function PaymentMethodForm({ paymentMethod, onClose }: PaymentMethodFormP
         Usar como método por defecto
       </label>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" loading={isPending}>
           Guardar
         </Button>
         <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
           Cancelar
         </Button>
+        {isEdit && onDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onDelete}
+            disabled={isPending}
+            className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+          >
+            Borrar
+          </Button>
+        )}
       </div>
     </form>
   );

@@ -15,9 +15,11 @@ import type { Account, AccountType } from './api';
 type AccountFormProps = {
   account?: Account;
   onClose: () => void;
+  /** En edición: dispara el borrado (con confirmación en la página). */
+  onDelete?: () => void;
 };
 
-export function AccountForm({ account, onClose }: AccountFormProps) {
+export function AccountForm({ account, onClose, onDelete }: AccountFormProps) {
   const isEdit = account !== undefined;
   const toast = useToast();
 
@@ -183,13 +185,24 @@ export function AccountForm({ account, onClose }: AccountFormProps) {
         Cuenta informal (efectivo, cripto, fuera del banco)
       </label>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" loading={isPending}>
           Guardar
         </Button>
         <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
           Cancelar
         </Button>
+        {isEdit && onDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onDelete}
+            disabled={isPending}
+            className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+          >
+            Borrar
+          </Button>
+        )}
       </div>
     </form>
   );

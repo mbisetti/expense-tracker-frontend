@@ -5,6 +5,8 @@ import { paymentMethodErrorMessage } from './errorMessages';
 import { PaymentMethodForm } from './PaymentMethodForm';
 import { useAccounts } from '../accounts/useAccounts';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
+import { EditButton } from '../../components/ui/ActionsMenu';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -31,6 +33,11 @@ export function PaymentMethodsPage() {
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—';
 
+  const openCreate = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+
   const closeForm = () => {
     setFormOpen(false);
     setEditing(null);
@@ -54,19 +61,9 @@ export function PaymentMethodsPage() {
     <section className="flex flex-col gap-4 text-left">
       <h1>Métodos de pago</h1>
 
-      {!formOpen && (
-        <Button type="button" onClick={() => setFormOpen(true)} className="self-start">
-          Nuevo método de pago
-        </Button>
-      )}
-
-      {formOpen && (
-        <PaymentMethodForm
-          key={editing?.id ?? 'new'}
-          paymentMethod={editing ?? undefined}
-          onClose={closeForm}
-        />
-      )}
+      <Button type="button" onClick={openCreate} className="self-start">
+        Nuevo método de pago
+      </Button>
 
       {isPending && <Skeleton variant="list" rows={4} />}
 
@@ -100,18 +97,8 @@ export function PaymentMethodsPage() {
                   <td className="py-2 pr-2 text-body">{TYPE_LABELS[pm.type]}</td>
                   <td className="py-2 pr-2 text-body">{pm.isDefault ? '★ Sí' : '—'}</td>
                   <td className="py-2 pr-2">
-                    <div className="flex gap-2">
-                      <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(pm)}>
-                        Editar
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setConfirmingDeleteId(pm.id)}
-                      >
-                        Borrar
-                      </Button>
+                    <div className="flex justify-end">
+                      <EditButton label={pm.name} onClick={() => startEdit(pm)} />
                     </div>
                   </td>
                 </tr>
@@ -120,6 +107,27 @@ export function PaymentMethodsPage() {
           </table>
         </div>
       )}
+
+      <Modal
+        open={formOpen}
+        onClose={closeForm}
+        title={editing ? 'Editar método de pago' : 'Nuevo método de pago'}
+      >
+        <PaymentMethodForm
+          key={editing?.id ?? 'new'}
+          paymentMethod={editing ?? undefined}
+          onClose={closeForm}
+          onDelete={
+            editing
+              ? () => {
+                  const id = editing.id;
+                  closeForm();
+                  setConfirmingDeleteId(id);
+                }
+              : undefined
+          }
+        />
+      </Modal>
 
       <ConfirmDialog
         open={confirmingDeleteId !== null}

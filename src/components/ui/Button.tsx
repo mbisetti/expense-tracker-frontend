@@ -22,7 +22,9 @@ type ButtonProps = {
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: 'bg-brand text-on-brand hover:bg-brand-hover',
   secondary: 'border border-line bg-surface-elevated text-ink hover:bg-brand-bg',
-  ghost: 'text-ink hover:bg-brand-bg',
+  // ghost lleva borde para que se lea como botón (antes, sin el chrome nativo, quedaba como
+  // texto suelto — reporte de Marko). Mismo borde que secondary, sin fondo de reposo.
+  ghost: 'border border-line text-ink hover:bg-brand-bg',
   danger: 'bg-expense text-on-brand hover:brightness-90',
 };
 

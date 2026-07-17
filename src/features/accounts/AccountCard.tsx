@@ -3,7 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { Amount } from '../../components/ui/Amount';
 import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
-import { ActionsMenu } from '../../components/ui/ActionsMenu';
+import { EditButton } from '../../components/ui/ActionsMenu';
 import { useTransactions } from '../transactions/useTransactions';
 import { BalanceSparkline } from './BalanceSparkline';
 import type { Account, AccountType } from './api';
@@ -44,10 +44,9 @@ function formatShortDate(date: string): string {
 type AccountCardProps = {
   account: Account;
   onEdit: () => void;
-  onDelete: () => void;
 };
 
-export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
+export function AccountCard({ account, onEdit }: AccountCardProps) {
   const { data, isPending, isError } = useTransactions({
     accountId: account.id,
     dateFrom: isoDaysShift(CHART_MONTHS),
@@ -129,7 +128,7 @@ export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
         </div>
 
         <div className="flex justify-end border-t border-line pt-3">
-          <ActionsMenu label={account.name} onEdit={onEdit} onDelete={onDelete} />
+          <EditButton label={account.name} onClick={onEdit} />
         </div>
       </div>
     </Card>

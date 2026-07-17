@@ -8,7 +8,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { ActionsMenu } from '../../components/ui/ActionsMenu';
+import { EditButton } from '../../components/ui/ActionsMenu';
 import { useToast } from '../../components/ui/toastContext';
 import type { Category, CategoryType } from './api';
 
@@ -102,11 +102,7 @@ export function CategoriesPage() {
                         {isSystem ? (
                           <em className="text-body">Sistema</em>
                         ) : (
-                          <ActionsMenu
-                            label={category.name}
-                            onEdit={() => startEdit(category)}
-                            onDelete={() => setConfirmingDeleteId(category.id)}
-                          />
+                          <EditButton label={category.name} onClick={() => startEdit(category)} />
                         )}
                       </li>
                     );
@@ -123,7 +119,20 @@ export function CategoriesPage() {
         onClose={closeForm}
         title={editing ? 'Editar categoría' : 'Nueva categoría'}
       >
-        <CategoryForm key={editing?.id ?? 'new'} category={editing ?? undefined} onClose={closeForm} />
+        <CategoryForm
+          key={editing?.id ?? 'new'}
+          category={editing ?? undefined}
+          onClose={closeForm}
+          onDelete={
+            editing
+              ? () => {
+                  const id = editing.id;
+                  closeForm();
+                  setConfirmingDeleteId(id);
+                }
+              : undefined
+          }
+        />
       </Modal>
 
       <ConfirmDialog

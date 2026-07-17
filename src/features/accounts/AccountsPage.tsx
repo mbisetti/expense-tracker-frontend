@@ -74,12 +74,7 @@ export function AccountsPage() {
         <>
           <div className="flex flex-col gap-4">
             {accounts.map((account) => (
-              <AccountCard
-                key={account.id}
-                account={account}
-                onEdit={() => openEdit(account)}
-                onDelete={() => setConfirmingDeleteId(account.id)}
-              />
+              <AccountCard key={account.id} account={account} onEdit={() => openEdit(account)} />
             ))}
           </div>
 
@@ -101,7 +96,20 @@ export function AccountsPage() {
       )}
 
       <Modal open={formOpen} onClose={closeForm} title={editing ? 'Editar cuenta' : 'Nueva cuenta'}>
-        <AccountForm key={editing?.id ?? 'new'} account={editing ?? undefined} onClose={closeForm} />
+        <AccountForm
+          key={editing?.id ?? 'new'}
+          account={editing ?? undefined}
+          onClose={closeForm}
+          onDelete={
+            editing
+              ? () => {
+                  const id = editing.id;
+                  closeForm();
+                  setConfirmingDeleteId(id);
+                }
+              : undefined
+          }
+        />
       </Modal>
 
       <ConfirmDialog

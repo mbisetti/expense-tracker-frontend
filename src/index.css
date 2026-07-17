@@ -107,7 +107,7 @@ button:disabled {
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -266,6 +266,33 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
+
+/* color-scheme sigue el tema de la APP (no el del SO): sin esto, los controles nativos
+   (checkbox, spinners de number, date picker, scrollbar) se ven oscuros en tema claro cuando
+   el SO está en oscuro. Alineados con data-theme y con prefers-color-scheme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+  }
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* Campos number sin las flechitas de subir/bajar (día de vencimiento, etc.). */
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
 }
 
 /* Drawer lateral (nav mobile): se desliza de izquierda a derecha al abrir. */

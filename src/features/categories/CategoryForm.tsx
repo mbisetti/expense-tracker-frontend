@@ -11,9 +11,11 @@ import type { Category, CategoryType } from './api';
 type CategoryFormProps = {
   category?: Category;
   onClose: () => void;
+  /** En edición: dispara el borrado (con confirmación en la página). */
+  onDelete?: () => void;
 };
 
-export function CategoryForm({ category, onClose }: CategoryFormProps) {
+export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps) {
   const isEdit = category !== undefined;
   const toast = useToast();
 
@@ -112,13 +114,24 @@ export function CategoryForm({ category, onClose }: CategoryFormProps) {
         />
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" loading={isPending}>
           Guardar
         </Button>
         <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
           Cancelar
         </Button>
+        {isEdit && onDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onDelete}
+            disabled={isPending}
+            className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+          >
+            Borrar
+          </Button>
+        )}
       </div>
     </form>
   );

@@ -63,9 +63,9 @@ describe('CategoriesPage', () => {
     expect(screen.getByRole('heading', { name: 'Gasto' })).toBeInTheDocument();
     expect(screen.getByText('Sistema')).toBeInTheDocument();
     // solo la categoría del usuario tiene el menú de acciones (lápiz)
-    expect(screen.getByRole('button', { name: 'Acciones de Mascotas' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Editar Mascotas' })).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: 'Acciones de Alimentación' }),
+      screen.queryByRole('button', { name: 'Editar Alimentación' }),
     ).not.toBeInTheDocument();
   });
 
@@ -81,8 +81,8 @@ describe('CategoriesPage', () => {
     );
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Acciones de Mascotas' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Borrar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar Mascotas' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar' }));
     const dialog = screen.getByRole('dialog', { name: 'Borrar categoría' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
 
@@ -101,8 +101,8 @@ describe('CategoriesPage', () => {
     );
 
     renderPage();
-    fireEvent.click(await screen.findByRole('button', { name: 'Acciones de Mascotas' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'Borrar' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar Mascotas' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar' }));
     const dialog = screen.getByRole('dialog', { name: 'Borrar categoría' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
 
