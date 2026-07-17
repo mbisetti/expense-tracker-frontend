@@ -66,7 +66,7 @@ export function AppLayout() {
 
   return (
     <>
-      <header className="border-b border-line bg-surface-elevated">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface-elevated">
         <nav aria-label="Principal" className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2">
           {/* Hamburger: sólo mobile (<lg). Abre el drawer lateral deslizante. */}
           <button

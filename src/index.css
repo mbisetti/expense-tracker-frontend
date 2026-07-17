@@ -16,18 +16,21 @@
 
 /* Reset mínimo de <button> (utilities-only SIN preflight): sin él, los botones nativos traen
    fondo, borde y relieve del navegador — que siguen el tema del SISTEMA OPERATIVO, no el de la
-   app — por eso se veían oscuros en tema claro y con borde grueso/3D. Los dejamos neutros para
-   que manden los utilities (bg-*, border-*, text-*). */
-button {
-  background-color: transparent;
-  background-image: none;
-  border: 0 solid transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-button:disabled {
-  cursor: not-allowed;
+   app. VA EN @layer base a propósito: sin capa, este reset pisaba a las utilities (bg-*,
+   border-*, hover:*) y TODOS los botones quedaban como texto. En `base` provee el default
+   neutro (para íconos/menús sin clases) pero las utilities de cada Button mandan. */
+@layer base {
+  button {
+    background-color: transparent;
+    background-image: none;
+    border: 0 solid transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
 }
 
 @theme inline {

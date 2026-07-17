@@ -132,11 +132,17 @@ export function PaymentMethodForm({ paymentMethod, onClose, onDelete }: PaymentM
         Usar como método por defecto
       </label>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex items-center gap-3">
         <Button type="submit" loading={isPending}>
           Guardar
         </Button>
-        <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onClose}
+          disabled={isPending}
+          className={isEdit && onDelete ? 'mx-auto' : undefined}
+        >
           Cancelar
         </Button>
         {isEdit && onDelete && (
@@ -145,7 +151,7 @@ export function PaymentMethodForm({ paymentMethod, onClose, onDelete }: PaymentM
             variant="ghost"
             onClick={onDelete}
             disabled={isPending}
-            className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+            className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
           >
             Borrar
           </Button>

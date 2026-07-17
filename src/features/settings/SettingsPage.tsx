@@ -46,10 +46,10 @@ export function SettingsPage() {
             id="date-format"
             value={dateFmt}
             onChange={(e) => setDateFmt(e.target.value as DateFormatPref)}
-            helper="Argentina usa DD/MM/AAAA. También ordena los filtros por fecha."
+            helper="Cómo se muestran las fechas en la app."
           >
-            <option value="ar">Normal — DD/MM/AAAA</option>
-            <option value="us">Yankee — MM/DD/AAAA</option>
+            <option value="ar">DD/MM/AAAA</option>
+            <option value="us">MM/DD/AAAA</option>
           </Select>
         </div>
       </Card>
