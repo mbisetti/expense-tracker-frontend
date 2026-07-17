@@ -75,8 +75,9 @@ describe('SettingsPage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar cuenta' }));
 
     await waitFor(() => expect(setAccessToken).toHaveBeenCalledWith(null));
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(String(url)).toContain('/users/me');
-    expect(init).toMatchObject({ method: 'DELETE' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/users/me'),
+      expect.objectContaining({ method: 'DELETE' }),
+    );
   });
 });
