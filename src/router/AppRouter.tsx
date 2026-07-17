@@ -11,6 +11,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { CategoriesPage } from '../features/categories/CategoriesPage';
 import { PaymentMethodsPage } from '../features/paymentMethods/PaymentMethodsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
+import { DataPage } from '../features/settings/DataPage';
 import { AppLayout } from '../components/AppLayout';
 import { UiGalleryPage } from '../features/dev/UiGalleryPage';
 
@@ -30,6 +31,7 @@ const routes: RouteObject[] = [
           { path: '/transfers', element: <TransfersPage /> },
           { path: '/categories', element: <CategoriesPage /> },
           { path: '/payment-methods', element: <PaymentMethodsPage /> },
+          { path: '/datos', element: <DataPage /> },
           { path: '/settings', element: <SettingsPage /> },
         ],
       },

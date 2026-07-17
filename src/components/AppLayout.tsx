@@ -20,6 +20,10 @@ const DRAWER_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
 const ICON_BTN_CLASS =
   'flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-ink transition-colors duration-200 ease-out hover:bg-brand-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand';
 
+// Ítem del menú de la persona (Datos, Ajustes y preferencias).
+const ACCOUNT_ITEM_CLASS =
+  'flex min-h-11 items-center rounded-sm px-3 text-sm text-ink transition-colors duration-200 ease-out hover:bg-brand-bg';
+
 // Nav principal CORTO (Sprint 21): Overview (ex-Dashboard), Cuentas, Transacciones, Ingresos.
 // Categorías y Métodos de pago se movieron a Ajustes; el tema y Cerrar sesión, al menú de la
 // persona. La ruta /transfers sigue viva (link "Registrar pago") pero no está en el nav.
@@ -94,7 +98,7 @@ export function AppLayout() {
             ))}
           </div>
 
-          {/* Menú de la persona (todos los viewports): Ajustes + Cerrar sesión */}
+          {/* Menú de la persona (todos los viewports): Datos + Ajustes y preferencias + Cerrar sesión */}
           <div ref={accountMenuRef} className="relative ml-auto">
             <button
               type="button"
@@ -114,10 +118,18 @@ export function AppLayout() {
                 className="absolute right-0 top-full z-50 mt-1 w-56 rounded-md border border-line bg-surface-elevated p-1 shadow-md"
               >
                 <NavLink
+                  to="/datos"
+                  role="menuitem"
+                  onClick={closeAccountMenu}
+                  className={ACCOUNT_ITEM_CLASS}
+                >
+                  Datos
+                </NavLink>
+                <NavLink
                   to="/settings"
                   role="menuitem"
                   onClick={closeAccountMenu}
-                  className="flex min-h-11 items-center rounded-sm px-3 text-sm text-ink transition-colors duration-200 ease-out hover:bg-brand-bg"
+                  className={ACCOUNT_ITEM_CLASS}
                 >
                   Ajustes y preferencias
                 </NavLink>

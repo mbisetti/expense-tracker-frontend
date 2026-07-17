@@ -1,37 +1,82 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { AuthContext } from '../auth/context';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { SettingsPage } from './SettingsPage';
+import { jsonResponse } from '../../test/mockResponse';
+
+function renderSettings() {
+  const setAccessToken = vi.fn();
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider
+        value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken }}
+      >
+        <ToastProvider>
+          <MemoryRouter>
+            <SettingsPage />
+          </MemoryRouter>
+        </ToastProvider>
+      </AuthContext.Provider>
+    </QueryClientProvider>,
+  );
+  return { setAccessToken };
+}
 
 afterEach(() => {
   localStorage.clear();
+  vi.unstubAllGlobals();
 });
 
 describe('SettingsPage', () => {
-  it('muestra tema, formato de fecha y accesos a categorías y métodos de pago', () => {
-    render(
-      <MemoryRouter>
-        <SettingsPage />
-      </MemoryRouter>,
-    );
+  it('muestra tema, formato de fecha, calendario y borrar cuenta', () => {
+    renderSettings();
 
-    expect(screen.getByRole('heading', { name: 'Ajustes' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Ajustes y preferencias' })).toBeInTheDocument();
     expect(screen.getByText('Tema')).toBeInTheDocument();
     expect(screen.getByLabelText('Formato de fecha', { exact: false })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Categorías' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Métodos de pago' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Calendario', { exact: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Borrar cuenta' })).toBeInTheDocument();
+    // Categorías/Métodos se mudaron a la página Datos
+    expect(screen.queryByRole('link', { name: 'Categorías' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Métodos de pago' })).not.toBeInTheDocument();
   });
 
   it('elegir formato de fecha yankee lo persiste en localStorage', () => {
-    render(
-      <MemoryRouter>
-        <SettingsPage />
-      </MemoryRouter>,
-    );
+    renderSettings();
 
     fireEvent.change(screen.getByLabelText('Formato de fecha', { exact: false }), {
       target: { value: 'us' },
     });
     expect(localStorage.getItem('dateFormat')).toBe('us');
+  });
+
+  it('elegir calendario US lo persiste en localStorage', () => {
+    renderSettings();
+
+    fireEvent.change(screen.getByLabelText('Calendario', { exact: false }), {
+      target: { value: 'US' },
+    });
+    expect(localStorage.getItem('holidayCalendar')).toBe('US');
+  });
+
+  it('borrar cuenta: confirma, pega a DELETE /users/me y limpia la sesión', async () => {
+    const fetchMock = vi.fn(() => jsonResponse(204));
+    vi.stubGlobal('fetch', fetchMock);
+    const { setAccessToken } = renderSettings();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar cuenta' }));
+    const dialog = screen.getByRole('dialog', { name: 'Borrar cuenta' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar cuenta' }));
+
+    await waitFor(() => expect(setAccessToken).toHaveBeenCalledWith(null));
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(String(url)).toContain('/users/me');
+    expect(init).toMatchObject({ method: 'DELETE' });
   });
 });

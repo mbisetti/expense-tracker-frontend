@@ -1,27 +1,54 @@
-import { NavLink } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
+import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { useToast } from '../../components/ui/toastContext';
 import { useTheme } from '../../lib/useTheme';
 import { useDateFormat, type DateFormatPref } from '../../lib/dateFormat';
-import { ChevronDownIcon, MoonIcon, SunIcon } from '../../components/ui/icons';
+import { useCalendar, type CalendarPref } from '../../lib/useCalendar';
+import { useAuth } from '../auth/useAuth';
+import { useDeleteAccount } from '../auth/useDeleteAccount';
+import { MoonIcon, SunIcon } from '../../components/ui/icons';
 
-const ROW_CLASS =
-  'flex min-h-11 items-center justify-between gap-3 rounded-sm px-3 text-ink transition-colors duration-200 ease-out hover:bg-brand-bg';
-
-// Ajustes y preferencias de la cuenta: engloba tema, categorías y métodos de pago
-// (que salieron del nav principal). Se llega desde el menú de la persona en el header.
+// "Ajustes y preferencias" — segunda entrada del menú de la persona. Tema, formato de fecha y
+// calendario de feriados; abajo, en la misma pantalla, la acción destructiva de borrar cuenta.
 export function SettingsPage() {
   const { theme, toggle: toggleTheme } = useTheme();
   const { pref: dateFmt, set: setDateFmt } = useDateFormat();
+  const { calendar, set: setCalendar } = useCalendar();
+
+  const { setAccessToken } = useAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const deleteAccount = useDeleteAccount();
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  const handleDelete = () => {
+    deleteAccount.mutate(undefined, {
+      onSuccess: () => {
+        // Cuenta borrada en el server → limpiamos la sesión local y salimos.
+        setAccessToken(null);
+        queryClient.clear();
+        navigate('/login', { replace: true });
+      },
+      onError: () => {
+        setConfirmingDelete(false);
+        toast.error('No se pudo borrar la cuenta. Intentá de nuevo.');
+      },
+    });
+  };
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <h1>Ajustes</h1>
+      <h1>Ajustes y preferencias</h1>
 
       <Card>
         <div className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-ink">Apariencia y preferencias</h2>
+          <h2 className="text-lg font-semibold text-ink">Preferencias</h2>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-col">
@@ -51,27 +78,49 @@ export function SettingsPage() {
             <option value="ar">DD/MM/AAAA</option>
             <option value="us">MM/DD/AAAA</option>
           </Select>
+
+          <Select
+            label="Calendario"
+            id="calendar"
+            value={calendar}
+            onChange={(e) => setCalendar(e.target.value as CalendarPref)}
+            helper="Feriados que se usan para calcular los días hábiles."
+          >
+            <option value="AR">Argentina</option>
+            <option value="US">Estados Unidos</option>
+          </Select>
         </div>
       </Card>
 
       <Card>
         <div className="flex flex-col gap-3">
           <div className="flex flex-col">
-            <h2 className="text-lg font-semibold text-ink">Datos</h2>
-            <span className="text-sm text-muted">Categorías y métodos de pago.</span>
+            <h2 className="text-lg font-semibold text-ink">Cuenta</h2>
+            <span className="text-sm text-muted">
+              Borrar tu cuenta elimina todos tus datos. No se puede deshacer.
+            </span>
           </div>
-          <nav className="flex flex-col divide-y divide-line" aria-label="Configuración de datos">
-            <NavLink to="/categories" className={ROW_CLASS}>
-              Categorías
-              <ChevronDownIcon className="h-4 w-4 -rotate-90 text-muted" />
-            </NavLink>
-            <NavLink to="/payment-methods" className={ROW_CLASS}>
-              Métodos de pago
-              <ChevronDownIcon className="h-4 w-4 -rotate-90 text-muted" />
-            </NavLink>
-          </nav>
+          <Button
+            type="button"
+            variant="ghost"
+            className="self-start border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+            onClick={() => setConfirmingDelete(true)}
+          >
+            Borrar cuenta
+          </Button>
         </div>
       </Card>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        danger
+        title="Borrar cuenta"
+        message="Se van a eliminar tu cuenta y todos tus datos (cuentas, transacciones, categorías, todo). Esta acción no se puede deshacer."
+        confirmLabel="Borrar cuenta"
+        loading={deleteAccount.isPending}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </section>
   );
 }
