@@ -18,9 +18,43 @@ const creditAccount: Account = {
   statementCloseDay: 10,
   paymentDueDay: 20,
   balances: [{ currency: 'ARS', balance: -1000 }],
+  institution: null,
+  linkedAccountId: null,
 };
 
-function renderForm(account?: Account) {
+const bank: Account = {
+  id: 'bank-1',
+  name: 'Santander',
+  type: 'BANK',
+  currency: 'ARS',
+  balance: 5000,
+  isInformal: false,
+  createdAt: '2026-07-01T00:00:00',
+  statementCloseDay: null,
+  paymentDueDay: null,
+  balances: [{ currency: 'ARS', balance: 5000 }],
+  institution: null,
+  linkedAccountId: null,
+};
+
+// Tarjeta de crédito vinculada (con ciclo: los inputs required quedan completos → el
+// submit del navegador no se bloquea en el test de desvinculación).
+const linkedCard: Account = {
+  id: 'card-1',
+  name: 'Visa *8190',
+  type: 'CREDIT',
+  currency: 'ARS',
+  balance: -2000,
+  isInformal: false,
+  createdAt: '2026-07-01T00:00:00',
+  statementCloseDay: 10,
+  paymentDueDay: 20,
+  balances: [{ currency: 'ARS', balance: -2000 }],
+  institution: null,
+  linkedAccountId: 'bank-1',
+};
+
+function renderForm(account?: Account, accounts?: Account[]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -30,7 +64,7 @@ function renderForm(account?: Account) {
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
         <ToastProvider>
-          <AccountForm account={account} onClose={() => {}} />
+          <AccountForm account={account} accounts={accounts} onClose={() => {}} />
         </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
@@ -49,57 +83,52 @@ describe('AccountForm', () => {
     expect(screen.queryByLabelText('Día de vencimiento (1-28)')).not.toBeInTheDocument();
   });
 
-  it('al elegir tipo Crédito aparecen los inputs de ciclo', () => {
+  it('el alta NO ofrece "Tarjeta de crédito" (una tarjeta nace desde el bloque, D9)', () => {
     renderForm();
 
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'CREDIT' } });
-
-    expect(screen.getByLabelText('Día de cierre (1-28)', { exact: false })).toBeInTheDocument();
-    expect(screen.getByLabelText('Día de vencimiento (1-28)', { exact: false })).toBeInTheDocument();
+    const typeSelect = screen.getByLabelText('Tipo') as HTMLSelectElement;
+    const values = Array.from(typeSelect.options).map((o) => o.value);
+    expect(values).toEqual(['CASH', 'BANK', 'WALLET', 'INVESTMENT', 'CRYPTO', 'DEBT']);
+    expect(values).not.toContain('CREDIT');
   });
 
-  it('alta de tarjeta con ambos días completos los manda atómicamente', async () => {
-    let postedBody: Record<string, unknown> | undefined;
+  it('la edición ofrece las 7 opciones, incluida Tarjeta de crédito', () => {
+    renderForm(bank);
+
+    const typeSelect = screen.getByLabelText('Tipo') as HTMLSelectElement;
+    const values = Array.from(typeSelect.options).map((o) => o.value);
+    expect(values).toHaveLength(7);
+    expect(values).toContain('CREDIT');
+  });
+
+  it('editar una CREDIT con ciclo deshabilita el selector de tipo (conversión imposible hoy)', () => {
+    renderForm(creditAccount);
+
+    // creditAccount tiene statementCloseDay=10 → typeLocked
+    expect(screen.getByLabelText('Tipo')).toBeDisabled();
+  });
+
+  it('tarjeta vinculada: "— ninguna —" manda linkedAccountId "" (desvincula, D8)', async () => {
+    let patchBody: Record<string, unknown> | undefined;
     vi.stubGlobal(
       'fetch',
       vi.fn((_url: string, options?: RequestInit) => {
-        if (options?.method === 'POST') {
-          postedBody = JSON.parse(options.body as string);
-          return ok({ ...creditAccount, ...postedBody, id: 'acc-new' });
+        if (options?.method === 'PATCH') {
+          patchBody = JSON.parse(options.body as string);
+          return ok({ ...linkedCard, ...patchBody });
         }
         return ok([]);
       }),
     );
 
-    renderForm();
+    renderForm(linkedCard, [bank, linkedCard]);
 
-    // Nombre/Moneda/día de cierre/día de vencimiento son required: el label del design
-    // system les agrega un "*" visual (aria-hidden), así que el texto exacto del <label>
-    // deja de ser sólo "Nombre" — se matchea con exact:false (mismo criterio que TransactionForm.test.tsx).
-    fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'Visa' } });
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'CREDIT' } });
-    fireEvent.change(screen.getByLabelText('Moneda (código de 3 letras)', { exact: false }), {
-      target: { value: 'ARS' },
-    });
-    fireEvent.change(screen.getByLabelText('Día de cierre (1-28)', { exact: false }), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Día de vencimiento (1-28)', { exact: false }), {
-      target: { value: '20' },
-    });
+    // el selector "Vinculada a" arranca en la madre; pasarlo a "— ninguna —" desvincula
+    fireEvent.change(screen.getByLabelText('Vinculada a'), { target: { value: '' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
-    await vi.waitFor(() => expect(postedBody).toBeDefined());
-    expect(postedBody).toMatchObject({ statementCloseDay: 10, paymentDueDay: 20 });
-  });
-
-  it('los inputs de ciclo son required para CREDIT (atomicidad: no hay alta parcial)', () => {
-    renderForm();
-
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'CREDIT' } });
-
-    // required fuerza el par completo: el navegador no deja submitear con uno solo,
-    // así el form nunca produce un payload parcial ni un "blanquear = no-op".
-    expect(screen.getByLabelText('Día de cierre (1-28)', { exact: false })).toBeRequired();
-    expect(screen.getByLabelText('Día de vencimiento (1-28)', { exact: false })).toBeRequired();
+    await vi.waitFor(() => expect(patchBody).toBeDefined());
+    expect(patchBody).toMatchObject({ linkedAccountId: '' });
   });
 
   it('editar cuenta de crédito ya configurada precarga los días', () => {

@@ -61,12 +61,33 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
     (c) => c.type === type || c.type === 'BOTH',
   );
   const selectedAccount = accounts?.find((a) => a.id === accountId);
+  // Sprint 22.2 (D6): el "método" puede ser un PaymentMethod (uuid) o una tarjeta de crédito
+  // hija (value "card:<accountId>"). Si es una tarjeta, la tx cae en la cuenta-tarjeta.
+  const selectedCardId = paymentMethodId.startsWith('card:') ? paymentMethodId.slice(5) : null;
+  const routedAccount = selectedCardId
+    ? accounts?.find((a) => a.id === selectedCardId)
+    : selectedAccount;
   // CREDIT es mono-moneda (D2): no se muestra el selector, la moneda es la de la cuenta.
-  const isCredit = selectedAccount?.type === 'CREDIT';
+  const isCredit = routedAccount?.type === 'CREDIT';
   // Monedas conocidas de la cuenta (principal primera) + "Otra…" para una moneda nueva.
-  const currencyOptions = selectedAccount?.balances?.map((b) => b.currency) ?? [];
-  // Moneda efectiva: la elegida, o la principal si aún no se tocó / es CREDIT.
-  const effectiveCurrency = isCredit ? selectedAccount!.currency : currency || selectedAccount?.currency || '';
+  const currencyOptions = routedAccount?.balances?.map((b) => b.currency) ?? [];
+  // Moneda efectiva: la elegida, o la principal si aún no se tocó / es CREDIT (o tarjeta).
+  const effectiveCurrency = isCredit
+    ? routedAccount!.currency
+    : currency || selectedAccount?.currency || '';
+
+  // Selector de cuenta (D7): activos + DEBT + CREDIT sin vínculo. Las CREDIT vinculadas se
+  // eligen por el método; en edición se incluye la cuenta real de la tx aunque esté oculta.
+  const accountOptions = (accounts ?? []).filter((a) => {
+    if (a.type === 'CREDIT' && a.linkedAccountId) {
+      return isEdit && a.id === transaction?.accountId;
+    }
+    return true;
+  });
+  // Tarjetas de crédito hijas de la cuenta elegida → opciones extra del selector de método.
+  const linkedCards = (accounts ?? []).filter(
+    (a) => a.type === 'CREDIT' && a.linkedAccountId === accountId,
+  );
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -99,12 +120,14 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
     } else {
       createMutation.mutate(
         {
-          accountId,
+          // Ruteo de tarjeta (D6): si se eligió una tarjeta hija, la tx cae en ELLA y no
+          // lleva método de pago; si no, la cuenta y el PM elegidos.
+          accountId: selectedCardId ?? accountId,
           type,
           amount: parseAmountInput(amount),
           date,
           categoryId: categoryId || undefined,
-          paymentMethodId: paymentMethodId || undefined,
+          paymentMethodId: selectedCardId ? undefined : paymentMethodId || undefined,
           description: description || undefined,
           // Sprint 22: manda la moneda resuelta (principal si no se tocó el selector).
           currency: effectiveCurrency || undefined,
@@ -147,7 +170,7 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         disabled={isEdit || isPending}
       >
         <option value="">Elegí una cuenta</option>
-        {accounts?.map((account) => (
+        {accountOptions.map((account) => (
           <option key={account.id} value={account.id}>
             {account.name} ({account.currency})
           </option>
@@ -181,7 +204,7 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
 
       {/* Selector de moneda discreto (Sprint 22 D4): solo en alta y solo si la cuenta no es
           CREDIT (mono-moneda). Se remonta con key={accountId} para resetear el modo "Otra…". */}
-      {!isEdit && selectedAccount && !isCredit && (
+      {!isEdit && routedAccount && !isCredit && (
         <CurrencySelect
           key={accountId}
           id="tx-currency"
@@ -232,6 +255,15 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
             {pm.name}
           </option>
         ))}
+        {/* Sprint 22.2 (D6): cada tarjeta de crédito hija de la cuenta elegida es una opción
+            del método; elegirla rutea la tx a la cuenta-tarjeta. Sólo en alta (accountId
+            es inmutable en edición). */}
+        {!isEdit &&
+          linkedCards.map((card) => (
+            <option key={card.id} value={`card:${card.id}`}>
+              {card.name} · crédito
+            </option>
+          ))}
       </Select>
 
       <Input

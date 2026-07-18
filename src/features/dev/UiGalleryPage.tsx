@@ -169,7 +169,7 @@ export function UiGalleryPage() {
               Elegí una opción
             </option>
             <option value="CASH">Efectivo</option>
-            <option value="DEBIT">Débito</option>
+            <option value="BANK">Banco</option>
             <option value="CREDIT">Crédito</option>
           </Select>
           <Select

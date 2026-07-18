@@ -10,6 +10,10 @@ export type CreateAccountInput = {
   isInformal?: boolean;
   statementCloseDay?: number;
   paymentDueDay?: number;
+  // Sprint 22.2: institución (D4) y madre de una tarjeta CREDIT (D2). En create el
+  // linkedAccountId es un UUID directo.
+  institution?: string;
+  linkedAccountId?: string;
 };
 
 export type UpdateAccountInput = {
@@ -19,6 +23,10 @@ export type UpdateAccountInput = {
   isInformal?: boolean;
   statementCloseDay?: number;
   paymentDueDay?: number;
+  // Sprint 22.2 (D8): institution/linkedAccountId — string vacío ("") = borrar/desvincular;
+  // ausente = no tocar.
+  institution?: string;
+  linkedAccountId?: string;
 };
 
 function useInvalidateAccounts() {

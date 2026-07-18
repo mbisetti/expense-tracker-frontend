@@ -211,3 +211,73 @@ describe('TransactionForm en alta (Sprint 22, moneda)', () => {
     expect(postCalls[0].body).toMatchObject({ accountId: 'acc-1', currency: 'EUR', amount: 80 });
   });
 });
+
+// Sprint 22.2: ruteo de tarjeta de crédito vinculada (D6/D7).
+describe('TransactionForm ruteo de tarjeta (Sprint 22.2)', () => {
+  const bankAcc = {
+    id: 'bank-1', name: 'Banco', type: 'BANK', currency: 'ARS', balance: 5000, isInformal: false,
+    statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'ARS', balance: 5000 }],
+    createdAt: '2026-07-01T00:00:00', institution: null, linkedAccountId: null,
+  };
+  const linkedCard = {
+    id: 'card-1', name: 'Visa *8190', type: 'CREDIT', currency: 'ARS', balance: -2000,
+    isInformal: false, statementCloseDay: 10, paymentDueDay: 20,
+    balances: [{ currency: 'ARS', balance: -2000 }], createdAt: '2026-07-01T00:00:00',
+    institution: null, linkedAccountId: 'bank-1',
+  };
+
+  function renderCreate() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider
+          value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
+        >
+          <ToastProvider>
+            <TransactionForm onClose={vi.fn()} lockedType="EXPENSE" />
+          </ToastProvider>
+        </AuthContext.Provider>
+      </QueryClientProvider>,
+    );
+  }
+
+  it('la tarjeta vinculada no está en el selector de cuenta, sí en el de método, y rutea la tx', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, options?: RequestInit) => {
+        if (options?.method === 'POST') {
+          const body = JSON.parse(options.body as string);
+          postCalls.push({ url, body });
+          return jsonResponse(201, { ...editTx, ...body, id: 'tx-new', accountBalance: -300 });
+        }
+        if (String(url).includes('/accounts')) return jsonResponse(200, [bankAcc, linkedCard]);
+        return jsonResponse(200, []);
+      }),
+    );
+
+    renderCreate();
+
+    await screen.findByRole('option', { name: /Banco/ });
+    // la tarjeta vinculada NO es opción de cuenta (D7)
+    expect(screen.queryByRole('option', { name: /Visa \*8190 \(ARS\)/ })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'bank-1' } });
+
+    // …pero sí aparece en el selector de método (D6)
+    const cardOption = await screen.findByRole('option', { name: /Visa \*8190 · crédito/ });
+    expect(cardOption).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Método de pago', { exact: false }), {
+      target: { value: 'card:card-1' },
+    });
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '300' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(postCalls).toHaveLength(1));
+    // la tx cae en la cuenta-tarjeta, sin método de pago
+    expect(postCalls[0].body).toMatchObject({ accountId: 'card-1' });
+    expect(postCalls[0].body.paymentMethodId).toBeUndefined();
+  });
+});

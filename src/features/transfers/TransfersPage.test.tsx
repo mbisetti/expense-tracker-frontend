@@ -7,9 +7,9 @@ import { TransfersPage } from './TransfersPage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
 
-const accArs1 = { id: 'acc1', name: 'Banco ARS', type: 'DEBIT', currency: 'ARS', balance: 5000, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'ARS', balance: 5000 }], createdAt: '2026-01-01T00:00:00' };
-const accArs2 = { id: 'acc2', name: 'Ahorro ARS', type: 'DEBIT', currency: 'ARS', balance: 0, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'ARS', balance: 0 }], createdAt: '2026-01-01T00:00:00' };
-const accUsd = { id: 'acc3', name: 'Dolares', type: 'DEBIT', currency: 'USD', balance: 100, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'USD', balance: 100 }], createdAt: '2026-01-01T00:00:00' };
+const accArs1 = { id: 'acc1', name: 'Banco ARS', type: 'BANK', currency: 'ARS', balance: 5000, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'ARS', balance: 5000 }], createdAt: '2026-01-01T00:00:00' };
+const accArs2 = { id: 'acc2', name: 'Ahorro ARS', type: 'BANK', currency: 'ARS', balance: 0, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'ARS', balance: 0 }], createdAt: '2026-01-01T00:00:00' };
+const accUsd = { id: 'acc3', name: 'Dolares', type: 'BANK', currency: 'USD', balance: 100, isInformal: false, statementCloseDay: null, paymentDueDay: null, balances: [{ currency: 'USD', balance: 100 }], createdAt: '2026-01-01T00:00:00' };
 
 const transfer = {
   id: 'tr1',

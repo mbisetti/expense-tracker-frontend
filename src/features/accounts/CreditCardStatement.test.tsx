@@ -18,6 +18,8 @@ const card: Account = {
   statementCloseDay: 10,
   paymentDueDay: 20,
   balances: [{ currency: 'ARS', balance: -1000 }],
+  institution: null,
+  linkedAccountId: null,
 };
 
 function statementFor(offset: number, overrides?: Partial<Record<string, unknown>>) {
@@ -59,11 +61,41 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+// Sprint 22.2: el detalle arranca colapsado; se despliega con el chevron (toggle reversible).
+async function expand() {
+  fireEvent.click(await screen.findByRole('button', { name: /Resumen del ciclo/ }));
+}
+
 describe('CreditCardStatement', () => {
-  it('muestra consumos, pagos y saldo al cierre formateados', async () => {
+  it('colapsado por defecto: no muestra el detalle (ni consumos ni saldo al cierre)', async () => {
     vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0))));
 
     renderStatement();
+
+    // el header/toggle está siempre; el detalle (incluido el saldo al cierre) queda oculto
+    expect(await screen.findByRole('button', { name: /Resumen del ciclo/ })).toBeInTheDocument();
+    expect(screen.queryByText(/Consumos del ciclo:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Saldo al cierre:/)).not.toBeInTheDocument();
+  });
+
+  it('al expandir se ve el detalle; al volver a clickear se colapsa (reversible)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0))));
+
+    renderStatement();
+
+    await expand();
+    expect(await screen.findByText(/Consumos del ciclo:/)).toBeInTheDocument();
+
+    // colapsar de nuevo
+    fireEvent.click(screen.getByRole('button', { name: /Resumen del ciclo/ }));
+    expect(screen.queryByText(/Consumos del ciclo:/)).not.toBeInTheDocument();
+  });
+
+  it('expandido: muestra consumos, pagos y saldo al cierre formateados', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0))));
+
+    renderStatement();
+    await expand();
 
     expect(await screen.findByText(/Consumos del ciclo:/)).toHaveTextContent('$ 5.000,00');
     expect(screen.getByText(/Pagos:/)).toHaveTextContent('$ 1.000,00');
@@ -75,6 +107,7 @@ describe('CreditCardStatement', () => {
     vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0, { dueDate: '2026-07-20' }))));
 
     renderStatement();
+    await expand();
 
     const dueText = await screen.findByText(/Vence el/);
     expect(dueText).not.toHaveClass('text-expense');
@@ -85,6 +118,7 @@ describe('CreditCardStatement', () => {
     vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0, { dueDate: '2026-07-20' }))));
 
     renderStatement();
+    await expand();
 
     const dueText = await screen.findByText(/Vencido el/);
     expect(dueText).toHaveClass('text-expense');
@@ -94,6 +128,7 @@ describe('CreditCardStatement', () => {
     vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0))));
 
     renderStatement();
+    await expand();
 
     await screen.findByText(/Consumos del ciclo:/);
     expect(screen.getByRole('button', { name: /Siguiente/ })).toBeDisabled();
@@ -108,6 +143,7 @@ describe('CreditCardStatement', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     renderStatement();
+    await expand();
 
     await screen.findByText(/Consumos del ciclo:/);
     fireEvent.click(screen.getByRole('button', { name: /Anterior/ }));
@@ -124,6 +160,7 @@ describe('CreditCardStatement', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     renderStatement();
+    await expand();
 
     await screen.findByText(/Consumos del ciclo:/);
     const prev = screen.getByRole('button', { name: /Anterior/ });
@@ -132,14 +169,5 @@ describe('CreditCardStatement', () => {
 
     expect(prev).toBeDisabled();
     expect(screen.getByRole('button', { name: /Siguiente/ })).not.toBeDisabled();
-  });
-
-  it('el CTA "Registrar pago" enlaza a /transfers con la tarjeta como destino', async () => {
-    vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0))));
-
-    renderStatement();
-
-    const link = await screen.findByRole('link', { name: 'Registrar pago' });
-    expect(link).toHaveAttribute('href', '/transfers?to=acc-3');
   });
 });

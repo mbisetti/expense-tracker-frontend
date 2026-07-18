@@ -75,6 +75,33 @@ const statementFixture = {
   closingBalance: -4000,
 };
 
+// Sprint 22.2: dos cuentas de la misma institución (agrupación D4).
+const bankCA = {
+  id: 'bank-ca', name: 'Caja de ahorro', type: 'BANK', currency: 'ARS', balance: 80000,
+  isInformal: false, createdAt: '2026-07-01T00:00:00', statementCloseDay: null, paymentDueDay: null,
+  balances: [{ currency: 'ARS', balance: 80000 }], institution: 'Santander', linkedAccountId: null,
+};
+const bankPF = {
+  id: 'bank-pf', name: 'Plazo fijo', type: 'BANK', currency: 'ARS', balance: 500000,
+  isInformal: false, createdAt: '2026-07-01T00:00:00', statementCloseDay: null, paymentDueDay: null,
+  balances: [{ currency: 'ARS', balance: 500000 }], institution: 'Santander', linkedAccountId: null,
+};
+// Cuenta banco con una tarjeta débito (PM) y una crédito hija (D2).
+const parentBank = {
+  id: 'bank-1', name: 'Santander CA', type: 'BANK', currency: 'ARS', balance: 80000,
+  isInformal: false, createdAt: '2026-07-01T00:00:00', statementCloseDay: null, paymentDueDay: null,
+  balances: [{ currency: 'ARS', balance: 80000 }], institution: null, linkedAccountId: null,
+};
+const childCredit = {
+  id: 'card-1', name: 'Visa *8190', type: 'CREDIT', currency: 'ARS', balance: -4000,
+  isInformal: false, createdAt: '2026-07-01T00:00:00', statementCloseDay: 10, paymentDueDay: 20,
+  balances: [{ currency: 'ARS', balance: -4000 }], institution: null, linkedAccountId: 'bank-1',
+};
+const debitPm = {
+  id: 'pm-1', userId: 'u1', accountId: 'bank-1', name: 'Visa *4160', type: 'DEBIT',
+  isDefault: false, createdAt: '2026-07-01T00:00:00',
+};
+
 function renderPage() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -289,11 +316,75 @@ describe('AccountsPage', () => {
 
     renderPage();
 
-    // el resumen del ciclo vive dentro de la card de la Visa (Sprint 22.1)
+    // el resumen del ciclo vive dentro de la card de la Visa (Sprint 22.1); colapsado por
+    // defecto (S22.2), el toggle "Resumen del ciclo" prueba que está dentro de la card.
     const card = await screen.findByRole('group', { name: 'Visa' });
-    expect(within(card).getByText('Resumen del ciclo')).toBeInTheDocument();
-    expect(await within(card).findByText(/Consumos del ciclo/)).toBeInTheDocument();
+    expect(await within(card).findByRole('button', { name: /Resumen del ciclo/ })).toBeInTheDocument();
     // ya no hay una sección separada al final de la página
     expect(screen.queryByRole('heading', { name: 'Tarjetas de crédito' })).not.toBeInTheDocument();
+  });
+
+  // ── Sprint 22.2 ────────────────────────────────────────────────────────────
+
+  it('agrupa por institución: 2 cuentas Santander en una card de grupo con header', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const u = String(url);
+        if (u.includes('/payment-methods')) return ok([]);
+        if (u.includes('/accounts')) return ok([bankCA, bankPF]);
+        return ok([]);
+      }),
+    );
+
+    renderPage();
+
+    await screen.findByRole('group', { name: 'Caja de ahorro' });
+    expect(screen.getByRole('group', { name: 'Plazo fijo' })).toBeInTheDocument();
+    // header del grupo (texto exacto "Santander"; los subtítulos son "Banco · Santander · ARS")
+    expect(screen.getByText('Santander')).toBeInTheDocument();
+  });
+
+  it('bloque con tarjetas: débito un renglón, crédito hija dentro de la madre (no top-level)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const u = String(url);
+        if (u.includes('/statement')) return ok({ ...statementFixture, accountId: 'card-1' });
+        if (u.includes('/payment-methods')) return ok([debitPm]);
+        if (u.includes('/accounts')) return ok([parentBank, childCredit]);
+        return ok([]);
+      }),
+    );
+
+    renderPage();
+
+    const bankCard = await screen.findByRole('group', { name: 'Santander CA' });
+    expect(within(bankCard).getByText(/Visa \*4160 · Débito/)).toBeInTheDocument();
+    expect(within(bankCard).getByText(/Visa \*8190 · Crédito/)).toBeInTheDocument();
+    // la CREDIT hija no se renderiza como card top-level propia (D7)
+    expect(screen.queryByRole('group', { name: 'Visa *8190' })).not.toBeInTheDocument();
+  });
+
+  it('"Agregar tarjeta" aparece en BANK con 0 tarjetas y no en una cuenta CASH', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        const u = String(url);
+        if (u.includes('/payment-methods')) return ok([]);
+        if (u.includes('/accounts')) return ok([parentBank, account]);
+        return ok([]);
+      }),
+    );
+
+    renderPage();
+
+    const bankCard = await screen.findByRole('group', { name: 'Santander CA' });
+    expect(within(bankCard).getByRole('button', { name: 'Agregar tarjeta' })).toBeInTheDocument();
+
+    const cashCard = screen.getByRole('group', { name: 'Billetera' });
+    expect(
+      within(cashCard).queryByRole('button', { name: 'Agregar tarjeta' }),
+    ).not.toBeInTheDocument();
   });
 });

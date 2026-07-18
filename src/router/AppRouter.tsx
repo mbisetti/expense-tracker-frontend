@@ -6,7 +6,6 @@ import { PublicHome } from '../features/landing/PublicHome';
 import { AccountsPage } from '../features/accounts/AccountsPage';
 import { TransactionsPage } from '../features/transactions/TransactionsPage';
 import { IncomePage } from '../features/income/IncomePage';
-import { TransfersPage } from '../features/transfers/TransfersPage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { CategoriesPage } from '../features/categories/CategoriesPage';
 import { PaymentMethodsPage } from '../features/paymentMethods/PaymentMethodsPage';
@@ -28,7 +27,9 @@ const routes: RouteObject[] = [
           { path: '/accounts', element: <AccountsPage /> },
           { path: '/transactions', element: <TransactionsPage /> },
           { path: '/income', element: <IncomePage /> },
-          { path: '/transfers', element: <TransfersPage /> },
+          // Sprint 22.2: la página vieja de transferencias (TransfersPage) queda en el código
+          // pero SIN ruta accesible — los transfers se registran desde Transacciones
+          // (TransferForm embebido) y se sacó el link "Registrar pago" del resumen de tarjeta.
           { path: '/categories', element: <CategoriesPage /> },
           { path: '/payment-methods', element: <PaymentMethodsPage /> },
           { path: '/datos', element: <DataPage /> },
