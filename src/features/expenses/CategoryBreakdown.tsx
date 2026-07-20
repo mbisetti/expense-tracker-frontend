@@ -81,12 +81,25 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subset, subsetTotal]);
 
+  // S24.2 fix: color estable por categoría — el color propio, o un hue de la paleta categórica
+  // por su posición en el orden COMPLETO del mes (no en el subset filtrado → el triple toggle
+  // no repinta). Compartido por el donut y el swatch de la lista. Antes: todo caía en muted →
+  // muchos gajos "negros" indistinguibles.
+  const colorMap = useMemo(() => {
+    const m = new Map<string, string>();
+    data.byCategory.forEach((c, i) => {
+      m.set(c.categoryId ?? 'uncategorized', c.color ?? `var(--cat-${(i % 8) + 1})`);
+    });
+    return m;
+  }, [data.byCategory]);
+  const colorFor = (c: CategoryExpense) => colorMap.get(c.categoryId ?? 'uncategorized') ?? 'var(--muted)';
+
   // Donut: visibles + "Otras" (= exactamente el conjunto colapsado). El donut NO se expande.
   const slices = useMemo<DonutSlice[]>(() => {
     const s: DonutSlice[] = visible.map((c) => ({
       name: catLabel(c),
       value: c.amount,
-      color: c.color ?? 'var(--muted)',
+      color: colorMap.get(c.categoryId ?? 'uncategorized') ?? 'var(--muted)',
     }));
     if (collapsed.length > 0) {
       s.push({
@@ -96,7 +109,7 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
       });
     }
     return s;
-  }, [visible, collapsed]);
+  }, [visible, collapsed, colorMap]);
 
   const listRows = showAll ? [...visible, ...collapsed] : visible;
 
@@ -177,7 +190,7 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
                     <span
                       aria-hidden="true"
                       className="inline-block h-3 w-3 shrink-0 rounded-sm border border-line"
-                      style={{ background: category.color ?? 'var(--muted)' }}
+                      style={{ background: colorFor(category) }}
                     />
                     {/* S24.2 (D6): "Sin categoría" también es clickeable (drill vía uncategorized). */}
                     <button
@@ -198,19 +211,20 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
                   </div>
                   <div className="flex shrink-0 items-center gap-3">
                     <span className="tabular-nums text-muted">{share}%</span>
-                    {delta.direction !== 'flat' && (
-                      <span
-                        className={[
-                          'tabular-nums text-xs',
-                          delta.direction === 'up' || delta.direction === 'new'
-                            ? 'text-expense'
-                            : 'text-income',
-                        ].join(' ')}
-                      >
-                        {delta.direction === 'up' ? '↑' : delta.direction === 'down' ? '↓' : ''}{' '}
-                        {delta.text}
-                      </span>
-                    )}
+                    {/* S24.2 fix: las sin cambio muestran "—" (muted) en vez de un hueco. */}
+                    <span
+                      className={[
+                        'tabular-nums text-xs',
+                        delta.direction === 'up' || delta.direction === 'new'
+                          ? 'text-expense'
+                          : delta.direction === 'down'
+                            ? 'text-income'
+                            : 'text-muted',
+                      ].join(' ')}
+                    >
+                      {delta.direction === 'up' ? '↑ ' : delta.direction === 'down' ? '↓ ' : ''}
+                      {delta.text}
+                    </span>
                     <Amount amount={category.amount} currency={data.currency} tone="neutral" size="sm" />
                   </div>
                 </li>

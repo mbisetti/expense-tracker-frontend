@@ -41,8 +41,8 @@ export function Switch({ checked, onChange, label, ariaLabel, helper, disabled, 
       <span
         aria-hidden="true"
         className={[
-          'inline-block h-4 w-4 transform rounded-full bg-surface shadow transition-transform duration-200 ease-out',
-          checked ? 'translate-x-6' : 'translate-x-1',
+          'inline-block h-5 w-5 transform rounded-full bg-surface shadow transition-transform duration-200 ease-out',
+          checked ? 'translate-x-[22px]' : 'translate-x-0.5',
         ].join(' ')}
       />
     </button>

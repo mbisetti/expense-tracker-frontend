@@ -7,6 +7,7 @@ export function deltaVsPrev(current: number, prev: number): Delta {
     return current > 0 ? { text: 'Nuevo', direction: 'new' } : { text: '—', direction: 'flat' };
   }
   const pct = Math.round(((current - prev) / prev) * 100);
-  if (pct === 0) return { text: '0%', direction: 'flat' };
+  // Sin cambio → "—" (S24.2 fix): antes se ocultaba y quedaba un hueco (p.ej. Vivienda flat).
+  if (pct === 0) return { text: '—', direction: 'flat' };
   return { text: `${Math.abs(pct)}%`, direction: pct > 0 ? 'up' : 'down' };
 }

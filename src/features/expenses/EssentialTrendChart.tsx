@@ -39,7 +39,9 @@ export function EssentialTrendChart({ months, currency, selectedMonth }: Essenti
 
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <BarChart data={data}>
+      {/* S24.2 fix: con pocos meses (post-trim) las barras quedaban finas y separadas —
+          barCategoryGap chico + maxBarSize alto (abajo) las hace más gordas y juntas. */}
+      <BarChart data={data} barCategoryGap="12%" barGap={3}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis
           dataKey="label"
@@ -67,7 +69,7 @@ export function EssentialTrendChart({ months, currency, selectedMonth }: Essenti
           formatter={(value) => formatMoney(Number(value), currency)}
         />
         <Legend />
-        <Bar dataKey="essential" name="Esencial" fill="var(--text-h)" radius={[4, 4, 0, 0]} maxBarSize={48}>
+        <Bar dataKey="essential" name="Esencial" fill="var(--text-h)" radius={[4, 4, 0, 0]} maxBarSize={72}>
           {data.map((d) => (
             <Cell key={d.month} fillOpacity={opacityFor(d.month)} />
           ))}
@@ -77,7 +79,7 @@ export function EssentialTrendChart({ months, currency, selectedMonth }: Essenti
           name="No esencial"
           fill="var(--warning)"
           radius={[4, 4, 0, 0]}
-          maxBarSize={48}
+          maxBarSize={72}
         >
           {data.map((d) => (
             <Cell key={d.month} fillOpacity={opacityFor(d.month)} />
