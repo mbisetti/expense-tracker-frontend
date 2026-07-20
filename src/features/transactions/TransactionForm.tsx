@@ -11,7 +11,6 @@ import { transactionErrorMessage } from './errorMessages';
 import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { MoneyInput } from '../../components/ui/MoneyInput';
-import { CurrencySelect } from '../../components/ui/CurrencySelect';
 import { DateField } from '../../components/ui/DateField';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
@@ -33,6 +32,9 @@ function todayLocal(): string {
   return `${d.getFullYear()}-${month}-${day}`;
 }
 
+// Sentinela de "Otra moneda…" en el selector de moneda (D8).
+const OTHER_CCY = '__other__';
+
 export function TransactionForm({ transaction, onClose, lockedType }: TransactionFormProps) {
   const isEdit = transaction !== undefined;
   const toast = useToast();
@@ -42,6 +44,8 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
   const [amount, setAmount] = useState(transaction ? numberToAmountDisplay(transaction.amount) : '');
   // Sprint 22: moneda de la tx. Default a la principal de la cuenta; se resetea al cambiar cuenta.
   const [currency, setCurrency] = useState(transaction?.currency ?? '');
+  // Sprint 23 (D8): modo "Otra…" del selector de moneda (input de 3 letras en fila propia).
+  const [currencyIsOther, setCurrencyIsOther] = useState(false);
   const [date, setDate] = useState(transaction?.date ?? todayLocal());
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? '');
   const [paymentMethodId, setPaymentMethodId] = useState(transaction?.paymentMethodId ?? '');
@@ -155,27 +159,79 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         {isEdit ? 'Editar transacción' : 'Nueva transacción'}
       </h2>
 
-      <Select
-        label="Cuenta"
-        id="tx-account"
-        value={accountId}
-        onChange={(e) => {
-          const newId = e.target.value;
-          setAccountId(newId);
-          setPaymentMethodId(''); // el método depende de la cuenta → se resetea al cambiarla
-          // la moneda vuelve a la principal de la cuenta elegida (Sprint 22 D4)
-          setCurrency(accounts?.find((a) => a.id === newId)?.currency ?? '');
-        }}
-        required
-        disabled={isEdit || isPending}
-      >
-        <option value="">Elegí una cuenta</option>
-        {accountOptions.map((account) => (
-          <option key={account.id} value={account.id}>
-            {account.name} ({account.currency})
-          </option>
-        ))}
-      </Select>
+      {/* D8: cuenta ¾ + moneda ¼ en una fila. El chip fijo de CREDIT ocupa el ¼; en modo
+          "Otra…" el input de 3 letras baja a su propia fila full-width (no se aprieta acá). */}
+      <div className="grid grid-cols-4 gap-3">
+        <div className="col-span-3">
+          <Select
+            label="Cuenta"
+            id="tx-account"
+            value={accountId}
+            onChange={(e) => {
+              const newId = e.target.value;
+              setAccountId(newId);
+              setPaymentMethodId(''); // el método depende de la cuenta → se resetea al cambiarla
+              // la moneda vuelve a la principal de la cuenta elegida (Sprint 22 D4)
+              setCurrency(accounts?.find((a) => a.id === newId)?.currency ?? '');
+              setCurrencyIsOther(false);
+            }}
+            required
+            disabled={isEdit || isPending}
+          >
+            <option value="">Elegí una cuenta</option>
+            {accountOptions.map((account) => (
+              <option key={account.id} value={account.id}>
+                {account.name} ({account.currency})
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <div className="col-span-1">
+          {!isEdit && routedAccount && !isCredit ? (
+            <Select
+              label="Moneda"
+              id="tx-currency"
+              value={currencyIsOther ? OTHER_CCY : currency}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === OTHER_CCY) {
+                  setCurrencyIsOther(true);
+                  setCurrency('');
+                } else {
+                  setCurrencyIsOther(false);
+                  setCurrency(v);
+                }
+              }}
+              disabled={isPending}
+            >
+              {currencyOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+              <option value={OTHER_CCY}>Otra…</option>
+            </Select>
+          ) : (
+            // CREDIT (mono-moneda) o edición (moneda inmutable): chip fijo con la moneda efectiva.
+            <Input label="Moneda" id="tx-currency-fixed" value={effectiveCurrency} readOnly disabled />
+          )}
+        </div>
+      </div>
+
+      {/* Otra moneda (D8): fila propia full-width, sólo en alta y cuenta no-CREDIT. */}
+      {!isEdit && !isCredit && currencyIsOther && (
+        <Input
+          label="Moneda (3 letras)"
+          id="tx-currency-other"
+          type="text"
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
+          maxLength={3}
+          placeholder="EUR"
+          disabled={isPending}
+        />
+      )}
 
       {/* Con lockedType (creación desde el selector de movimiento) el tipo ya está fijado
           afuera → no se muestra el Select para no duplicar la elección. En edición sí se
@@ -201,20 +257,6 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         required
         disabled={isPending}
       />
-
-      {/* Selector de moneda discreto (Sprint 22 D4): solo en alta y solo si la cuenta no es
-          CREDIT (mono-moneda). Se remonta con key={accountId} para resetear el modo "Otra…". */}
-      {!isEdit && routedAccount && !isCredit && (
-        <CurrencySelect
-          key={accountId}
-          id="tx-currency"
-          label="Moneda"
-          options={currencyOptions}
-          value={currency}
-          onChange={setCurrency}
-          disabled={isPending}
-        />
-      )}
 
       <DateField
         label="Fecha"
@@ -261,7 +303,7 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         {!isEdit &&
           linkedCards.map((card) => (
             <option key={card.id} value={`card:${card.id}`}>
-              {card.name} · crédito
+              {card.name} - Crédito
             </option>
           ))}
       </Select>

@@ -184,15 +184,18 @@ describe('TransactionForm en alta (Sprint 22, moneda)', () => {
     expect(postCalls[0].body).toMatchObject({ accountId: 'acc-1', currency: 'ARS', amount: 500 });
   });
 
-  it('cuenta CREDIT: NO muestra el selector de moneda (mono-moneda)', async () => {
+  it('cuenta CREDIT: la moneda es un chip fijo (mono-moneda), sin selector editable (S23 D8)', async () => {
     renderCreateForm();
 
     await screen.findByRole('option', { name: /Visa/ });
     fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-2' } });
 
-    // aparece el selector solo si NO es CREDIT: acá no debe estar
-    expect(await screen.findByLabelText(/Monto/)).toBeInTheDocument();
-    expect(screen.queryByLabelText('Moneda', { exact: false })).not.toBeInTheDocument();
+    // Sprint 23 (D8): el ¼ muestra la moneda de la CREDIT como chip fijo deshabilitado —
+    // no un select (no hay opción "Otra…").
+    const currencyField = await screen.findByLabelText('Moneda', { exact: false });
+    expect(currencyField).toBeDisabled();
+    expect(currencyField).toHaveValue('ARS');
+    expect(screen.queryByRole('option', { name: 'Otra…' })).not.toBeInTheDocument();
   });
 
   it('"Otra…": permite cargar una moneda nueva (uppercase) y la manda', async () => {
@@ -265,8 +268,8 @@ describe('TransactionForm ruteo de tarjeta (Sprint 22.2)', () => {
 
     fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'bank-1' } });
 
-    // …pero sí aparece en el selector de método (D6)
-    const cardOption = await screen.findByRole('option', { name: /Visa \*8190 · crédito/ });
+    // …pero sí aparece en el selector de método (D6). Sprint 23: label "- Crédito".
+    const cardOption = await screen.findByRole('option', { name: /Visa \*8190 - Crédito/ });
     expect(cardOption).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Método de pago', { exact: false }), {

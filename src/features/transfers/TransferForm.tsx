@@ -6,12 +6,14 @@ import { MoneyInput } from '../../components/ui/MoneyInput';
 import { CurrencySelect } from '../../components/ui/CurrencySelect';
 import { DateField } from '../../components/ui/DateField';
 import { Button } from '../../components/ui/Button';
+import { ArrowRightIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/toastContext';
 import { formatMoney, numberToAmountDisplay, parseAmountInput } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
-import { useCreateTransfer } from './useTransferMutations';
+import { useCreateTransfer, useUpdateTransfer } from './useTransferMutations';
 import { useExchangeRate } from './useExchangeRate';
 import { transferErrorMessage } from './errorMessages';
+import type { TransferListItem } from './api';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -23,22 +25,34 @@ function round2(n: number): number {
 
 type TransferFormProps = {
   initialToAccountId?: string;
+  /** Modo edición (Sprint 23 D4): prefill completo + submit por PUT. */
+  transfer?: TransferListItem;
+  /** Se llama tras un alta/edición exitosa (la página lo usa para cerrar el form en edición). */
+  onDone?: () => void;
 };
 
-export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
+export function TransferForm({ initialToAccountId, transfer, onDone }: TransferFormProps = {}) {
+  const isEdit = transfer !== undefined;
   const toast = useToast();
   const { data: accounts } = useAccounts();
-  const mutation = useCreateTransfer();
+  const createMutation = useCreateTransfer();
+  const updateMutation = useUpdateTransfer();
+  const mutation = isEdit ? updateMutation : createMutation;
 
-  const [fromAccountId, setFromAccountId] = useState('');
-  const [toAccountId, setToAccountId] = useState(initialToAccountId ?? '');
-  const [fromCurrency, setFromCurrency] = useState('');
-  const [toCurrency, setToCurrency] = useState('');
-  const [fromAmount, setFromAmount] = useState('');
-  const [toAmount, setToAmount] = useState('');
-  const [toAmountTouched, setToAmountTouched] = useState(false);
-  const [date, setDate] = useState(todayIso());
-  const [description, setDescription] = useState('');
+  const [fromAccountId, setFromAccountId] = useState(transfer?.fromAccountId ?? '');
+  const [toAccountId, setToAccountId] = useState(transfer?.toAccountId ?? initialToAccountId ?? '');
+  const [fromCurrency, setFromCurrency] = useState(transfer?.fromCurrency ?? '');
+  const [toCurrency, setToCurrency] = useState(transfer?.toCurrency ?? '');
+  const [fromAmount, setFromAmount] = useState(
+    transfer ? numberToAmountDisplay(transfer.fromAmount) : '',
+  );
+  const [toAmount, setToAmount] = useState(
+    transfer ? numberToAmountDisplay(transfer.toAmount) : '',
+  );
+  // En edición el toAmount cargado es la verdad → no dejar que el efecto de cotización lo pise.
+  const [toAmountTouched, setToAmountTouched] = useState(isEdit);
+  const [date, setDate] = useState(transfer?.date ?? todayIso());
+  const [description, setDescription] = useState(transfer?.description ?? '');
 
   const fromAccount = accounts?.find((a) => a.id === fromAccountId);
   const toAccount = accounts?.find((a) => a.id === toAccountId);
@@ -50,8 +64,8 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
   const resolvedFromCcy = fromIsCredit ? fromAccount!.currency : fromCurrency || fromAccount?.currency || '';
   const resolvedToCcy = toIsCredit ? toAccount!.currency : toCurrency || toAccount?.currency || '';
 
-  // crossCurrency ahora depende de las monedas RESUELTAS (no de las cuentas): habilita el
-  // caso intra-cuenta (comprar USD dentro de una cuenta) y el override de moneda por pata.
+  // crossCurrency depende de las monedas RESUELTAS (no de las cuentas): habilita el caso
+  // intra-cuenta (comprar USD dentro de una cuenta) y el override de moneda por pata.
   const crossCurrency = !!resolvedFromCcy && !!resolvedToCcy && resolvedFromCcy !== resolvedToCcy;
   // Misma cuenta + misma moneda no mueve nada → error inline (el backend también lo rechaza).
   const sameAccountSameCurrency =
@@ -62,8 +76,8 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
     crossCurrency ? resolvedToCcy : undefined,
   );
 
-  // Pre-llena el monto de destino con la cotización sugerida, salvo que el usuario lo
-  // haya editado: el monto real lo pone el usuario (el rate es sugerencia, no verdad).
+  // Pre-llena el monto de destino con la cotización sugerida, salvo que el usuario lo haya
+  // editado (o sea una edición con el monto ya cargado): el monto real lo pone el usuario.
   // (lint set-state-in-effect pre-existente — no tocado en esta migración, ver reporte S19 B3)
   useEffect(() => {
     if (crossCurrency && rate?.rate && !toAmountTouched && fromAmount) {
@@ -71,14 +85,12 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
     }
   }, [crossCurrency, rate, fromAmount, toAmountTouched]);
 
-  // Sprint 22: el destino puede ser CUALQUIER cuenta, incluida la misma que el origen
-  // (conversión intra-cuenta entre monedas distintas).
+  // Sprint 22: el destino puede ser CUALQUIER cuenta, incluida la misma que el origen.
   const toOptions = accounts ?? [];
 
   const handleFromChange = (id: string) => {
     setFromAccountId(id);
     setToAmountTouched(false);
-    // la moneda de la pata vuelve a la principal de la cuenta elegida
     setFromCurrency(accounts?.find((a) => a.id === id)?.currency ?? '');
   };
 
@@ -93,30 +105,39 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
     if (sameAccountSameCurrency) return; // guard cliente (el botón ya está deshabilitado)
     const from = parseAmountInput(fromAmount);
     const to = crossCurrency ? parseAmountInput(toAmount) : from;
-    mutation.mutate(
-      {
-        fromAccountId,
-        toAccountId,
-        fromAmount: from,
-        toAmount: to,
-        fromCurrency: resolvedFromCcy || undefined,
-        toCurrency: resolvedToCcy || undefined,
-        date,
-        description: description || undefined,
-      },
-      {
-        onSuccess: (data) => {
-          toast.success(
-            `Transferencia realizada. Nuevo saldo — ${fromAccount!.name} (${resolvedFromCcy}): ${formatMoney(data.fromAccountBalance, resolvedFromCcy)} · ${toAccount!.name} (${resolvedToCcy}): ${formatMoney(data.toAccountBalance, resolvedToCcy)}`,
-          );
-          setFromAmount('');
-          setToAmount('');
-          setToAmountTouched(false);
-          setDescription('');
-        },
-        onError: (error) => toast.error(transferErrorMessage(error)),
-      },
-    );
+    const input = {
+      fromAccountId,
+      toAccountId,
+      fromAmount: from,
+      toAmount: to,
+      fromCurrency: resolvedFromCcy || undefined,
+      toCurrency: resolvedToCcy || undefined,
+      date,
+      description: description || undefined,
+    };
+    const onSuccess = (data: { fromAccountBalance: number; toAccountBalance: number }) => {
+      const verb = isEdit ? 'Transferencia actualizada' : 'Transferencia realizada';
+      toast.success(
+        `${verb}. Nuevo saldo — ${fromAccount!.name} (${resolvedFromCcy}): ${formatMoney(data.fromAccountBalance, resolvedFromCcy)} · ${toAccount!.name} (${resolvedToCcy}): ${formatMoney(data.toAccountBalance, resolvedToCcy)}`,
+      );
+      if (isEdit) {
+        onDone?.();
+      } else {
+        setFromAmount('');
+        setToAmount('');
+        setToAmountTouched(false);
+        setDescription('');
+        onDone?.();
+      }
+    };
+    const onError = (error: unknown) =>
+      toast.error(transferErrorMessage(error as Parameters<typeof transferErrorMessage>[0]));
+
+    if (isEdit) {
+      updateMutation.mutate({ id: transfer.id, input }, { onSuccess, onError });
+    } else {
+      createMutation.mutate(input, { onSuccess, onError });
+    }
   };
 
   // Sprint 22: con transfers intra-cuenta alcanza UNA cuenta (comprar USD dentro de ella).
@@ -124,70 +145,93 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
 
   return (
     <Card>
-      <h2>Nueva transferencia</h2>
+      <h2>{isEdit ? 'Editar transferencia' : 'Nueva transferencia'}</h2>
 
       {!hasAccounts ? (
         <p className="text-body">Necesitás al menos una cuenta para transferir.</p>
       ) : (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <Select
-            label="Cuenta origen"
-            id="transfer-from"
-            value={fromAccountId}
-            onChange={(e) => handleFromChange(e.target.value)}
-            required
-            disabled={mutation.isPending}
-          >
-            <option value="">Elegí una cuenta</option>
-            {accounts?.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name} ({account.currency})
-              </option>
-            ))}
-          </Select>
-
-          {/* Chip de moneda de la pata origen (Sprint 22 D4). CREDIT → fija, sin selector. */}
-          {fromAccount && !fromIsCredit && (
-            <CurrencySelect
-              key={`from-${fromAccountId}`}
-              id="transfer-from-currency"
-              label="Moneda origen"
-              options={(fromAccount.balances ?? []).map((b) => b.currency)}
-              value={fromCurrency}
-              onChange={setFromCurrency}
+          {/* Fila 1 (D5): cuenta origen ½ | moneda origen ½ */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select
+              label="Cuenta origen"
+              id="transfer-from"
+              value={fromAccountId}
+              onChange={(e) => handleFromChange(e.target.value)}
+              required
               disabled={mutation.isPending}
-            />
-          )}
+            >
+              <option value="">Elegí una cuenta</option>
+              {accounts?.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name} ({account.currency})
+                </option>
+              ))}
+            </Select>
 
-          <Select
-            label="Cuenta destino"
-            id="transfer-to"
-            value={toAccountId}
-            onChange={(e) => handleToChange(e.target.value)}
-            required
-            disabled={mutation.isPending || !fromAccountId}
-          >
-            <option value="">{fromAccountId ? 'Elegí una cuenta' : 'Elegí primero el origen'}</option>
-            {toOptions.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name} ({account.currency})
-                {account.id === fromAccountId ? ' — misma cuenta' : ''}
-              </option>
-            ))}
-          </Select>
+            {/* Moneda de la pata origen (D5). CREDIT → chip fijo; el resto → CurrencySelect. */}
+            {fromAccount &&
+              (fromIsCredit ? (
+                <Input
+                  label="Moneda origen"
+                  id="transfer-from-currency-fixed"
+                  value={resolvedFromCcy}
+                  readOnly
+                  disabled
+                />
+              ) : (
+                <CurrencySelect
+                  key={`from-${fromAccountId}`}
+                  id="transfer-from-currency"
+                  label="Moneda origen"
+                  options={(fromAccount.balances ?? []).map((b) => b.currency)}
+                  value={fromCurrency}
+                  onChange={setFromCurrency}
+                  disabled={mutation.isPending}
+                />
+              ))}
+          </div>
 
-          {/* Chip de moneda de la pata destino (Sprint 22 D4). CREDIT → fija, sin selector. */}
-          {toAccount && !toIsCredit && (
-            <CurrencySelect
-              key={`to-${toAccountId}`}
-              id="transfer-to-currency"
-              label="Moneda destino"
-              options={(toAccount.balances ?? []).map((b) => b.currency)}
-              value={toCurrency}
-              onChange={setToCurrency}
-              disabled={mutation.isPending}
-            />
-          )}
+          {/* Fila 2 (D5): cuenta destino ½ | moneda destino ½ */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select
+              label="Cuenta destino"
+              id="transfer-to"
+              value={toAccountId}
+              onChange={(e) => handleToChange(e.target.value)}
+              required
+              disabled={mutation.isPending || !fromAccountId}
+            >
+              <option value="">{fromAccountId ? 'Elegí una cuenta' : 'Elegí primero el origen'}</option>
+              {toOptions.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name} ({account.currency})
+                  {account.id === fromAccountId ? ' — misma cuenta' : ''}
+                </option>
+              ))}
+            </Select>
+
+            {toAccount &&
+              (toIsCredit ? (
+                <Input
+                  label="Moneda destino"
+                  id="transfer-to-currency-fixed"
+                  value={resolvedToCcy}
+                  readOnly
+                  disabled
+                />
+              ) : (
+                <CurrencySelect
+                  key={`to-${toAccountId}`}
+                  id="transfer-to-currency"
+                  label="Moneda destino"
+                  options={(toAccount.balances ?? []).map((b) => b.currency)}
+                  value={toCurrency}
+                  onChange={setToCurrency}
+                  disabled={mutation.isPending}
+                />
+              ))}
+          </div>
 
           {sameAccountSameCurrency && (
             <p role="alert" className="text-sm text-expense">
@@ -195,33 +239,53 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
             </p>
           )}
 
-          <MoneyInput
-            label={crossCurrency ? `Monto a debitar (${resolvedFromCcy})` : `Monto${resolvedFromCcy ? ` (${resolvedFromCcy})` : ''}`}
-            id="transfer-from-amount"
-            value={fromAmount}
-            onValueChange={setFromAmount}
-            required
-            disabled={mutation.isPending}
-          />
-
-          {crossCurrency && (
+          {/* Fila 3 (D6): monto a debitar → monto a acreditar ("de esto pasa a esto"). La flecha
+              aparece SOLO cuando las monedas difieren; en angosto las mitades se apilan y la
+              flecha rota a vertical. Same-currency → un solo MoneyInput, sin flecha. */}
+          {crossCurrency ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <div className="flex-1">
+                <MoneyInput
+                  label={`Monto a debitar (${resolvedFromCcy})`}
+                  id="transfer-from-amount"
+                  value={fromAmount}
+                  onValueChange={setFromAmount}
+                  required
+                  disabled={mutation.isPending}
+                />
+              </div>
+              <div className="flex justify-center py-1 text-muted sm:pb-3" aria-hidden="true">
+                <ArrowRightIcon className="h-5 w-5 rotate-90 sm:rotate-0" />
+              </div>
+              <div className="flex-1">
+                <MoneyInput
+                  label={`Monto a acreditar (${resolvedToCcy})`}
+                  id="transfer-to-amount"
+                  value={toAmount}
+                  onValueChange={(v) => {
+                    setToAmount(v);
+                    setToAmountTouched(true);
+                  }}
+                  required
+                  disabled={mutation.isPending}
+                  helper={
+                    rate?.unavailable
+                      ? 'Cotización no disponible — ingresá el monto de destino a mano.'
+                      : rate?.rate
+                        ? `Cotización sugerida: 1 ${resolvedFromCcy} ≈ ${rate.rate} ${resolvedToCcy} (editable).`
+                        : 'Buscando cotización...'
+                  }
+                />
+              </div>
+            </div>
+          ) : (
             <MoneyInput
-              label={`Monto a acreditar (${resolvedToCcy})`}
-              id="transfer-to-amount"
-              value={toAmount}
-              onValueChange={(v) => {
-                setToAmount(v);
-                setToAmountTouched(true);
-              }}
+              label={`Monto${resolvedFromCcy ? ` (${resolvedFromCcy})` : ''}`}
+              id="transfer-from-amount"
+              value={fromAmount}
+              onValueChange={setFromAmount}
               required
               disabled={mutation.isPending}
-              helper={
-                rate?.unavailable
-                  ? 'Cotización no disponible — ingresá el monto de destino a mano.'
-                  : rate?.rate
-                    ? `Cotización sugerida: 1 ${resolvedFromCcy} ≈ ${rate.rate} ${resolvedToCcy} (editable).`
-                    : 'Buscando cotización...'
-              }
             />
           )}
 
@@ -244,14 +308,27 @@ export function TransferForm({ initialToAccountId }: TransferFormProps = {}) {
             disabled={mutation.isPending}
           />
 
-          <Button
-            type="submit"
-            loading={mutation.isPending}
-            disabled={sameAccountSameCurrency}
-            className="self-start"
-          >
-            {mutation.isPending ? 'Transfiriendo...' : 'Transferir'}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              type="submit"
+              loading={mutation.isPending}
+              disabled={sameAccountSameCurrency}
+              className="self-start"
+            >
+              {mutation.isPending
+                ? isEdit
+                  ? 'Guardando...'
+                  : 'Transfiriendo...'
+                : isEdit
+                  ? 'Guardar'
+                  : 'Transferir'}
+            </Button>
+            {isEdit && onDone && (
+              <Button type="button" variant="secondary" onClick={onDone} disabled={mutation.isPending}>
+                Cancelar
+              </Button>
+            )}
+          </div>
         </form>
       )}
     </Card>

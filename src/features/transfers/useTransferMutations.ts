@@ -41,6 +41,22 @@ export function useCreateTransfer() {
   });
 }
 
+// Sprint 23 (D4): editar un transfer = PUT atómico (el backend hace delete+recreate en una
+// transacción; el transfer resultante tiene id nuevo). Mismo shape de input que el alta.
+export function useUpdateTransfer() {
+  const http = useHttp();
+  const invalidate = useInvalidateTransfers();
+
+  return useMutation<TransferResponse, ApiError, { id: string; input: CreateTransferInput }>({
+    mutationFn: ({ id, input }) =>
+      http<TransferResponse>(`/transfers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: invalidate,
+  });
+}
+
 export function useDeleteTransfer() {
   const http = useHttp();
   const invalidate = useInvalidateTransfers();

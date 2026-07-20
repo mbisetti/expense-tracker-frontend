@@ -49,6 +49,29 @@ export function AlertTriangleIcon(props: IconProps) {
   );
 }
 
+// Flecha → — fila "debitar → acreditar" del TransferForm cross-currency (Sprint 23 D6).
+// En móvil se rota 90° (apunta hacia abajo) cuando las mitades se apilan.
+export function ArrowRightIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M5 12h14" />
+      <path d="m12 5 7 7-7 7" />
+    </svg>
+  );
+}
+
+// Calendario — botón del picker nativo dentro del DateField (Sprint 23 D1).
+export function CalendarIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M8 2v4" />
+      <path d="M16 2v4" />
+      <rect width="18" height="18" x="3" y="4" rx="2" />
+      <path d="M3 10h18" />
+    </svg>
+  );
+}
+
 export function AlertOctagonIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>

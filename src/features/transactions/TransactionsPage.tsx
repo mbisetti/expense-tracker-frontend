@@ -44,6 +44,7 @@ const NEW_KIND_OPTIONS: { value: NewMovementKind; label: string }[] = [
 export function TransactionsPage() {
   const [accountId, setAccountId] = useState('');
   const [type, setType] = useState<MovementTypeFilter>('');
+  const [categoryId, setCategoryId] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -52,6 +53,7 @@ export function TransactionsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [newKind, setNewKind] = useState<NewMovementKind>('EXPENSE');
   const [editing, setEditing] = useState<TransactionListItem | null>(null);
+  const [editingTransfer, setEditingTransfer] = useState<TransferListItem | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ kind: 'tx' | 'transfer'; id: string } | null>(
     null,
   );
@@ -75,9 +77,24 @@ export function TransactionsPage() {
     setPage(0);
   };
   const changeAccount = setFilter(setAccountId);
-  const changeType = setFilter(setType);
+  const changeCategory = setFilter(setCategoryId);
   const changeDateFrom = setFilter(setDateFrom);
   const changeDateTo = setFilter(setDateTo);
+
+  // El tipo resetea la categoría si queda incompatible (D2): TRANSFER no admite categoría;
+  // pasar a INCOME/EXPENSE descarta una categoría del otro tipo (BOTH siempre sirve).
+  const changeType = (value: MovementTypeFilter) => {
+    setType(value);
+    setPage(0);
+    if (value === 'TRANSFER') {
+      setCategoryId('');
+      return;
+    }
+    if (categoryId && value !== '') {
+      const cat = categories?.find((c) => c.id === categoryId);
+      if (cat && cat.type !== 'BOTH' && cat.type !== value) setCategoryId('');
+    }
+  };
 
   // Las transacciones se filtran server-side (menos las patas de transfer, ocultas por
   // excludeTransferLegs). El tipo 'INCOME'/'EXPENSE' también va al server; con 'TRANSFER'
@@ -87,13 +104,15 @@ export function TransactionsPage() {
       excludeTransferLegs: true,
       accountId: accountId || undefined,
       type: type === 'INCOME' || type === 'EXPENSE' ? type : undefined,
+      // Sprint 23 (D2): categoría server-side (el backend ya lo soporta); TRANSFER no lleva.
+      categoryId: type !== 'TRANSFER' && categoryId ? categoryId : undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
       search: search || undefined,
       page: 0,
       size: FETCH_SIZE,
     }),
-    [accountId, type, dateFrom, dateTo, search],
+    [accountId, type, categoryId, dateFrom, dateTo, search],
   );
 
   const { data: txData, isPending: txPending, isError: txError, isPlaceholderData } =
@@ -107,13 +126,22 @@ export function TransactionsPage() {
   const categoryName = (id: string | null) =>
     id ? categories?.find((c) => c.id === id)?.name ?? '—' : '—';
 
+  // Sprint 23 (D2): opciones del filtro de categoría según el Tipo elegido (BOTH sirve para
+  // INCOME y EXPENSE; con Tipo vacío se listan todas).
+  const filterCategories = categories?.filter((c) => {
+    if (type === 'INCOME') return c.type === 'INCOME' || c.type === 'BOTH';
+    if (type === 'EXPENSE') return c.type === 'EXPENSE' || c.type === 'BOTH';
+    return true;
+  });
+
   // Feed unificado: transacciones (sin patas) + transferencias, mergeadas y ordenadas por
   // fecha desc (tiebreak createdAt, id). Los filtros que el server ya aplicó a las tx se
   // replican client-side sobre las transferencias para que el resultado sea coherente.
   const movements = useMemo<MovementRow[]>(() => {
     const txItems = type === 'TRANSFER' ? [] : txData?.content ?? [];
+    // Con categoría activa (D2) las transferencias se excluyen: un transfer no matchea categoría.
     const transferItems =
-      type === 'INCOME' || type === 'EXPENSE'
+      type === 'INCOME' || type === 'EXPENSE' || categoryId
         ? []
         : (transfersData?.content ?? []).filter((t) => {
             if (accountId && t.fromAccountId !== accountId && t.toAccountId !== accountId)
@@ -135,7 +163,7 @@ export function TransactionsPage() {
       return a.item.id < b.item.id ? 1 : -1;
     });
     return rows;
-  }, [txData, transfersData, type, accountId, dateFrom, dateTo, search]);
+  }, [txData, transfersData, type, categoryId, accountId, dateFrom, dateTo, search]);
 
   const totalPages = Math.max(1, Math.ceil(movements.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);
@@ -146,6 +174,7 @@ export function TransactionsPage() {
 
   const openCreate = () => {
     setEditing(null);
+    setEditingTransfer(null);
     setNewKind('EXPENSE');
     setFormOpen(true);
   };
@@ -153,10 +182,19 @@ export function TransactionsPage() {
   const closeForm = () => {
     setFormOpen(false);
     setEditing(null);
+    setEditingTransfer(null);
   };
 
   const startEdit = (tx: TransactionListItem) => {
+    setEditingTransfer(null);
     setEditing(tx);
+    setFormOpen(true);
+  };
+
+  // Sprint 23 (D4): editar una transferencia desde el feed (abre el TransferForm en modo edición).
+  const startEditTransfer = (t: TransferListItem) => {
+    setEditing(null);
+    setEditingTransfer(t);
     setFormOpen(true);
   };
 
@@ -182,16 +220,37 @@ export function TransactionsPage() {
     <section className="flex flex-col gap-4 text-left">
       <h1>Transacciones</h1>
 
+      {/* Sprint 23 (D9): chips de cuenta con scroll horizontal — reemplazan el texto de saldos
+          y filtran el feed al tocarlos (mismo estado que el select "Cuenta"). Universo = TODAS
+          las cuentas (incluidas las CREDIT vinculadas: filtrar por tarjeta es legítimo). El saldo
+          del chip es el de la principal; los sub-balances por moneda viven en Cuentas. */}
       {accounts && accounts.length > 0 && (
-        <p aria-label="Balances" className="flex flex-wrap gap-x-2 gap-y-1 text-sm text-body">
-          {accounts.map((account, i) => (
-            <span key={account.id}>
-              {i > 0 && ' · '}
-              {account.name}:{' '}
-              <Amount amount={account.balance} currency={account.currency} tone="neutral" size="sm" />
-            </span>
-          ))}
-        </p>
+        <div
+          role="group"
+          aria-label="Filtrar por cuenta"
+          className="flex gap-2 overflow-x-auto pb-1"
+        >
+          {accounts.map((account) => {
+            const active = accountId === account.id;
+            return (
+              <button
+                key={account.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => changeAccount(active ? '' : account.id)}
+                className={[
+                  'flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors',
+                  active
+                    ? 'border-brand bg-brand/10 text-ink'
+                    : 'border-line text-body hover:border-brand',
+                ].join(' ')}
+              >
+                <span className="whitespace-nowrap">{account.name}</span>
+                <Amount amount={account.balance} currency={account.currency} tone="neutral" size="sm" />
+              </button>
+            );
+          })}
+        </div>
       )}
 
       {!formOpen && (
@@ -205,6 +264,8 @@ export function TransactionsPage() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             {editing ? (
               <span className="text-sm font-medium text-ink">Editar transacción</span>
+            ) : editingTransfer ? (
+              <span className="text-sm font-medium text-ink">Editar transferencia</span>
             ) : (
               <div role="group" aria-label="Tipo de movimiento" className="flex flex-wrap gap-2">
                 {NEW_KIND_OPTIONS.map((option) => (
@@ -225,7 +286,9 @@ export function TransactionsPage() {
             </Button>
           </div>
 
-          {editing || newKind !== 'TRANSFER' ? (
+          {editingTransfer ? (
+            <TransferForm key={editingTransfer.id} transfer={editingTransfer} onDone={closeForm} />
+          ) : editing || newKind !== 'TRANSFER' ? (
             <TransactionForm
               key={editing?.id ?? `new-${newKind}`}
               transaction={editing ?? undefined}
@@ -241,7 +304,7 @@ export function TransactionsPage() {
       <form
         aria-label="Filtros"
         onSubmit={(e) => e.preventDefault()}
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6"
       >
         <Select
           label="Cuenta"
@@ -267,6 +330,23 @@ export function TransactionsPage() {
           <option value="INCOME">Ingreso</option>
           <option value="EXPENSE">Gasto</option>
           <option value="TRANSFER">Entre cuentas</option>
+        </Select>
+
+        {/* Sprint 23 (D2): filtro de categoría. Opciones según el Tipo; con "Entre cuentas"
+            se deshabilita (un transfer no tiene categoría). */}
+        <Select
+          label="Categoría"
+          id="filter-category"
+          value={categoryId}
+          onChange={(e) => changeCategory(e.target.value)}
+          disabled={type === 'TRANSFER'}
+        >
+          <option value="">Todas</option>
+          {filterCategories?.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.name}
+            </option>
+          ))}
         </Select>
 
         <DateField
@@ -313,31 +393,42 @@ export function TransactionsPage() {
         <>
           <div className={`overflow-x-auto ${isPlaceholderData ? 'opacity-60' : ''}`}>
             <table className="w-full border-collapse text-sm">
+              {/* Sprint 23 (D3): una línea por celda — todo `whitespace-nowrap` salvo la
+                  descripción, que trunca con tooltip (title). +8px de aire (pr-4). El wrapper
+                  scrollea en horizontal. D10: la columna Fecha con la voz de los montos. */}
               <thead>
                 <tr className="border-b border-line text-left text-muted">
-                  <th className="py-2 pr-2 font-medium">Fecha</th>
-                  <th className="py-2 pr-2 font-medium">Tipo</th>
-                  <th className="py-2 pr-2 font-medium">Descripción</th>
-                  <th className="py-2 pr-2 font-medium">Categoría</th>
-                  <th className="py-2 pr-2 font-medium">Cuenta</th>
-                  <th className="py-2 pr-2 font-medium">Monto</th>
-                  <th className="py-2 pr-2 font-medium"></th>
+                  <th className="whitespace-nowrap py-2 pr-4 font-medium">Fecha</th>
+                  <th className="whitespace-nowrap py-2 pr-4 font-medium">Tipo</th>
+                  <th className="py-2 pr-4 font-medium">Descripción</th>
+                  <th className="whitespace-nowrap py-2 pr-4 font-medium">Categoría</th>
+                  <th className="whitespace-nowrap py-2 pr-4 font-medium">Cuenta</th>
+                  <th className="whitespace-nowrap py-2 pr-4 font-medium">Monto</th>
+                  <th className="py-2 pr-4 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
                 {pageRows.map((row) =>
                   row.kind === 'tx' ? (
                     <tr key={`tx-${row.item.id}`} className="border-b border-line">
-                      <td className="py-2 pr-2 tabular-nums text-ink">
+                      <td className="whitespace-nowrap py-2 pr-4 font-semibold tabular-nums text-ink">
                         {formatDate(row.item.date, dateFmt)}
                       </td>
-                      <td className="py-2 pr-2 text-body">
+                      <td className="whitespace-nowrap py-2 pr-4 text-body">
                         {row.item.type === 'INCOME' ? 'Ingreso' : 'Gasto'}
                       </td>
-                      <td className="py-2 pr-2 text-ink">{row.item.description ?? '—'}</td>
-                      <td className="py-2 pr-2 text-body">{categoryName(row.item.categoryId)}</td>
-                      <td className="py-2 pr-2 text-body">{accountName(row.item.accountId)}</td>
-                      <td className="py-2 pr-2">
+                      <td className="py-2 pr-4 text-ink">
+                        <div className="max-w-[28ch] truncate" title={row.item.description ?? ''}>
+                          {row.item.description ?? '—'}
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap py-2 pr-4 text-body">
+                        {categoryName(row.item.categoryId)}
+                      </td>
+                      <td className="whitespace-nowrap py-2 pr-4 text-body">
+                        {accountName(row.item.accountId)}
+                      </td>
+                      <td className="whitespace-nowrap py-2 pr-4">
                         <Amount
                           amount={row.item.amount}
                           currency={row.item.currency}
@@ -345,7 +436,7 @@ export function TransactionsPage() {
                           size="sm"
                         />
                       </td>
-                      <td className="py-2 pr-2">
+                      <td className="whitespace-nowrap py-2 pr-4">
                         <div className="flex gap-2">
                           <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(row.item)}>
                             Editar
@@ -363,20 +454,36 @@ export function TransactionsPage() {
                     </tr>
                   ) : (
                     <tr key={`tr-${row.item.id}`} className="border-b border-line">
-                      <td className="py-2 pr-2 tabular-nums text-ink">
+                      <td className="whitespace-nowrap py-2 pr-4 font-semibold tabular-nums text-ink">
                         {formatDate(row.item.date, dateFmt)}
                       </td>
-                      <td className="py-2 pr-2 text-body">Entre cuentas</td>
-                      <td className="py-2 pr-2 text-ink">{row.item.description ?? '—'}</td>
-                      <td className="py-2 pr-2 text-body">—</td>
-                      <td className="py-2 pr-2 text-body">
-                        {/* Sprint 22: intra-cuenta → una cuenta con sus dos monedas; el resto,
-                            origen → destino. Monedas del transfer, no derivadas de la cuenta. */}
-                        {row.item.fromAccountId === row.item.toAccountId
-                          ? `${accountName(row.item.fromAccountId)} · ${row.item.fromCurrency} → ${row.item.toCurrency}`
-                          : `${accountName(row.item.fromAccountId)} → ${accountName(row.item.toAccountId)}`}
+                      <td className="whitespace-nowrap py-2 pr-4 text-body">Entre cuentas</td>
+                      <td className="py-2 pr-4 text-ink">
+                        <div className="max-w-[28ch] truncate" title={row.item.description ?? ''}>
+                          {row.item.description ?? '—'}
+                        </div>
                       </td>
-                      <td className="py-2 pr-2">
+                      <td className="whitespace-nowrap py-2 pr-4 text-body">—</td>
+                      {/* Sprint 23 (D5): dos líneas — origen · moneda / destino · moneda.
+                          Intra-cuenta → una línea `Cuenta · ARS → USD` (Sprint 22). */}
+                      <td className="py-2 pr-4 text-body">
+                        {row.item.fromAccountId === row.item.toAccountId ? (
+                          <span className="whitespace-nowrap">
+                            {accountName(row.item.fromAccountId)} · {row.item.fromCurrency} →{' '}
+                            {row.item.toCurrency}
+                          </span>
+                        ) : (
+                          <div className="flex flex-col leading-tight">
+                            <span className="whitespace-nowrap">
+                              {accountName(row.item.fromAccountId)} · {row.item.fromCurrency}
+                            </span>
+                            <span className="whitespace-nowrap text-muted">
+                              {accountName(row.item.toAccountId)} · {row.item.toCurrency}
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap py-2 pr-4">
                         <span className="tabular-nums">
                           <Amount
                             amount={row.item.fromAmount}
@@ -397,15 +504,25 @@ export function TransactionsPage() {
                           )}
                         </span>
                       </td>
-                      <td className="py-2 pr-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setConfirmDelete({ kind: 'transfer', id: row.item.id })}
-                        >
-                          Borrar
-                        </Button>
+                      <td className="whitespace-nowrap py-2 pr-4">
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditTransfer(row.item)}
+                          >
+                            Editar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConfirmDelete({ kind: 'transfer', id: row.item.id })}
+                          >
+                            Borrar
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ),
