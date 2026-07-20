@@ -109,6 +109,23 @@ export function ChevronDownIcon(props: IconProps) {
   );
 }
 
+// Chevrons de navegación mensual (Sprint 24, PeriodNav de la tab Gastos).
+export function ChevronLeftIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
 export function XIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>

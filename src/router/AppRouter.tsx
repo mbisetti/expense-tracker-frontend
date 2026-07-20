@@ -5,6 +5,7 @@ import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { PublicHome } from '../features/landing/PublicHome';
 import { AccountsPage } from '../features/accounts/AccountsPage';
 import { TransactionsPage } from '../features/transactions/TransactionsPage';
+import { ExpensesPage } from '../features/expenses/ExpensesPage';
 import { IncomePage } from '../features/income/IncomePage';
 import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { CategoriesPage } from '../features/categories/CategoriesPage';
@@ -26,6 +27,7 @@ const routes: RouteObject[] = [
           { path: '/dashboard', element: <DashboardPage /> },
           { path: '/accounts', element: <AccountsPage /> },
           { path: '/transactions', element: <TransactionsPage /> },
+          { path: '/expenses', element: <ExpensesPage /> },
           { path: '/income', element: <IncomePage /> },
           // Sprint 22.2: la página vieja de transferencias (TransfersPage) queda en el código
           // pero SIN ruta accesible — los transfers se registran desde Transacciones

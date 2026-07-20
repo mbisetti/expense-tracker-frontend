@@ -3,6 +3,7 @@ import { useCreateCategory, useUpdateCategory, type UpdateCategoryInput } from '
 import { categoryErrorMessage } from './errorMessages';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { Switch } from '../../components/ui/Switch';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
 import { FIELD_LABEL_CLASS, FIELD_WRAPPER_CLASS } from '../../components/ui/fieldStyles';
@@ -26,6 +27,8 @@ export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps)
   // en PATCHes donde el usuario no tocó el picker
   const initialColor = category?.color ?? '#aa3bff';
   const [color, setColor] = useState(initialColor);
+  // Sprint 24 (D3/D7): esencialidad. En INCOME el flag no se muestra (conceptualmente es de gasto).
+  const [isEssential, setIsEssential] = useState(category?.isEssential ?? false);
 
   const createMutation = useCreateCategory();
   const updateMutation = useUpdateCategory();
@@ -38,6 +41,7 @@ export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps)
       if (name !== category.name) changes.name = name;
       if (type !== category.type) changes.type = type;
       if (color !== initialColor) changes.color = color;
+      if (isEssential !== category.isEssential) changes.isEssential = isEssential;
 
       if (Object.keys(changes).length === 0) {
         onClose();
@@ -55,7 +59,7 @@ export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps)
       );
     } else {
       createMutation.mutate(
-        { name, type, color },
+        { name, type, color, isEssential: type === 'INCOME' ? undefined : isEssential },
         {
           onSuccess: () => {
             toast.success('Categoría creada.');
@@ -113,6 +117,17 @@ export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps)
           className="h-11 w-16 cursor-pointer rounded-sm border border-line bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
+
+      {/* Sprint 24 (D7): esencialidad — oculta con tipo INCOME (el flag es conceptualmente de gasto). */}
+      {type !== 'INCOME' && (
+        <Switch
+          label="Esencial"
+          checked={isEssential}
+          onChange={setIsEssential}
+          disabled={isPending}
+          helper="Los gastos esenciales no cuentan como recortables"
+        />
+      )}
 
       <div className="flex items-center gap-3">
         <Button type="submit" loading={isPending}>

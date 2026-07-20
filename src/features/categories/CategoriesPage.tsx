@@ -4,6 +4,7 @@ import { useDeleteCategory } from './useCategoryMutations';
 import { categoryErrorMessage } from './errorMessages';
 import { CategoryForm } from './CategoryForm';
 import { Button } from '../../components/ui/Button';
+import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -98,6 +99,8 @@ export function CategoriesPage() {
                             />
                           )}
                           <span className="text-ink">{category.name}</span>
+                          {/* Sprint 24: marca visual de esencialidad (info, barato). */}
+                          {category.isEssential && <Badge status="info" label="Esencial" />}
                         </span>
                         {isSystem ? (
                           <em className="text-body">Sistema</em>

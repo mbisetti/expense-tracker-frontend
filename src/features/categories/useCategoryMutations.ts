@@ -8,6 +8,7 @@ export type CreateCategoryInput = {
   type: CategoryType;
   color?: string;
   icon?: string;
+  isEssential?: boolean;
 };
 
 export type UpdateCategoryInput = Partial<CreateCategoryInput>;
@@ -16,6 +17,10 @@ function useInvalidateCategories() {
   const queryClient = useQueryClient();
   return () => {
     queryClient.invalidateQueries({ queryKey: ['categories'] });
+    // Sprint 24: la esencialidad (retroactiva) mueve el análisis de Gastos; invalidar
+    // summary refresca la tab. De paso corrige el staleness del nombre de categoría en el
+    // widget de presupuestos del Overview (que venía sin refrescar tras un rename).
+    queryClient.invalidateQueries({ queryKey: ['summary'] });
   };
 }
 

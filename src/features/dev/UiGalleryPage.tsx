@@ -11,6 +11,7 @@ import { ProgressBar, type ProgressBarTone } from '../../components/ui/ProgressB
 import { Modal } from '../../components/ui/Modal';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { Skeleton, type SkeletonVariant } from '../../components/ui/Skeleton';
+import { Switch } from '../../components/ui/Switch';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { useToast } from '../../components/ui/toastContext';
@@ -75,6 +76,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 // así que no forma parte del bundle/ruta de producción.
 export function UiGalleryPage() {
   const [theme, setTheme] = useState<ThemeChoice>('system');
+  const [switchOn, setSwitchOn] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmDangerOpen, setConfirmDangerOpen] = useState(false);
@@ -245,6 +247,17 @@ export function UiGalleryPage() {
           {BADGE_STATUSES.map(({ status, label }) => (
             <Badge key={status} status={status} label={label} />
           ))}
+        </Row>
+      </Section>
+
+      <Section title="Switch">
+        <Row label="con label">
+          <Switch label="Esencial" checked={switchOn} onChange={setSwitchOn} />
+        </Row>
+        <Row label="estados">
+          <Switch ariaLabel="on" checked onChange={() => {}} />
+          <Switch ariaLabel="off" checked={false} onChange={() => {}} />
+          <Switch ariaLabel="disabled" checked disabled onChange={() => {}} />
         </Row>
       </Section>
 

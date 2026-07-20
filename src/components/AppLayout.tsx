@@ -31,6 +31,7 @@ const ROUTES = [
   { to: '/dashboard', label: 'Overview' },
   { to: '/accounts', label: 'Cuentas' },
   { to: '/transactions', label: 'Transacciones' },
+  { to: '/expenses', label: 'Gastos' },
   { to: '/income', label: 'Ingresos' },
 ];
 

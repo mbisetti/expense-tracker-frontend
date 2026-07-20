@@ -7,6 +7,8 @@ export type Category = {
   type: CategoryType;
   color: string | null;
   icon: string | null;
+  // Sprint 24: esencial = no recortable (vivienda, salud). Default false.
+  isEssential: boolean;
   sourceDefaultCategoryId: string | null;
   createdAt: string;
 };
