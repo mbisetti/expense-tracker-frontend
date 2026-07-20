@@ -1,9 +1,12 @@
+import { useNavigate } from 'react-router-dom';
 import { Modal } from '../../components/ui/Modal';
 import { Amount } from '../../components/ui/Amount';
+import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useTransactions } from '../transactions/useTransactions';
 import { formatDate, useDateFormat } from '../../lib/dateFormat';
+import { periodLabel } from '../../lib/months';
 import type { CategoryExpense } from './api';
 
 type CategoryTransactionsModalProps = {
@@ -24,15 +27,10 @@ function monthBounds(year: number, month: number): { from: string; to: string } 
   };
 }
 
-function periodLabel(year: number, month: number): string {
-  const s = new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric' }).format(
-    new Date(year, month - 1, 1),
-  );
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 // Sprint 24 (D9): drill-down de las transacciones de UNA categoría en el mes. Solo lectura.
 // NO toca TransactionsPage. Filtra la moneda client-side (GET /transactions no la filtra).
+// S24.2 (D6): el bucket "Sin categoría" usa uncategorized=true; botón "Ver en Transacciones"
+// deep-linkea a /transactions con los mismos filtros.
 export function CategoryTransactionsModal({
   category,
   currency,
@@ -41,9 +39,13 @@ export function CategoryTransactionsModal({
   onClose,
 }: CategoryTransactionsModalProps) {
   const { pref } = useDateFormat();
+  const navigate = useNavigate();
   const bounds = monthBounds(year, month);
+  const isUncategorized = category.categoryId === null;
+
   const { data, isPending, isError } = useTransactions({
-    categoryId: category.categoryId ?? undefined,
+    categoryId: isUncategorized ? undefined : (category.categoryId ?? undefined),
+    uncategorized: isUncategorized ? true : undefined,
     type: 'EXPENSE',
     dateFrom: bounds.from,
     dateTo: bounds.to,
@@ -55,11 +57,27 @@ export function CategoryTransactionsModal({
 
   const rows = (data?.content ?? []).filter((t) => t.currency === currency);
 
+  const openInTransactions = () => {
+    const params = new URLSearchParams({
+      type: 'EXPENSE',
+      dateFrom: bounds.from,
+      dateTo: bounds.to,
+    });
+    if (isUncategorized) params.set('uncategorized', 'true');
+    else params.set('categoryId', category.categoryId!);
+    navigate(`/transactions?${params.toString()}`);
+  };
+
   return (
     <Modal
       open
       onClose={onClose}
-      title={`${category.name ?? 'Sin categoría'} — ${periodLabel(year, month)}`}
+      title={`${category.name ?? 'Sin categoría'} · ${periodLabel(year, month)}`}
+      footer={
+        <Button type="button" variant="secondary" onClick={openInTransactions}>
+          Ver en Transacciones
+        </Button>
+      }
     >
       {isPending && <Skeleton variant="list" rows={5} />}
       {isError && (

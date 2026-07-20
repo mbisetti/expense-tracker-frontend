@@ -14,10 +14,12 @@ const data: CurrencyExpenses = {
   nonEssentialTotal: 600,
   prevMonthTotal: 600,
   avg3mTotal: 500,
+  totalToDate: null,
+  projectedTotal: null,
   byCategory: [
-    { categoryId: 'c1', name: 'Ocio', color: '#ff0000', isEssential: false, amount: 500, prevMonthAmount: 400, avg3mAmount: 300 },
-    { categoryId: 'c2', name: 'Vivienda', color: '#00ff00', isEssential: true, amount: 300, prevMonthAmount: 300, avg3mAmount: 300 },
-    { categoryId: null, name: null, color: null, isEssential: false, amount: 100, prevMonthAmount: 0, avg3mAmount: 0 },
+    { categoryId: 'c1', name: 'Ocio', color: '#ff0000', isEssential: false, amount: 500, prevMonthAmount: 400, avg3mAmount: 300, txCount: 3, avg3mCount: 3, maxTxAmount: 200 },
+    { categoryId: 'c2', name: 'Vivienda', color: '#00ff00', isEssential: true, amount: 300, prevMonthAmount: 300, avg3mAmount: 300, txCount: 1, avg3mCount: 1, maxTxAmount: 300 },
+    { categoryId: null, name: null, color: null, isEssential: false, amount: 100, prevMonthAmount: 0, avg3mAmount: 0, txCount: 2, avg3mCount: 0, maxTxAmount: 60 },
   ],
   months: [],
 };
@@ -93,11 +95,13 @@ describe('CategoryBreakdown', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('click en una categoría con id dispara el drill-down; "Sin categoría" no', () => {
+  it('click en una categoría dispara el drill-down; "Sin categoría" también (S24.2 D6)', () => {
     const onDrill = renderBreakdown();
     fireEvent.click(screen.getByRole('button', { name: 'Ocio' }));
     expect(onDrill).toHaveBeenCalledWith(expect.objectContaining({ categoryId: 'c1', name: 'Ocio' }));
-    // "Sin categoría" no es un botón (no drill)
-    expect(screen.queryByRole('button', { name: 'Sin categoría' })).not.toBeInTheDocument();
+
+    // "Sin categoría" ahora es clickeable (drill vía uncategorized)
+    fireEvent.click(screen.getByRole('button', { name: 'Sin categoría' }));
+    expect(onDrill).toHaveBeenCalledWith(expect.objectContaining({ categoryId: null }));
   });
 });

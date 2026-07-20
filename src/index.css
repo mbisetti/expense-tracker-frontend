@@ -93,6 +93,8 @@
   --transfer: #0284c7;
   --warning: #b45309;
   --exceeded: #b91c1c;
+  /* Cursor de hover de los charts (S24.2): gris clarito visible sobre el Card blanco. */
+  --chart-cursor: #eceae9;
 
   /* Sombras crudas (light) — mapeadas arriba a --shadow-sm/md/lg */
   --elevation-sm: 0 1px 2px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.08);
@@ -150,6 +152,8 @@
     --transfer: #38bdf8;
     --warning: #fbbf24;
     --exceeded: #fca5a5;
+    /* Cursor de hover de los charts (S24.2): ACLARA sobre el Card oscuro (#1c1917). */
+    --chart-cursor: rgba(250, 250, 249, 0.07);
 
     --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
     --elevation-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
@@ -188,6 +192,7 @@
   --transfer: #38bdf8;
   --warning: #fbbf24;
   --exceeded: #fca5a5;
+  --chart-cursor: rgba(250, 250, 249, 0.07);
 
   --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
   --elevation-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
@@ -214,6 +219,8 @@
   --transfer: #0284c7;
   --warning: #b45309;
   --exceeded: #b91c1c;
+  /* Cursor de hover de los charts (S24.2): gris clarito visible sobre el Card blanco. */
+  --chart-cursor: #eceae9;
 
   --elevation-sm: 0 1px 2px rgba(28, 25, 23, 0.06), 0 1px 3px rgba(28, 25, 23, 0.08);
   --elevation-md:

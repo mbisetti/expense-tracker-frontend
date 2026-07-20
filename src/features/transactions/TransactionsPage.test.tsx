@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { TransactionsPage } from './TransactionsPage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
@@ -18,7 +19,9 @@ function renderPage() {
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
         <ToastProvider>
-          <TransactionsPage />
+          <MemoryRouter>
+            <TransactionsPage />
+          </MemoryRouter>
         </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,

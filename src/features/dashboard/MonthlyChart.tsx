@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { formatMoney } from '../../lib/money';
+import { monthShortLabel } from '../../lib/months';
 import type { MonthlyBucket } from './api';
 
 type MonthlyChartProps = {
@@ -18,14 +19,9 @@ type MonthlyChartProps = {
 
 const compact = new Intl.NumberFormat('es-AR', { notation: 'compact' });
 
-function monthLabel(month: string): string {
-  const [y, m] = month.split('-');
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('es-AR', { month: 'short' });
-}
-
 export function MonthlyChart({ months, currency }: MonthlyChartProps) {
   const data = months.map((bucket) => ({
-    label: monthLabel(bucket.month),
+    label: monthShortLabel(bucket.month),
     income: bucket.income,
     expense: bucket.expense,
   }));
@@ -60,7 +56,7 @@ export function MonthlyChart({ months, currency }: MonthlyChartProps) {
             {/* cursor + contentStyle tematizados: el default de Recharts era un cuadrado
                 blanco/gris que no combinaba (9b). Ahora el resalte y la cajita siguen los tokens. */}
             <Tooltip
-              cursor={{ fill: 'var(--surface-sunken)', opacity: 0.6 }}
+              cursor={{ fill: 'var(--chart-cursor)' }}
               contentStyle={{
                 background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)',

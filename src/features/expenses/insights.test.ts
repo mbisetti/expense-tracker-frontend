@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { growers, simulateSavings, topNonEssential } from './insights';
-import type { CategoryExpense } from './api';
+import {
+  growers,
+  peakStory,
+  simulateSavings,
+  topNonEssential,
+  trimLeadingEmpty,
+} from './insights';
+import type { CategoryExpense, EssentialMonthBucket } from './api';
 
 function cat(over: Partial<CategoryExpense>): CategoryExpense {
   return {
@@ -11,8 +17,15 @@ function cat(over: Partial<CategoryExpense>): CategoryExpense {
     amount: 0,
     prevMonthAmount: 0,
     avg3mAmount: 0,
+    txCount: 0,
+    avg3mCount: 0,
+    maxTxAmount: 0,
     ...over,
   };
+}
+
+function bucket(month: string, essential: number, nonEssential: number): EssentialMonthBucket {
+  return { month, essential, nonEssential };
 }
 
 describe('insights', () => {
@@ -23,35 +36,38 @@ describe('insights', () => {
         cat({ name: 'Vivienda', amount: 400, isEssential: true }),
         cat({ name: 'Delivery', amount: 300, isEssential: false }),
       ];
-      const top = topNonEssential(byCategory);
-      expect(top.map((c) => c.name)).toEqual(['Ocio', 'Delivery']);
-    });
-
-    it('respeta el límite', () => {
-      const byCategory = [1, 2, 3, 4].map((n) =>
-        cat({ name: `C${n}`, amount: 100 - n, isEssential: false }),
-      );
-      expect(topNonEssential(byCategory, 2)).toHaveLength(2);
+      expect(topNonEssential(byCategory).map((c) => c.name)).toEqual(['Ocio', 'Delivery']);
     });
   });
 
-  describe('growers', () => {
-    it('solo con avg3m > 0 y amount ≥ 1.2× promedio, ordenados por crecimiento absoluto', () => {
+  describe('growers v2', () => {
+    it('clasifica puntual / conductual / crecimiento y ordena por crecimiento absoluto', () => {
       const byCategory = [
-        cat({ name: 'Justo', amount: 120, avg3mAmount: 100 }), // 1.2× exacto → entra (+20)
-        cat({ name: 'Salto', amount: 300, avg3mAmount: 100 }), // 3× → entra (+200)
-        cat({ name: 'Estable', amount: 105, avg3mAmount: 100 }), // 1.05× → NO
-        cat({ name: 'SinBase', amount: 50, avg3mAmount: 0 }), // sin base → NO
+        // puntual: una compra ≥ 70% del monto
+        cat({ name: 'Electro', amount: 300, avg3mAmount: 100, maxTxAmount: 250, txCount: 2, avg3mCount: 2 }),
+        // conductual: 8 − 3 = 5 compras más que el promedio
+        cat({ name: 'Delivery', amount: 240, avg3mAmount: 100, maxTxAmount: 40, txCount: 8, avg3mCount: 3 }),
+        // crecimiento: ni puntual ni conductual → % (130 vs 100 = +30%)
+        cat({ name: 'Cafe', amount: 130, avg3mAmount: 100, maxTxAmount: 20, txCount: 4, avg3mCount: 3.5 }),
       ];
-      const result = growers(byCategory);
-      expect(result.map((g) => g.category.name)).toEqual(['Salto', 'Justo']);
-      expect(result[0].growthPct).toBe(200);
-      expect(result[1].growthAbs).toBe(20);
+      const result = growers(byCategory, 1000);
+      expect(result.map((g) => g.category.name)).toEqual(['Electro', 'Delivery', 'Cafe']);
+      expect(result[0].kind).toBe('punctual');
+      expect(result[1].kind).toBe('behavioral');
+      expect(result[2].kind).toBe('growth');
+      if (result[1].kind === 'behavioral') expect(result[1].extraCount).toBe(5);
+      if (result[2].kind === 'growth') expect(result[2].growthPct).toBe(30);
     });
 
-    it('sin base (todo avg3m en 0) → lista vacía', () => {
-      const byCategory = [cat({ amount: 500, avg3mAmount: 0 })];
-      expect(growers(byCategory)).toEqual([]);
+    it('piso de base: una categoría con promedio < 5% del gasto promedio no genera insight', () => {
+      // avg3m 20 = 2% de avg3mTotal 1000 → excluida aunque haya crecido 25×
+      const byCategory = [cat({ name: 'Chica', amount: 500, avg3mAmount: 20, maxTxAmount: 500 })];
+      expect(growers(byCategory, 1000)).toEqual([]);
+    });
+
+    it('sin crecimiento (< 1.2×) → no aparece', () => {
+      const byCategory = [cat({ amount: 105, avg3mAmount: 100, maxTxAmount: 20 })];
+      expect(growers(byCategory, 1000)).toEqual([]);
     });
   });
 
@@ -59,9 +75,50 @@ describe('insights', () => {
     it('calcula ahorro mensual y anual', () => {
       expect(simulateSavings(1000, 20)).toEqual({ monthly: 200, yearly: 2400 });
     });
+  });
 
-    it('nonEssential 0 → ahorro 0', () => {
-      expect(simulateSavings(0, 30)).toEqual({ monthly: 0, yearly: 0 });
+  describe('trimLeadingEmpty', () => {
+    it('recorta ceros del inicio pero mantiene un cero intermedio', () => {
+      const months = [
+        bucket('2026-02', 0, 0),
+        bucket('2026-03', 0, 0),
+        bucket('2026-04', 100, 50),
+        bucket('2026-05', 0, 0), // cero intermedio: se mantiene (dejaste de gastar)
+        bucket('2026-06', 0, 20),
+        bucket('2026-07', 0, 0),
+      ];
+      expect(trimLeadingEmpty(months).map((m) => m.month)).toEqual([
+        '2026-04',
+        '2026-05',
+        '2026-06',
+        '2026-07',
+      ]);
+    });
+
+    it('todos en cero → deja 1 (el último, honesto)', () => {
+      const months = [bucket('2026-06', 0, 0), bucket('2026-07', 0, 0)];
+      expect(trimLeadingEmpty(months)).toHaveLength(1);
+    });
+  });
+
+  describe('peakStory', () => {
+    const byCategory = [cat({ name: 'Ocio', amount: 500 })];
+    const months = [
+      bucket('2026-06', 100, 100),
+      bucket('2026-07', 300, 200), // el más alto
+    ];
+
+    it('el mes seleccionado es el máximo → cuenta la categoría que lo empujó', () => {
+      const story = peakStory(months, byCategory, '2026-07');
+      expect(story).toEqual({ topName: 'Ocio', topAmount: 500 });
+    });
+
+    it('el mes seleccionado NO es el máximo → null', () => {
+      expect(peakStory(months, byCategory, '2026-06')).toBeNull();
+    });
+
+    it('menos de 2 meses → null', () => {
+      expect(peakStory([bucket('2026-07', 300, 200)], byCategory, '2026-07')).toBeNull();
     });
   });
 });

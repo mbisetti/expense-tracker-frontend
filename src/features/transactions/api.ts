@@ -33,6 +33,9 @@ export type TransactionFilters = {
   type?: TransactionType;
   /** Oculta las patas de transfer (feed unificado de Movimientos, Sprint 20 #4). */
   excludeTransferLegs?: boolean;
+  /** Sprint 24.2: solo transacciones "Sin categoría" (category_id IS NULL). Mandar SOLO true;
+   *  pasar undefined para apagado (buildTransactionsQuery serializaría "false"). */
+  uncategorized?: boolean;
   dateFrom?: string;
   dateTo?: string;
   search?: string;

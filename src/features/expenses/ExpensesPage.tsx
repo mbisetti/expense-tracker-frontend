@@ -11,7 +11,12 @@ import { CategoryBreakdown } from './CategoryBreakdown';
 import { InsightsSection } from './InsightsSection';
 import { CategoryTransactionsModal } from './CategoryTransactionsModal';
 import { deltaVsPrev } from './format';
+import { trimLeadingEmpty } from './insights';
 import type { CategoryExpense, CurrencyExpenses } from './api';
+
+function monthKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
 
 // Recharts lazy (patrón MonthlyChart): no engordar el bundle inicial.
 const EssentialTrendChart = lazy(() =>
@@ -49,20 +54,43 @@ function MonthSummary({ data }: { data: CurrencyExpenses }) {
         )}
       </div>
 
+      {/* Proyección MTD (S24.2 E): solo en el mes corriente (el backend manda projectedTotal
+          únicamente ahí). "A este ritmo…" + comparación con el mes pasado si aplica. */}
+      {data.projectedTotal != null && (
+        <p className="text-sm text-body">
+          A este ritmo terminás el mes en{' '}
+          <span className="tabular-nums text-ink">
+            ~{formatMoney(data.projectedTotal, data.currency)}
+          </span>
+          {data.prevMonthTotal > 0 && (
+            <>
+              {' '}
+              <span className="text-muted">
+                (el mes pasado: {formatMoney(data.prevMonthTotal, data.currency)})
+              </span>
+            </>
+          )}
+        </p>
+      )}
+
       {data.total > 0 && (
         <div className="flex flex-col gap-1.5">
+          {/* S24.2 A.1: esencial = ink (el "negro" temático), no esencial = ámbar. Ni rojo
+              (atado a "malo") ni verde (es ingreso). */}
           <div className="flex h-2 overflow-hidden rounded-full bg-surface-sunken">
-            <div className="h-2 bg-brand" style={{ width: `${essentialPct}%` }} />
-            <div className="h-2 bg-expense" style={{ width: `${nonEssentialPct}%` }} />
+            <div className="h-2 bg-ink" style={{ width: `${essentialPct}%` }} />
+            <div className="h-2 bg-warning" style={{ width: `${nonEssentialPct}%` }} />
           </div>
           <div className="flex justify-between text-sm text-body">
-            <span>
+            <span className="flex items-center gap-1.5">
+              <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-ink" />
               Esencial{' '}
               <span className="text-muted">
                 {formatMoney(data.essentialTotal, data.currency)} · {essentialPct}%
               </span>
             </span>
-            <span>
+            <span className="flex items-center gap-1.5">
+              <span aria-hidden="true" className="inline-block h-2 w-2 rounded-full bg-warning" />
               No esencial{' '}
               <span className="text-muted">
                 {formatMoney(data.nonEssentialTotal, data.currency)} · {nonEssentialPct}%
@@ -139,15 +167,29 @@ export function ExpensesPage() {
       {current && (
         <>
           <MonthSummary data={current} />
-          <CategoryBreakdown data={current} onDrill={setDrill} />
+          {/* key por mes+moneda: resetea el triple toggle y "Ver todos" al navegar (S24.2 B). */}
+          <CategoryBreakdown
+            key={`${monthKey(period.year, period.month)}-${active}`}
+            data={current}
+            onDrill={setDrill}
+          />
           <section className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
             <h2>Evolución</h2>
             <p className="text-sm text-body">Esencial vs no esencial, últimos 6 meses</p>
             <Suspense fallback={<Skeleton variant="chart" />}>
-              <EssentialTrendChart months={current.months} currency={current.currency} />
+              {/* S24.2 (C): sin meses fantasma al inicio + mes seleccionado resaltado. */}
+              <EssentialTrendChart
+                months={trimLeadingEmpty(current.months)}
+                currency={current.currency}
+                selectedMonth={monthKey(period.year, period.month)}
+              />
             </Suspense>
           </section>
-          <InsightsSection data={current} />
+          <InsightsSection
+            data={current}
+            months={trimLeadingEmpty(current.months)}
+            selectedMonth={monthKey(period.year, period.month)}
+          />
         </>
       )}
 

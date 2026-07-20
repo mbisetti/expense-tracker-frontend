@@ -4,7 +4,7 @@ export type Delta = { text: string; direction: 'up' | 'down' | 'flat' | 'new' };
 
 export function deltaVsPrev(current: number, prev: number): Delta {
   if (prev === 0) {
-    return current > 0 ? { text: 'nuevo', direction: 'new' } : { text: '—', direction: 'flat' };
+    return current > 0 ? { text: 'Nuevo', direction: 'new' } : { text: '—', direction: 'flat' };
   }
   const pct = Math.round(((current - prev) / prev) * 100);
   if (pct === 0) return { text: '0%', direction: 'flat' };

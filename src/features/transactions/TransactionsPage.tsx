@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
 import { useTransactions } from './useTransactions';
@@ -41,12 +42,25 @@ const NEW_KIND_OPTIONS: { value: NewMovementKind; label: string }[] = [
   { value: 'TRANSFER', label: 'Entre cuentas' },
 ];
 
+// Sprint 24.2 (D6): sentinel del filtro "Sin categoría" (→ uncategorized=true server-side).
+const CATEGORY_NONE = 'none';
+
 export function TransactionsPage() {
-  const [accountId, setAccountId] = useState('');
-  const [type, setType] = useState<MovementTypeFilter>('');
-  const [categoryId, setCategoryId] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  // Sprint 24.2 (D6): los filtros se inicializan desde los query params UNA vez (deep-link
+  // desde Gastos). No se sincroniza de vuelta al navegar/filtrar (v1; back/forward no re-aplica).
+  const [searchParams] = useSearchParams();
+  const [accountId, setAccountId] = useState(() => searchParams.get('accountId') ?? '');
+  const [type, setType] = useState<MovementTypeFilter>(() => {
+    const t = searchParams.get('type');
+    return t === 'INCOME' || t === 'EXPENSE' || t === 'TRANSFER' ? t : '';
+  });
+  const [categoryId, setCategoryId] = useState(() =>
+    searchParams.get('uncategorized') === 'true'
+      ? CATEGORY_NONE
+      : (searchParams.get('categoryId') ?? ''),
+  );
+  const [dateFrom, setDateFrom] = useState(() => searchParams.get('dateFrom') ?? '');
+  const [dateTo, setDateTo] = useState(() => searchParams.get('dateTo') ?? '');
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
@@ -104,8 +118,11 @@ export function TransactionsPage() {
       excludeTransferLegs: true,
       accountId: accountId || undefined,
       type: type === 'INCOME' || type === 'EXPENSE' ? type : undefined,
-      // Sprint 23 (D2): categoría server-side (el backend ya lo soporta); TRANSFER no lleva.
-      categoryId: type !== 'TRANSFER' && categoryId ? categoryId : undefined,
+      // Sprint 23 (D2): categoría server-side; TRANSFER no lleva. S24.2 (D6): el sentinel
+      // 'none' va como uncategorized=true (NO categoryId). undefined para apagado (nunca false).
+      categoryId:
+        type !== 'TRANSFER' && categoryId && categoryId !== CATEGORY_NONE ? categoryId : undefined,
+      uncategorized: type !== 'TRANSFER' && categoryId === CATEGORY_NONE ? true : undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
       search: search || undefined,
@@ -342,6 +359,8 @@ export function TransactionsPage() {
           disabled={type === 'TRANSFER'}
         >
           <option value="">Todas</option>
+          {/* Sprint 24.2 (D6): filtra las transacciones sin categoría (uncategorized server-side). */}
+          <option value={CATEGORY_NONE}>— Sin categoría —</option>
           {filterCategories?.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}

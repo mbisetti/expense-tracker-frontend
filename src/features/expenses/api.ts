@@ -10,6 +10,10 @@ export type CategoryExpense = {
   amount: number;
   prevMonthAmount: number;
   avg3mAmount: number;
+  // Sprint 24.2 (insights v2): datos del mes pedido para clasificar los growers.
+  txCount: number;
+  avg3mCount: number;
+  maxTxAmount: number;
 };
 
 export type EssentialMonthBucket = {
@@ -26,6 +30,9 @@ export type CurrencyExpenses = {
   nonEssentialTotal: number;
   prevMonthTotal: number;
   avg3mTotal: number;
+  // Sprint 24.2 (E): proyección MTD — solo cuando el mes pedido == mes corriente (si no, null).
+  totalToDate: number | null;
+  projectedTotal: number | null;
   byCategory: CategoryExpense[];
   months: EssentialMonthBucket[];
 };

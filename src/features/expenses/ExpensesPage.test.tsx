@@ -22,10 +22,12 @@ const arsCurrency: CurrencyExpenses = {
   nonEssentialTotal: 600,
   prevMonthTotal: 600,
   avg3mTotal: 500,
+  totalToDate: null,
+  projectedTotal: null,
   byCategory: [
-    { categoryId: 'c1', name: 'Ocio', color: '#ff0000', isEssential: false, amount: 500, prevMonthAmount: 400, avg3mAmount: 300 },
-    { categoryId: 'c2', name: 'Vivienda', color: '#00ff00', isEssential: true, amount: 300, prevMonthAmount: 300, avg3mAmount: 300 },
-    { categoryId: null, name: null, color: null, isEssential: false, amount: 100, prevMonthAmount: 0, avg3mAmount: 0 },
+    { categoryId: 'c1', name: 'Ocio', color: '#ff0000', isEssential: false, amount: 500, prevMonthAmount: 400, avg3mAmount: 300, txCount: 3, avg3mCount: 3, maxTxAmount: 200 },
+    { categoryId: 'c2', name: 'Vivienda', color: '#00ff00', isEssential: true, amount: 300, prevMonthAmount: 300, avg3mAmount: 300, txCount: 1, avg3mCount: 1, maxTxAmount: 300 },
+    { categoryId: null, name: null, color: null, isEssential: false, amount: 100, prevMonthAmount: 0, avg3mAmount: 0, txCount: 2, avg3mCount: 0, maxTxAmount: 60 },
   ],
   months: months(600),
 };
@@ -37,8 +39,10 @@ const usdCurrency: CurrencyExpenses = {
   nonEssentialTotal: 40,
   prevMonthTotal: 0,
   avg3mTotal: 0,
+  totalToDate: null,
+  projectedTotal: null,
   byCategory: [
-    { categoryId: 'c3', name: 'Viajes', color: '#0000ff', isEssential: false, amount: 40, prevMonthAmount: 0, avg3mAmount: 0 },
+    { categoryId: 'c3', name: 'Viajes', color: '#0000ff', isEssential: false, amount: 40, prevMonthAmount: 0, avg3mAmount: 0, txCount: 1, avg3mCount: 0, maxTxAmount: 40 },
   ],
   months: months(40),
 };

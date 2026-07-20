@@ -2,6 +2,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   Legend,
   ResponsiveContainer,
   Tooltip,
@@ -9,28 +10,32 @@ import {
   YAxis,
 } from 'recharts';
 import { formatMoney } from '../../lib/money';
+import { monthShortLabel } from '../../lib/months';
 import type { EssentialMonthBucket } from './api';
 
 type EssentialTrendChartProps = {
   months: EssentialMonthBucket[];
   currency: string;
+  /** 'YYYY-MM' del mes seleccionado en la tab → se resalta; el resto se atenúa. */
+  selectedMonth: string;
 };
 
 const compact = new Intl.NumberFormat('es-AR', { notation: 'compact' });
 
-function monthLabel(month: string): string {
-  const [y, m] = month.split('-');
-  return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('es-AR', { month: 'short' });
-}
-
-// Sprint 24 (D2/FR-7): evolución apilada esencial/no esencial de 6 meses (zero-filled). Lazy,
-// mismo theming por CSS vars que MonthlyChart.
-export function EssentialTrendChart({ months, currency }: EssentialTrendChartProps) {
+// Sprint 24 (evolución) + S24.2 (C): barras AGRUPADAS (sin stackId), colores identidad
+// (esencial=ink, no esencial=ámbar), meses capitalizados y mes seleccionado resaltado.
+// Resaltado por `fillOpacity` de Cell (plan B aprobado §C.3: más robusto que ReferenceArea
+// sobre eje de categorías) + tick del eje en negrita para ese mes. Lazy, theming por CSS vars.
+export function EssentialTrendChart({ months, currency, selectedMonth }: EssentialTrendChartProps) {
   const data = months.map((bucket) => ({
-    label: monthLabel(bucket.month),
+    label: monthShortLabel(bucket.month),
+    month: bucket.month,
     essential: bucket.essential,
     nonEssential: bucket.nonEssential,
   }));
+  // Mes seleccionado resaltado por fillOpacity (plan B §C.3): el resto se atenúa. Robusto y
+  // sin depender del tipado del tick custom de Recharts v3.
+  const opacityFor = (month: string) => (month === selectedMonth ? 1 : 0.55);
 
   return (
     <ResponsiveContainer width="100%" height={240}>
@@ -50,7 +55,7 @@ export function EssentialTrendChart({ months, currency }: EssentialTrendChartPro
           width={48}
         />
         <Tooltip
-          cursor={{ fill: 'var(--surface-sunken)', opacity: 0.6 }}
+          cursor={{ fill: 'var(--chart-cursor)' }}
           contentStyle={{
             background: 'var(--bg-elevated)',
             border: '1px solid var(--border)',
@@ -62,14 +67,22 @@ export function EssentialTrendChart({ months, currency }: EssentialTrendChartPro
           formatter={(value) => formatMoney(Number(value), currency)}
         />
         <Legend />
-        <Bar dataKey="essential" name="Esencial" stackId="a" fill="var(--brand)" radius={[0, 0, 0, 0]} />
+        <Bar dataKey="essential" name="Esencial" fill="var(--text-h)" radius={[4, 4, 0, 0]} maxBarSize={48}>
+          {data.map((d) => (
+            <Cell key={d.month} fillOpacity={opacityFor(d.month)} />
+          ))}
+        </Bar>
         <Bar
           dataKey="nonEssential"
           name="No esencial"
-          stackId="a"
-          fill="var(--expense)"
+          fill="var(--warning)"
           radius={[4, 4, 0, 0]}
-        />
+          maxBarSize={48}
+        >
+          {data.map((d) => (
+            <Cell key={d.month} fillOpacity={opacityFor(d.month)} />
+          ))}
+        </Bar>
       </BarChart>
     </ResponsiveContainer>
   );
