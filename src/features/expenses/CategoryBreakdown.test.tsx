@@ -48,7 +48,7 @@ beforeEach(() => {
 
 afterEach(() => vi.unstubAllGlobals());
 
-function renderBreakdown(onDrill = vi.fn()) {
+function renderBreakdown(onDrill = vi.fn(), breakdownData: CurrencyExpenses = data) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -58,7 +58,7 @@ function renderBreakdown(onDrill = vi.fn()) {
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
         <ToastProvider>
-          <CategoryBreakdown data={data} onDrill={onDrill} />
+          <CategoryBreakdown data={breakdownData} onDrill={onDrill} />
         </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
@@ -103,5 +103,37 @@ describe('CategoryBreakdown', () => {
     // "Sin categoría" ahora es clickeable (drill vía uncategorized)
     fireEvent.click(screen.getByRole('button', { name: 'Sin categoría' }));
     expect(onDrill).toHaveBeenCalledWith(expect.objectContaining({ categoryId: null }));
+  });
+
+  it('lista tope 7: con 9 categorías ≥5% muestra 7 y colapsa el resto tras "Ver todos"', () => {
+    // 9 categorías, todas ≥5% del total → visible top 7, colapsan 2.
+    const amounts = [200, 190, 180, 170, 160, 150, 140, 130, 120];
+    const nineCats: CurrencyExpenses = {
+      ...data,
+      total: amounts.reduce((s, a) => s + a, 0),
+      byCategory: amounts.map((amount, i) => ({
+        categoryId: `k${i}`,
+        name: `Cat${i}`,
+        color: null,
+        isEssential: false,
+        amount,
+        prevMonthAmount: amount,
+        avg3mAmount: amount,
+        txCount: 1,
+        avg3mCount: 1,
+        maxTxAmount: amount,
+      })),
+    };
+    renderBreakdown(vi.fn(), nineCats);
+
+    // 7 filas visibles + botón "Ver todos (2)"
+    expect(screen.getAllByRole('listitem')).toHaveLength(7);
+    expect(screen.getByRole('button', { name: 'Ver todos (2)' })).toBeInTheDocument();
+    // las 2 de menor monto no están hasta expandir
+    expect(screen.queryByText('Cat8')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ver todos (2)' }));
+    expect(screen.getAllByRole('listitem')).toHaveLength(9);
+    expect(screen.getByText('Cat8')).toBeInTheDocument();
   });
 });
