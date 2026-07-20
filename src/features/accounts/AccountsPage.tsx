@@ -9,9 +9,11 @@ import { accountErrorMessage } from './errorMessages';
 import { AccountForm } from './AccountForm';
 import { CardForm } from './CardForm';
 import { AccountCardBody } from './AccountCardBody';
+import { ReorderAccountsModal } from './ReorderAccountsModal';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
+import { DotsVerticalIcon } from '../../components/ui/icons';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -51,6 +53,7 @@ export function AccountsPage() {
   // Editar una tarjeta de débito (PaymentMethod) desde la gestión del bloque.
   const [editingPm, setEditingPm] = useState<PaymentMethod | null>(null);
   const [confirmingDeletePmId, setConfirmingDeletePmId] = useState<string | null>(null);
+  const [reorderOpen, setReorderOpen] = useState(false);
 
   const toast = useToast();
   const { data: accounts, isPending, isError } = useAccounts();
@@ -124,7 +127,19 @@ export function AccountsPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <h1>Cuentas</h1>
+      <div className="flex items-center justify-between gap-2">
+        <h1>Cuentas</h1>
+        {topLevel.length > 1 && (
+          <button
+            type="button"
+            aria-label="Ordenar cuentas"
+            onClick={() => setReorderOpen(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-brand-bg hover:text-ink"
+          >
+            <DotsVerticalIcon className="h-5 w-5" />
+          </button>
+        )}
+      </div>
 
       {isPending && <Skeleton variant="list" rows={3} />}
 
@@ -178,6 +193,12 @@ export function AccountsPage() {
           </div>
         </>
       )}
+
+      <ReorderAccountsModal
+        open={reorderOpen}
+        accounts={topLevel}
+        onClose={() => setReorderOpen(false)}
+      />
 
       <Modal open={formOpen} onClose={closeForm} title={editing ? 'Editar cuenta' : 'Nueva cuenta'}>
         <AccountForm

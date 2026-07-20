@@ -28,6 +28,17 @@ export function CheckCircleIcon(props: IconProps) {
   );
 }
 
+// Kebab (⋮) — menú/acciones. Sprint 22.4: entra al popup de "Ordenar cuentas".
+export function DotsVerticalIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </svg>
+  );
+}
+
 export function AlertTriangleIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>

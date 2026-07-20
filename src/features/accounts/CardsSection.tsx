@@ -51,7 +51,7 @@ export function CardsSection({
   if (!hasCards) {
     return (
       <div className="flex flex-col gap-2 border-t border-line pt-3">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted">Tarjetas</span>
+        <span className="text-sm font-medium uppercase tracking-wide text-muted">Tarjetas</span>
         <Button type="button" variant="secondary" size="sm" onClick={onAddCard} className="self-start">
           Agregar tarjeta
         </Button>
@@ -61,14 +61,14 @@ export function CardsSection({
 
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-3">
-      <span className="text-xs font-medium uppercase tracking-wide text-muted">Tarjetas</span>
+      <span className="text-sm font-medium uppercase tracking-wide text-muted">Tarjetas</span>
 
       <ul className="m-0 flex list-none flex-col divide-y divide-line p-0">
         {cardPms.map((pm) => {
           const spent = spentThisMonth(pm.id);
           return (
             <li key={pm.id} className="flex items-center justify-between gap-3 py-2 first:pt-0">
-              <span className="text-base text-body">
+              <span className="text-sm text-body">
                 {pm.name} · {pm.type === 'DEBIT' ? 'Débito' : 'Crédito'}
               </span>
               <span className="flex flex-col items-end leading-tight">
@@ -87,10 +87,12 @@ export function CardsSection({
         {creditChildren.map((child) => (
           <li key={child.id} className="flex flex-col gap-1 py-2 first:pt-0">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-base text-ink">{child.name} · Crédito</span>
+              <span className="text-sm text-body">{child.name} · Crédito</span>
               <Amount amount={child.balance} currency={child.currency} tone="neutral" size="sm" />
             </div>
-            {child.statementCloseDay != null && <CreditCardStatement account={child} />}
+            {child.statementCloseDay != null && (
+              <CreditCardStatement account={child} parentAccount={account} />
+            )}
           </li>
         ))}
       </ul>

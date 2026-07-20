@@ -69,3 +69,17 @@ export function useDeleteAccount() {
     onSuccess: invalidate,
   });
 }
+
+// Sprint 22.4: reordena las cuentas top-level. Body = el orden completo de ids; el server
+// asigna sort_order = índice. Invalida accounts para que la página de atrás se reordene en
+// vivo (el modal mantiene su propio estado optimista). El modal serializa los PUT.
+export function useReorderAccounts() {
+  const http = useHttp();
+  const invalidate = useInvalidateAccounts();
+
+  return useMutation<void, ApiError, string[]>({
+    mutationFn: (accountIds) =>
+      http<void>('/accounts/order', { method: 'PUT', body: JSON.stringify({ accountIds }) }),
+    onSuccess: invalidate,
+  });
+}

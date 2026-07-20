@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { CreditCardStatement } from './CreditCardStatement';
+import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
 import type { Account } from './api';
 
@@ -35,22 +36,44 @@ function statementFor(offset: number, overrides?: Partial<Record<string, unknown
     totalSpent: 5000,
     payments: 1000,
     closingBalance: -4000,
+    paid: false,
+    paidWithTransfer: false,
+    // Sprint 22.4: por defecto, ciclo CERRADO con deuda pendiente (el widget muestra el tick).
+    closed: true,
+    remainingToPay: 4000,
     ...overrides,
   };
 }
 
-function renderStatement(account: Account = card) {
+const parentBank: Account = {
+  id: 'bank-1',
+  name: 'Banco Nación',
+  type: 'BANK',
+  currency: 'ARS',
+  balance: 100000,
+  isInformal: false,
+  createdAt: '2026-07-01T00:00:00',
+  statementCloseDay: null,
+  paymentDueDay: null,
+  balances: [{ currency: 'ARS', balance: 100000 }],
+  institution: null,
+  linkedAccountId: null,
+};
+
+function renderStatement(account: Account = card, parentAccount?: Account) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={queryClient}>
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <MemoryRouter>
-          <CreditCardStatement account={account} />
-        </MemoryRouter>
+        <ToastProvider>
+          <MemoryRouter>
+            <CreditCardStatement account={account} parentAccount={parentAccount} />
+          </MemoryRouter>
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -169,5 +192,136 @@ describe('CreditCardStatement', () => {
 
     expect(prev).toBeDisabled();
     expect(screen.getByRole('button', { name: /Siguiente/ })).not.toBeDisabled();
+  });
+
+  // ── Sprint 22.4: widget "Pagar resumen" ──────────────────────────────────
+
+  it('widget: ciclo abierto → "El resumen cierra el …", sin botones', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0, { closed: false }))));
+
+    renderStatement();
+    await expand();
+
+    expect(await screen.findByText(/El resumen cierra el/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pagado' })).not.toBeInTheDocument();
+  });
+
+  it('widget: cerrado sin deuda → "No hay nada que pagar"', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => ok(statementFor(0, { closed: true, closingBalance: 0, remainingToPay: 0 }))),
+    );
+
+    renderStatement();
+    await expand();
+
+    expect(await screen.findByText(/No hay nada que pagar/)).toBeInTheDocument();
+  });
+
+  it('widget: suelta con deuda → tick abre confirmar-marca → PUT pay:false', async () => {
+    let putBody: Record<string, unknown> | undefined;
+    const fetchMock = vi.fn((_url: string, options?: RequestInit) => {
+      if (options?.method === 'PUT') {
+        putBody = JSON.parse(options.body as string);
+        return ok({});
+      }
+      return ok(statementFor(0));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderStatement(); // sin madre → solo marca cosmética
+    await expand();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Pagado' }));
+    expect(await screen.findByText(/no mueve plata ni cambia tus saldos/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Marcar' }));
+
+    await waitFor(() => expect(putBody).toEqual({ periodEnd: '2026-07-10', pay: false }));
+  });
+
+  it('widget: pagado cosmético → ✗ hace DELETE directo (sin diálogo)', async () => {
+    let deleteUrl: string | undefined;
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (options?.method === 'DELETE') {
+        deleteUrl = url;
+        return ok({});
+      }
+      return ok(statementFor(0, { paid: true, paidWithTransfer: false }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderStatement();
+    await expand();
+
+    expect(await screen.findByRole('button', { name: 'Pagado' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'No pagado' }));
+
+    await waitFor(() => expect(deleteUrl).toContain('periodEnd=2026-07-10'));
+    expect(screen.queryByText(/Deshacer el pago/)).not.toBeInTheDocument();
+  });
+
+  it('widget: pagado real → ✗ pide confirmación antes del DELETE', async () => {
+    let deleteUrl: string | undefined;
+    const fetchMock = vi.fn((url: string, options?: RequestInit) => {
+      if (options?.method === 'DELETE') {
+        deleteUrl = url;
+        return ok({});
+      }
+      return ok(statementFor(0, { paid: true, paidWithTransfer: true }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderStatement();
+    await expand();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'No pagado' }));
+    expect(await screen.findByText(/Se va a borrar la transferencia/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Deshacer' }));
+
+    await waitFor(() => expect(deleteUrl).toContain('periodEnd=2026-07-10'));
+  });
+
+  it('widget: vinculada con deuda → "Pagar desde {madre}" hace PUT pay:true', async () => {
+    let putBody: Record<string, unknown> | undefined;
+    const fetchMock = vi.fn((_url: string, options?: RequestInit) => {
+      if (options?.method === 'PUT') {
+        putBody = JSON.parse(options.body as string);
+        return ok({});
+      }
+      return ok(statementFor(0));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderStatement(card, parentBank); // madre con saldo ARS suficiente
+    await expand();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Pagado' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Pagar desde Banco Nación/ }));
+
+    await waitFor(() => expect(putBody).toEqual({ periodEnd: '2026-07-10', pay: true }));
+  });
+
+  it('widget: vinculada sin saldo en la moneda → diálogo de otra moneda, sin PUT', async () => {
+    const fetchMock = vi.fn((_url: string, options?: RequestInit) => {
+      if (options?.method === 'PUT') return ok({});
+      return ok(statementFor(0));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const parentUsd: Account = { ...parentBank, balances: [{ currency: 'USD', balance: 100000 }] };
+    renderStatement(card, parentUsd); // madre no tiene ARS (la moneda de la tarjeta)
+    await expand();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Pagado' }));
+    fireEvent.click(await screen.findByRole('button', { name: /Pagar desde Banco Nación/ }));
+
+    expect(await screen.findByText(/No trabajamos con pagos en otra moneda/)).toBeInTheDocument();
+    const putCalls = fetchMock.mock.calls.filter(
+      ([, opts]) => (opts as RequestInit | undefined)?.method === 'PUT',
+    );
+    expect(putCalls).toHaveLength(0);
   });
 });

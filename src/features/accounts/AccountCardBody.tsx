@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Amount } from '../../components/ui/Amount';
 import { Badge } from '../../components/ui/Badge';
+import { Tooltip } from '../../components/ui/Tooltip';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EditButton } from '../../components/ui/ActionsMenu';
 import { useTransactions } from '../transactions/useTransactions';
@@ -101,7 +102,11 @@ export function AccountCardBody({
         <div className="flex flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-ink">{account.name}</span>
-            {account.isInformal && <Badge status="info" label="Informal" />}
+            {account.isInformal && (
+              <Tooltip text="Plata fuera del sistema bancario (efectivo, colchón, cripto en mano). Suma a tu balance total; el Overview la desglosa como “Informal”.">
+                <Badge status="info" label="Informal" />
+              </Tooltip>
+            )}
           </div>
           <span className="text-sm text-muted">
             {TYPE_LABELS[account.type]}

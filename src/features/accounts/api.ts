@@ -44,4 +44,13 @@ export type Statement = {
   totalSpent: number;
   payments: number;
   closingBalance: number;
+  // Sprint 22.3/22.4: este ciclo está marcado como pagado (marca viva).
+  paid: boolean;
+  // Sprint 22.4: la marca es un PAGO REAL (tiene transfer) vs cosmética → decide si el
+  // deshacer pide confirmación.
+  paidWithTransfer: boolean;
+  // Sprint 22.4: el ciclo ya cerró (lo decide el server). Solo un ciclo cerrado se paga/marca.
+  closed: boolean;
+  // Sprint 22.4: lo que falta pagar de este resumen (deuda al cierre − pagos posteriores).
+  remainingToPay: number;
 };
