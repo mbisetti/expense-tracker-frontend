@@ -6,14 +6,14 @@ import { MangoIcon, MenuIcon, UserIcon } from './ui/icons';
 
 const NAV_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
   [
-    'rounded-sm px-2 py-1 text-sm transition-colors duration-200 ease-out',
+    'rounded-sm px-2 py-1 text-sm no-underline transition-colors duration-200 ease-out',
     isActive ? 'font-semibold text-brand' : 'text-body hover:text-ink',
   ].join(' ');
 
 // Filas del drawer mobile: touch target de 44px + tono de marca en la activa.
 const DRAWER_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
   [
-    'flex min-h-11 items-center rounded-sm px-3 text-base transition-colors duration-200 ease-out',
+    'flex min-h-11 items-center rounded-sm px-3 text-base no-underline transition-colors duration-200 ease-out',
     isActive ? 'bg-brand-bg font-semibold text-brand' : 'text-ink hover:bg-surface-sunken',
   ].join(' ');
 
@@ -22,7 +22,7 @@ const ICON_BTN_CLASS =
 
 // Ítem del menú de la persona (Datos, Ajustes y preferencias).
 const ACCOUNT_ITEM_CLASS =
-  'flex min-h-11 items-center rounded-sm px-3 text-sm text-ink transition-colors duration-200 ease-out hover:bg-brand-bg';
+  'flex min-h-11 items-center rounded-sm px-3 text-sm text-ink no-underline transition-colors duration-200 ease-out hover:bg-brand-bg';
 
 // Nav principal CORTO (Sprint 21): Overview (ex-Dashboard), Cuentas, Transacciones, Ingresos.
 // Categorías y Métodos de pago se movieron a Ajustes; el tema y Cerrar sesión, al menú de la
@@ -85,7 +85,7 @@ export function AppLayout() {
           </button>
 
           {/* Marca: mango + Manguitos → lleva al inicio */}
-          <NavLink to="/dashboard" className="flex items-center gap-2" aria-label="Manguitos, inicio">
+          <NavLink to="/dashboard" className="flex items-center gap-2 no-underline" aria-label="Manguitos, inicio">
             <MangoIcon className="h-6 w-6" />
             <span className="text-lg font-semibold text-ink">Manguitos</span>
           </NavLink>

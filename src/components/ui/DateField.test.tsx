@@ -87,10 +87,12 @@ describe('DateField (Sprint 23 D1)', () => {
     expect((screen.getByLabelText('Fecha') as HTMLInputElement).value).toBe('20/05/2026');
   });
 
-  it('los dígitos van con la voz de los montos (font-semibold tabular-nums, D10)', () => {
+  it('los dígitos comparten la voz plana del campo de monto (sin font-semibold/tabular-nums propios)', () => {
     render(<Harness />);
     const input = screen.getByLabelText('Fecha') as HTMLInputElement;
-    expect(input.className).toContain('font-semibold');
-    expect(input.className).toContain('tabular-nums');
+    // La fecha debe verse idéntica al monto (MoneyInput/Input): mismo FIELD_BASE, sin
+    // peso ni numerales tabulares propios que la diferencien en el mismo form.
+    expect(input.className).not.toContain('font-semibold');
+    expect(input.className).not.toContain('tabular-nums');
   });
 });

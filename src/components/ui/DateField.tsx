@@ -33,8 +33,9 @@ type DateFieldProps = {
 // TEXTO enmascarado, no el <input type="date"> nativo (que seguía el locale del SO). El
 // contrato público NO cambia: value/onChange siguen en ISO 'YYYY-MM-DD' → cero cambios en los
 // consumidores; arregla de una vez el form de tx, el de transferencias, ingresos y los filtros.
-// D10: los dígitos van con la voz de los montos (font-semibold tabular-nums) SIN el leading-[1.1]
-// (exclusivo de Amount por design-principles §2).
+// Los dígitos comparten la voz del campo de monto (MoneyInput/Input): mismo peso y numerales
+// que el FIELD_BASE, sin font-semibold/tabular-nums propios — así fecha y monto se ven idénticos
+// en el mismo form (filtros y nuevo movimiento).
 
 const PLACEHOLDER: Record<DateFormatPref, string> = {
   ar: 'DD/MM/AAAA',
@@ -199,7 +200,7 @@ export function DateField({
           className={[
             FIELD_BASE,
             fieldBorderClass(!!shownError),
-            'pr-10 font-semibold tabular-nums',
+            'pr-10',
             className ?? '',
           ]
             .join(' ')

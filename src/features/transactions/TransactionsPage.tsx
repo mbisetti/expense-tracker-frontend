@@ -321,7 +321,7 @@ export function TransactionsPage() {
       <form
         aria-label="Filtros"
         onSubmit={(e) => e.preventDefault()}
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3"
       >
         <Select
           label="Cuenta"
