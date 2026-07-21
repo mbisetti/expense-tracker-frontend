@@ -5,6 +5,7 @@ import { usePaymentMethods } from '../paymentMethods/usePaymentMethods';
 import {
   useCreateTransaction,
   useUpdateTransaction,
+  type CreateTransactionInput,
   type UpdateTransactionInput,
 } from './useTransactionMutations';
 import { transactionErrorMessage } from './errorMessages';
@@ -12,9 +13,14 @@ import { Select } from '../../components/ui/Select';
 import { Input } from '../../components/ui/Input';
 import { MoneyInput } from '../../components/ui/MoneyInput';
 import { DateField } from '../../components/ui/DateField';
+import { Switch } from '../../components/ui/Switch';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
 import { numberToAmountDisplay, parseAmountInput } from '../../lib/money';
+import { useRecurringExpenses } from '../expenses/useRecurringExpenses';
+import { useCreateRecurringExpense } from '../expenses/useRecurringMutations';
+import { RecurringConfigFields } from '../expenses/RecurringConfigFields';
+import { buildConfigPayload, emptyRecurringConfig, type RecurringConfig } from '../expenses/recurringConfig';
 import type { TransactionListItem, TransactionType } from './api';
 
 type TransactionFormProps = {
@@ -34,6 +40,8 @@ function todayLocal(): string {
 
 // Sentinela de "Otra moneda…" en el selector de moneda (D8).
 const OTHER_CCY = '__other__';
+// Sentinela de "+ Nuevo gasto recurrente…" en el selector de recurrente (S24.3).
+const RECURRING_NEW = '__new_recurring__';
 
 export function TransactionForm({ transaction, onClose, lockedType }: TransactionFormProps) {
   const isEdit = transaction !== undefined;
@@ -51,14 +59,25 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
   const [paymentMethodId, setPaymentMethodId] = useState(transaction?.paymentMethodId ?? '');
   const [description, setDescription] = useState(transaction?.description ?? '');
 
+  // Sprint 24.3: vínculo a un gasto recurrente (solo en gastos). Precargado en edición si ya
+  // está vinculada. recurringId = id existente | RECURRING_NEW | ''.
+  const [recurringEnabled, setRecurringEnabled] = useState(
+    isEdit && transaction?.recurringExpenseId != null,
+  );
+  const [recurringId, setRecurringId] = useState(transaction?.recurringExpenseId ?? '');
+  const [recName, setRecName] = useState('');
+  const [recConfig, setRecConfig] = useState<RecurringConfig>(emptyRecurringConfig);
+
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   // Los métodos de pago se filtran por la cuenta elegida (Sprint 20 #6): cada método
   // pertenece a una cuenta.
   const { data: paymentMethods } = usePaymentMethods(accountId || undefined);
+  const { data: recurringList } = useRecurringExpenses();
 
   const createMutation = useCreateTransaction();
   const updateMutation = useUpdateTransaction();
+  const createRecurringMutation = useCreateRecurringExpense();
   const mutation = isEdit ? updateMutation : createMutation;
 
   const categoryOptions = categories?.filter(
@@ -79,6 +98,11 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
   const effectiveCurrency = isCredit
     ? routedAccount!.currency
     : currency || selectedAccount?.currency || '';
+
+  // Sprint 24.3: recurrentes activos de la moneda efectiva (el vínculo exige moneda igual).
+  const recurringOptions = (recurringList ?? []).filter(
+    (r) => r.active && r.currency === effectiveCurrency,
+  );
 
   // Selector de cuenta (D7): activos + DEBT + CREDIT sin vínculo. Las CREDIT vinculadas se
   // eligen por el método; en edición se incluye la cuenta real de la tx aunque esté oculta.
@@ -107,6 +131,16 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
       if (description && description !== transaction.description)
         changes.description = description;
 
+      // Sprint 24.3: set/clear del vínculo recurrente (solo gastos). "" = desvincular.
+      if (type === 'EXPENSE') {
+        const was = transaction.recurringExpenseId ?? null;
+        if (recurringEnabled && recurringId && recurringId !== RECURRING_NEW) {
+          if (recurringId !== was) changes.recurringExpenseId = recurringId;
+        } else if (!recurringEnabled && was) {
+          changes.recurringExpenseId = '';
+        }
+      }
+
       if (Object.keys(changes).length === 0) {
         onClose();
         return;
@@ -122,32 +156,79 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         },
       );
     } else {
-      createMutation.mutate(
-        {
-          // Ruteo de tarjeta (D6): si se eligió una tarjeta hija, la tx cae en ELLA y no
-          // lleva método de pago; si no, la cuenta y el PM elegidos.
-          accountId: selectedCardId ?? accountId,
-          type,
-          amount: parseAmountInput(amount),
-          date,
-          categoryId: categoryId || undefined,
-          paymentMethodId: selectedCardId ? undefined : paymentMethodId || undefined,
-          description: description || undefined,
-          // Sprint 22: manda la moneda resuelta (principal si no se tocó el selector).
-          currency: effectiveCurrency || undefined,
-        },
-        {
-          onSuccess: () => {
-            toast.success('Transacción guardada.');
-            onClose();
+      // Ruteo de tarjeta (D6): si se eligió una tarjeta hija, la tx cae en ELLA y no
+      // lleva método de pago; si no, la cuenta y el PM elegidos.
+      const baseInput: CreateTransactionInput = {
+        accountId: selectedCardId ?? accountId,
+        type,
+        amount: parseAmountInput(amount),
+        date,
+        categoryId: categoryId || undefined,
+        paymentMethodId: selectedCardId ? undefined : paymentMethodId || undefined,
+        description: description || undefined,
+        // Sprint 22: manda la moneda resuelta (principal si no se tocó el selector).
+        currency: effectiveCurrency || undefined,
+      };
+
+      const createTx = (recurringExpenseId?: string) =>
+        createMutation.mutate(
+          { ...baseInput, recurringExpenseId },
+          {
+            onSuccess: () => {
+              toast.success('Transacción guardada.');
+              onClose();
+            },
+            onError: (error) => toast.error(transactionErrorMessage(error)),
           },
-          onError: (error) => toast.error(transactionErrorMessage(error)),
-        },
-      );
+        );
+
+      const linkNew = type === 'EXPENSE' && recurringEnabled && recurringId === RECURRING_NEW;
+      if (linkNew) {
+        // Alta inline = DOS llamadas (D2/§9.2): crear el recurrente, después la tx vinculada.
+        // Si la 2ª falla, el recurrente QUEDA creado y el toast lo dice (sin tx cross-endpoint).
+        if (!categoryId) {
+          toast.error('Elegí una categoría para el gasto recurrente.');
+          return;
+        }
+        createRecurringMutation.mutate(
+          {
+            name: recName || description || 'Gasto recurrente',
+            amount: parseAmountInput(amount),
+            currency: effectiveCurrency,
+            categoryId,
+            frequency: recConfig.frequency,
+            ...buildConfigPayload(recConfig),
+          },
+          {
+            onSuccess: (created) =>
+              createMutation.mutate(
+                { ...baseInput, recurringExpenseId: created.id },
+                {
+                  onSuccess: () => {
+                    toast.success('Transacción guardada.');
+                    onClose();
+                  },
+                  onError: () =>
+                    toast.error(
+                      'El gasto recurrente se creó; reintentá guardar el gasto o vinculalo editándolo.',
+                    ),
+                },
+              ),
+            onError: (error) => toast.error(transactionErrorMessage(error)),
+          },
+        );
+        return;
+      }
+
+      const link =
+        type === 'EXPENSE' && recurringEnabled && recurringId && recurringId !== RECURRING_NEW
+          ? recurringId
+          : undefined;
+      createTx(link);
     }
   };
 
-  const isPending = mutation.isPending;
+  const isPending = mutation.isPending || createRecurringMutation.isPending;
 
   return (
     <form
@@ -174,6 +255,7 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
               // la moneda vuelve a la principal de la cuenta elegida (Sprint 22 D4)
               setCurrency(accounts?.find((a) => a.id === newId)?.currency ?? '');
               setCurrencyIsOther(false);
+              setRecurringId(''); // el vínculo recurrente exige moneda igual → se resetea (S24.3)
             }}
             required
             disabled={isEdit || isPending}
@@ -195,6 +277,7 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
               value={currencyIsOther ? OTHER_CCY : currency}
               onChange={(e) => {
                 const v = e.target.value;
+                setRecurringId(''); // moneda distinta → reset del selector recurrente (S24.3)
                 if (v === OTHER_CCY) {
                   setCurrencyIsOther(true);
                   setCurrency('');
@@ -226,7 +309,10 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
           id="tx-currency-other"
           type="text"
           value={currency}
-          onChange={(e) => setCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
+          onChange={(e) => {
+            setRecurringId('');
+            setCurrency(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3));
+          }}
           maxLength={3}
           placeholder="EUR"
           disabled={isPending}
@@ -317,6 +403,76 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         onChange={(e) => setDescription(e.target.value)}
         disabled={isPending}
       />
+
+      {/* Sprint 24.3: vínculo a un gasto recurrente (solo gastos). Elegir uno existente prefillea
+          categoría + monto; "+ Nuevo" expande la config inline (usa la moneda de la tx). */}
+      {type === 'EXPENSE' && (
+        <div className="flex flex-col gap-3 rounded-md border border-line bg-surface p-3">
+          <Switch
+            id="tx-recurring"
+            label="Gasto recurrente"
+            checked={recurringEnabled}
+            onChange={(v) => {
+              setRecurringEnabled(v);
+              if (!v) setRecurringId('');
+            }}
+            disabled={isPending}
+          />
+
+          {recurringEnabled && (
+            <>
+              <Select
+                label="¿Cuál?"
+                id="tx-recurring-which"
+                value={recurringId}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setRecurringId(v);
+                  if (v && v !== RECURRING_NEW) {
+                    const rec = recurringOptions.find((r) => r.id === v);
+                    if (rec) {
+                      setCategoryId(rec.categoryId);
+                      setAmount(numberToAmountDisplay(rec.amount));
+                    }
+                  }
+                }}
+                disabled={isPending}
+              >
+                <option value="">Elegí un gasto recurrente</option>
+                {recurringOptions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+                {!isEdit && <option value={RECURRING_NEW}>+ Nuevo gasto recurrente…</option>}
+              </Select>
+
+              {!isEdit && recurringId === RECURRING_NEW && (
+                <>
+                  <Input
+                    label="Nombre del gasto recurrente"
+                    id="tx-recurring-name"
+                    type="text"
+                    maxLength={100}
+                    value={recName}
+                    onChange={(e) => setRecName(e.target.value)}
+                    disabled={isPending}
+                  />
+                  <RecurringConfigFields
+                    value={recConfig}
+                    onChange={(patch) => setRecConfig((c) => ({ ...c, ...patch }))}
+                    idPrefix="tx-recurring"
+                    disabled={isPending}
+                  />
+                  <p className="text-xs text-muted">
+                    Usa la moneda ({effectiveCurrency || '—'}), el monto y la categoría de este gasto.
+                  </p>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-3">
         <Button type="submit" loading={isPending}>

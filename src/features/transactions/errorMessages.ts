@@ -21,6 +21,12 @@ export function transactionErrorMessage(error: unknown): string {
       return 'El método de pago seleccionado no existe.';
     case 'TRANSACTION_NOT_FOUND':
       return 'La transacción no existe o fue borrada.';
+    case 'INVALID_RECURRING_LINK':
+      return 'Solo un gasto se puede vincular a un gasto recurrente.';
+    case 'RECURRING_EXPENSE_NOT_FOUND':
+      return 'El gasto recurrente no existe.';
+    case 'INVALID_RECURRING_CONFIG':
+      return 'Revisá la configuración del gasto recurrente.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }

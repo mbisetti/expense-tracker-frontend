@@ -12,6 +12,8 @@ export type TransactionListItem = {
   date: string;
   description: string | null;
   createdAt: string;
+  // Sprint 24.3: null = tx suelta; presente = vinculada a ese gasto recurrente.
+  recurringExpenseId: string | null;
 };
 
 export type TransactionResponse = TransactionListItem & {
@@ -36,6 +38,8 @@ export type TransactionFilters = {
   /** Sprint 24.2: solo transacciones "Sin categoría" (category_id IS NULL). Mandar SOLO true;
    *  pasar undefined para apagado (buildTransactionsQuery serializaría "false"). */
   uncategorized?: boolean;
+  /** Sprint 24.3: solo las vinculadas a este gasto recurrente (historial del detalle). */
+  recurringExpenseId?: string;
   dateFrom?: string;
   dateTo?: string;
   search?: string;

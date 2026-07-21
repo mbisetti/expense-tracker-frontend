@@ -1,0 +1,96 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthContext } from '../auth/context';
+import { ToastProvider } from '../../components/ui/ToastProvider';
+import { RecurringSection } from './RecurringSection';
+import { jsonResponse } from '../../test/mockResponse';
+import type { CurrencyExpenses, RecurringExpense, RecurringItem } from './api';
+
+const item1: RecurringItem = {
+  id: 'r1', name: 'Alquiler', amount: 50000, frequency: 'MONTHLY', billingDay: 1, weekday: null,
+  dueMonth: null, state: 'PENDING', expectedCount: 1, paidCount: 0, installmentsPaid: 0,
+  installmentsTotal: null, cashPrice: null, isEssential: true, categoryId: 'c1', categoryName: 'Vivienda',
+};
+const item2: RecurringItem = {
+  id: 'r2', name: 'Streaming', amount: 6000, frequency: 'BIWEEKLY', billingDay: 5, weekday: null,
+  dueMonth: null, state: 'PARTIAL', expectedCount: 2, paidCount: 1, installmentsPaid: 0,
+  installmentsTotal: null, cashPrice: null, isEssential: false, categoryId: 'c2', categoryName: 'Ocio',
+};
+
+const inactiveRec: RecurringExpense = {
+  id: 'r3', name: 'Viejo', amount: 1000, currency: 'ARS', categoryId: 'c1', frequency: 'MONTHLY',
+  billingDay: 1, weekday: null, dueMonth: null, installmentsTotal: null, cashPrice: null,
+  active: false, createdAt: '2026-01-01T00:00:00',
+};
+
+function makeData(items: RecurringItem[]): CurrencyExpenses {
+  const nonEssential = items.filter((i) => !i.isEssential).reduce((s, i) => s + i.amount * i.expectedCount, 0);
+  const committed = items.reduce((s, i) => s + i.amount * i.expectedCount, 0);
+  return {
+    currency: 'ARS', total: 100000, essentialTotal: 0, nonEssentialTotal: 0, prevMonthTotal: 0,
+    avg3mTotal: 0, totalToDate: null, projectedTotal: null, byCategory: [], months: [],
+    recurring: {
+      committedTotal: committed, paidTotal: 6000, pendingTotal: 56000,
+      nonEssentialCommittedTotal: nonEssential, items,
+    },
+  };
+}
+
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) => {
+      if (url.includes('/recurring-expenses')) return jsonResponse(200, [inactiveRec]);
+      return jsonResponse(200, []);
+    }),
+  );
+});
+afterEach(() => vi.unstubAllGlobals());
+
+function renderSection(data: CurrencyExpenses) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider value={{ accessToken: 't', status: 'authenticated', setAccessToken: () => {} }}>
+        <ToastProvider>
+          <RecurringSection data={data} />
+        </ToastProvider>
+      </AuthContext.Provider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('RecurringSection', () => {
+  it('muestra totales, % recurrente y el leak no esencial', async () => {
+    renderSection(makeData([item1, item2]));
+    expect(await screen.findByRole('heading', { name: 'Gastos recurrentes' })).toBeInTheDocument();
+    expect(screen.getByText('Comprometido')).toBeInTheDocument();
+    expect(screen.getByText('Pagado')).toBeInTheDocument();
+    // committed = 50000 + 6000*2 = 62000 sobre total 100000 → 62%
+    expect(screen.getByText(/62% de tu gasto del mes es recurrente/)).toBeInTheDocument();
+    expect(screen.getByText(/es no esencial/)).toBeInTheDocument();
+  });
+
+  it('renderiza los items con su estado', async () => {
+    renderSection(makeData([item1, item2]));
+    expect(await screen.findByText('Alquiler')).toBeInTheDocument();
+    expect(screen.getByText('Streaming')).toBeInTheDocument();
+    // item1 PENDING, item2 PARTIAL 1/2 (badge de item, no el label del stat "Pendiente")
+    expect(screen.getByText('Parcial 1/2')).toBeInTheDocument();
+  });
+
+  it('sección Inactivos colapsada que se expande', async () => {
+    renderSection(makeData([item1]));
+    const toggle = await screen.findByText(/Inactivos \(1\)/);
+    expect(screen.queryByText('Viejo')).not.toBeInTheDocument();
+    fireEvent.click(toggle);
+    expect(await screen.findByText('Viejo')).toBeInTheDocument();
+  });
+
+  it('empty state con CTA cuando no hay recurrentes', async () => {
+    renderSection(makeData([]));
+    expect(await screen.findByText(/Declará tus suscripciones/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nuevo' })).toBeInTheDocument();
+  });
+});

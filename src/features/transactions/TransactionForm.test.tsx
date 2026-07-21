@@ -46,6 +46,7 @@ const editTx: TransactionListItem = {
   date: '2026-07-01',
   description: 'Super',
   createdAt: '2026-07-01T00:00:00',
+  recurringExpenseId: null,
 };
 
 let patchCalls: { url: string; body: Record<string, unknown> }[];

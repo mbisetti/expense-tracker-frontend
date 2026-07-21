@@ -36,6 +36,7 @@ const transaction1: TransactionListItem = {
   date: '2026-07-05',
   description: 'Sueldo',
   createdAt: '2026-07-05T10:00:00Z',
+  recurringExpenseId: null,
 };
 
 const transaction2: TransactionListItem = {
@@ -50,6 +51,7 @@ const transaction2: TransactionListItem = {
   date: '2026-07-06',
   description: null,
   createdAt: '2026-07-06T10:00:00Z',
+  recurringExpenseId: null,
 };
 
 const pageFixture = {

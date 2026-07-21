@@ -23,6 +23,58 @@ export type EssentialMonthBucket = {
   nonEssential: number;
 };
 
+// ── Sprint 24.3: gastos recurrentes ──────────────────────────────────────────
+
+export type RecurringFrequency = 'MONTHLY' | 'BIWEEKLY' | 'WEEKLY' | 'ANNUAL';
+export type Weekday =
+  | 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+export type RecurringState = 'COMPLETED' | 'NOT_DUE' | 'PAID' | 'PARTIAL' | 'PENDING';
+
+// CRUD (GET /recurring-expenses): la DEFINICIÓN, con el billingDay CRUDO 1-31 (para editar).
+export type RecurringExpense = {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  categoryId: string;
+  frequency: RecurringFrequency;
+  billingDay: number | null;
+  weekday: Weekday | null;
+  dueMonth: number | null;
+  installmentsTotal: number | null;
+  cashPrice: number | null;
+  active: boolean;
+  createdAt: string;
+};
+
+// Un recurrente visto DESDE el mes pedido (viene en el summary). billingDay ya clampeado (D7).
+export type RecurringItem = {
+  id: string;
+  name: string;
+  amount: number;
+  frequency: RecurringFrequency;
+  billingDay: number | null;
+  weekday: Weekday | null;
+  dueMonth: number | null;
+  state: RecurringState;
+  expectedCount: number;
+  paidCount: number;
+  installmentsPaid: number;
+  installmentsTotal: number | null;
+  cashPrice: number | null;
+  isEssential: boolean;
+  categoryId: string | null;
+  categoryName: string | null;
+};
+
+export type RecurringSummary = {
+  committedTotal: number;
+  paidTotal: number;
+  pendingTotal: number;
+  nonEssentialCommittedTotal: number;
+  items: RecurringItem[];
+};
+
 export type CurrencyExpenses = {
   currency: string;
   total: number;
@@ -35,6 +87,9 @@ export type CurrencyExpenses = {
   projectedTotal: number | null;
   byCategory: CategoryExpense[];
   months: EssentialMonthBucket[];
+  // Sprint 24.3: bloque de gastos recurrentes de esta moneda (opcional por compat de fixtures;
+  // el backend siempre lo manda).
+  recurring?: RecurringSummary;
 };
 
 export type ExpensesSummary = {

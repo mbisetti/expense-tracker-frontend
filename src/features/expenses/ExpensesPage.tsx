@@ -8,6 +8,7 @@ import { formatMoney } from '../../lib/money';
 import { useExpensesSummary } from './useExpensesSummary';
 import { PeriodNav } from './PeriodNav';
 import { CategoryBreakdown } from './CategoryBreakdown';
+import { RecurringSection } from './RecurringSection';
 import { InsightsSection } from './InsightsSection';
 import { CategoryTransactionsModal } from './CategoryTransactionsModal';
 import { deltaVsPrev } from './format';
@@ -185,6 +186,7 @@ export function ExpensesPage() {
               />
             </Suspense>
           </section>
+          <RecurringSection data={current} />
           <InsightsSection
             data={current}
             months={trimLeadingEmpty(current.months)}

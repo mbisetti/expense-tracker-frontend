@@ -96,6 +96,11 @@ describe('ExpensesPage', () => {
     expect(screen.getByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
   });
 
+  it('muestra la card de Gastos recurrentes', async () => {
+    renderPage();
+    expect(await screen.findByRole('heading', { name: 'Gastos recurrentes' })).toBeInTheDocument();
+  });
+
   it('EmptyState cuando no hay gastos en el período', async () => {
     byCurrency = [];
     renderPage();

@@ -13,6 +13,8 @@ export type CreateTransactionInput = {
   description?: string;
   // Sprint 22: moneda de la tx (null/undefined → principal de la cuenta). Solo CREDIT la fija.
   currency?: string;
+  // Sprint 24.3: vínculo opcional a un gasto recurrente (solo EXPENSE, misma moneda).
+  recurringExpenseId?: string;
 };
 
 export type UpdateTransactionInput = {
@@ -21,6 +23,8 @@ export type UpdateTransactionInput = {
   categoryId?: string;
   paymentMethodId?: string;
   description?: string;
+  // Sprint 24.3: "" = desvincular, UUID = vincular, ausente = no tocar (patrón linkedAccountId).
+  recurringExpenseId?: string;
 };
 
 function useInvalidateTransactions() {
