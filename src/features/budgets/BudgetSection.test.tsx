@@ -5,6 +5,7 @@ import { AuthContext } from '../auth/context';
 import { BudgetSection } from './BudgetSection';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { jsonResponse, ok } from '../../test/mockResponse';
+import { selectOption } from '../../test/selectOption';
 
 const fail = () => jsonResponse(500, { error: 'INTERNAL', message: 'boom' });
 
@@ -100,11 +101,9 @@ describe('BudgetSection', () => {
     renderSection();
     // arranca vacío: el CTA es el del centro (EmptyState), no el de arriba a la derecha
     fireEvent.click(await screen.findByRole('button', { name: 'Nuevo presupuesto' }));
-    // las opciones de categoría/moneda cargan async: esperar antes de elegir
-    await screen.findByRole('option', { name: 'Comida' });
-    await screen.findByRole('option', { name: 'ARS' });
-    fireEvent.change(screen.getByLabelText('Categoría', { exact: false }), { target: { value: 'c1' } });
-    fireEvent.change(screen.getByLabelText('Moneda', { exact: false }), { target: { value: 'ARS' } });
+    // las opciones de categoría/moneda cargan async: selectOption espera a que aparezcan
+    await selectOption('Categoría', 'c1', { exact: false });
+    await selectOption('Moneda', 'ARS', { exact: false });
     fireEvent.change(screen.getByLabelText('Límite mensual', { exact: false }), {
       target: { value: '50000' },
     });

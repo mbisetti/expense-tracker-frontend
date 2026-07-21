@@ -5,6 +5,7 @@ import { AuthContext } from '../auth/context';
 import { IncomeSourceList } from './IncomeSourceList';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
+import { selectOption } from '../../test/selectOption';
 
 // Captura los bodies de los POST a /income-sources para verificar el payload atómico.
 function setup() {
@@ -66,7 +67,7 @@ describe('IncomeSourceList — recurrencia', () => {
 
     fireEvent.click(screen.getByLabelText('¿Es un ingreso recurrente?'));
 
-    fireEvent.change(screen.getByLabelText('Frecuencia'), { target: { value: 'BIWEEKLY' } });
+    await selectOption('Frecuencia', 'BIWEEKLY');
     fireEvent.change(screen.getByLabelText('Monto esperado', { exact: false }), {
       target: { value: '500000' },
     });

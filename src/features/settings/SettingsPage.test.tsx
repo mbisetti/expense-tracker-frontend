@@ -6,6 +6,7 @@ import { AuthContext } from '../auth/context';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { SettingsPage } from './SettingsPage';
 import { jsonResponse } from '../../test/mockResponse';
+import { selectOption, selectValue } from '../../test/selectOption';
 
 function renderSettings() {
   const setAccessToken = vi.fn();
@@ -64,28 +65,23 @@ describe('SettingsPage', () => {
     );
     renderSettings();
 
-    const select = (await screen.findByLabelText('Moneda favorita', { exact: false })) as HTMLSelectElement;
-    await waitFor(() => expect(select.value).toBe('ARS'));
+    await waitFor(() => expect(selectValue('Moneda favorita', { exact: false })).toBe('ARS'));
 
-    fireEvent.change(select, { target: { value: 'USD' } });
+    await selectOption('Moneda favorita', 'USD', { exact: false });
     await waitFor(() => expect(patchBodies).toContainEqual({ defaultCurrency: 'USD' }));
   });
 
-  it('elegir formato de fecha yankee lo persiste en localStorage', () => {
+  it('elegir formato de fecha yankee lo persiste en localStorage', async () => {
     renderSettings();
 
-    fireEvent.change(screen.getByLabelText('Formato de fecha', { exact: false }), {
-      target: { value: 'us' },
-    });
+    await selectOption('Formato de fecha', 'us', { exact: false });
     expect(localStorage.getItem('dateFormat')).toBe('us');
   });
 
-  it('elegir calendario US lo persiste en localStorage', () => {
+  it('elegir calendario US lo persiste en localStorage', async () => {
     renderSettings();
 
-    fireEvent.change(screen.getByLabelText('Calendario', { exact: false }), {
-      target: { value: 'US' },
-    });
+    await selectOption('Calendario', 'US', { exact: false });
     expect(localStorage.getItem('holidayCalendar')).toBe('US');
   });
 

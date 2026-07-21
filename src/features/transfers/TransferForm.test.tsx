@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { TransferForm } from './TransferForm';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { TransferListItem } from './api';
 import { jsonResponse } from '../../test/mockResponse';
+import { selectOption, selectValue } from '../../test/selectOption';
 
 const accA = {
   id: 'a', name: 'Caja ARS', type: 'BANK', currency: 'ARS', balance: 5000, isInformal: false,
@@ -83,10 +84,8 @@ describe('TransferForm en edición (Sprint 23 D4)', () => {
     const save = await screen.findByRole('button', { name: 'Guardar' });
 
     // prefill de cuentas (labels con asterisco de required → exact:false)
-    await waitFor(() =>
-      expect((screen.getByLabelText('Cuenta origen', { exact: false }) as HTMLSelectElement).value).toBe('a'),
-    );
-    expect((screen.getByLabelText('Cuenta destino', { exact: false }) as HTMLSelectElement).value).toBe('b');
+    await waitFor(() => expect(selectValue('Cuenta origen', { exact: false })).toBe('a'));
+    expect(selectValue('Cuenta destino', { exact: false })).toBe('b');
 
     // cambiar el monto y guardar
     fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '800' } });
@@ -115,11 +114,9 @@ describe('TransferForm en alta — layout D5/D6 cross-currency', () => {
   it('alta cross-currency: fila debitar → acreditar y POST con ambos montos', async () => {
     renderForm();
 
-    // esperar a que carguen las cuentas (opción scoped al select origen, evita el doble match)
-    const fromSelect = await screen.findByLabelText('Cuenta origen', { exact: false });
-    await within(fromSelect).findByRole('option', { name: 'Caja ARS (ARS)' });
-    fireEvent.change(fromSelect, { target: { value: 'a' } });
-    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), { target: { value: 'u' } });
+    // selectOption espera a que carguen las cuentas y la opción exista
+    await selectOption('Cuenta origen', 'a', { exact: false });
+    await selectOption('Cuenta destino', 'u', { exact: false });
 
     // aparecen los dos montos (la fila con flecha)
     fireEvent.change(await screen.findByLabelText(/Monto a debitar/), { target: { value: '1000' } });

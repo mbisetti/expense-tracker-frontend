@@ -5,6 +5,7 @@ import { AuthContext } from '../auth/context';
 import { CategoryForm } from './CategoryForm';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { jsonResponse } from '../../test/mockResponse';
+import { selectOption } from '../../test/selectOption';
 import type { Category } from './api';
 
 const editCat: Category = {
@@ -58,11 +59,11 @@ function renderForm(category?: Category) {
 }
 
 describe('CategoryForm — esencialidad (Sprint 24)', () => {
-  it('el switch "Esencial" se muestra en gasto y se oculta en INCOME', () => {
+  it('el switch "Esencial" se muestra en gasto y se oculta en INCOME', async () => {
     renderForm();
     expect(screen.getByRole('switch', { name: 'Esencial' })).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'INCOME' } });
+    await selectOption('Tipo', 'INCOME');
     expect(screen.queryByRole('switch', { name: 'Esencial' })).not.toBeInTheDocument();
   });
 

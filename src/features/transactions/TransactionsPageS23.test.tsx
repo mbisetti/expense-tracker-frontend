@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { openSelect, selectOption, selectValue } from '../../test/selectOption';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
@@ -73,28 +74,29 @@ describe('TransactionsPage — chips de cuenta (Sprint 23 D9)', () => {
     // click → filtra y sincroniza el select "Cuenta"
     fireEvent.click(efectivo);
     expect(efectivo).toHaveAttribute('aria-pressed', 'true');
-    expect((screen.getByLabelText('Cuenta') as HTMLSelectElement).value).toBe('a1');
+    expect(selectValue('Cuenta')).toBe('a1');
 
     // re-click → togglea a '' (sin filtro)
     fireEvent.click(efectivo);
     expect(efectivo).toHaveAttribute('aria-pressed', 'false');
-    expect((screen.getByLabelText('Cuenta') as HTMLSelectElement).value).toBe('');
+    expect(selectValue('Cuenta')).toBe('');
   });
 });
 
 describe('TransactionsPage — filtro de categoría (Sprint 23 D2)', () => {
   it('las opciones dependen del Tipo (BOTH sirve para ambos)', async () => {
     renderPage();
-    const category = (await screen.findByLabelText('Categoría')) as HTMLSelectElement;
-    // esperar a que carguen las categorías (las opciones aparecen tras el fetch)
+    // abrir Categoría y esperar a que carguen (las opciones aparecen tras el fetch)
+    let category = await openSelect('Categoría');
     await within(category).findByRole('option', { name: 'Sueldo' });
     // Tipo vacío → todas
     expect(within(category).getByRole('option', { name: 'Sueldo' })).toBeInTheDocument();
     expect(within(category).getByRole('option', { name: 'Comida' })).toBeInTheDocument();
     expect(within(category).getByRole('option', { name: 'Ajuste' })).toBeInTheDocument();
 
-    // Tipo INCOME → Sueldo + Ajuste, sin Comida
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'INCOME' } });
+    // Tipo INCOME → Sueldo + Ajuste, sin Comida (cambiar Tipo cierra el listbox → reabrir)
+    await selectOption('Tipo', 'INCOME');
+    category = await openSelect('Categoría');
     expect(within(category).getByRole('option', { name: 'Sueldo' })).toBeInTheDocument();
     expect(within(category).getByRole('option', { name: 'Ajuste' })).toBeInTheDocument();
     expect(within(category).queryByRole('option', { name: 'Comida' })).not.toBeInTheDocument();
@@ -103,28 +105,26 @@ describe('TransactionsPage — filtro de categoría (Sprint 23 D2)', () => {
   it('con Tipo "Entre cuentas" el filtro de categoría se deshabilita', async () => {
     renderPage();
     await screen.findByLabelText('Categoría');
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'TRANSFER' } });
+    await selectOption('Tipo', 'TRANSFER');
     expect(screen.getByLabelText('Categoría')).toBeDisabled();
   });
 
   it('cambiar a un Tipo incompatible resetea la categoría elegida', async () => {
     renderPage();
-    const category = (await screen.findByLabelText('Categoría')) as HTMLSelectElement;
-    await within(category).findByRole('option', { name: 'Comida' });
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'EXPENSE' } });
-    fireEvent.change(category, { target: { value: 'c2' } }); // Comida (EXPENSE)
-    expect(category.value).toBe('c2');
+    await screen.findByLabelText('Categoría');
+    await selectOption('Tipo', 'EXPENSE');
+    await selectOption('Categoría', 'c2'); // Comida (EXPENSE)
+    expect(selectValue('Categoría')).toBe('c2');
 
     // pasar a INCOME → Comida no aplica → reset a ''
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'INCOME' } });
-    expect(category.value).toBe('');
+    await selectOption('Tipo', 'INCOME');
+    expect(selectValue('Categoría')).toBe('');
   });
 
   it('la categoría viaja server-side en el request de transacciones', async () => {
     renderPage();
-    const category = (await screen.findByLabelText('Categoría')) as HTMLSelectElement;
-    await within(category).findByRole('option', { name: 'Sueldo' });
-    fireEvent.change(category, { target: { value: 'c1' } });
+    await screen.findByLabelText('Categoría');
+    await selectOption('Categoría', 'c1');
     await waitFor(() => expect(txRequests.some((u) => u.includes('categoryId=c1'))).toBe(true));
   });
 });

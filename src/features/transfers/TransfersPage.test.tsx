@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { openSelect, selectOption, selectValue } from '../../test/selectOption';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
@@ -96,12 +97,12 @@ describe('TransfersPage', () => {
     renderPage();
 
     // Cuenta origen/destino son required: el label agrega un "*" (aria-hidden) → exact:false.
-    fireEvent.change(await screen.findByLabelText('Cuenta origen', { exact: false }), {
-      target: { value: 'acc1' },
-    });
+    await selectOption('Cuenta origen', 'acc1', { exact: false });
 
-    const toSelect = screen.getByLabelText('Cuenta destino', { exact: false }) as HTMLSelectElement;
-    const labels = Array.from(toSelect.options).map((o) => o.textContent ?? '');
+    const toListbox = await openSelect('Cuenta destino', { exact: false });
+    const labels = within(toListbox)
+      .getAllByRole('option')
+      .map((o) => o.textContent ?? '');
     expect(labels.some((l) => l.includes('Ahorro ARS'))).toBe(true);   // otra ARS
     expect(labels.some((l) => l.includes('Dolares'))).toBe(true);      // USD (cross-currency)
     // Sprint 22: el origen ahora SÍ está (transfer intra-cuenta), marcado "misma cuenta"
@@ -112,12 +113,8 @@ describe('TransfersPage', () => {
     stubEndpoints();
     renderPage();
 
-    fireEvent.change(await screen.findByLabelText('Cuenta origen', { exact: false }), {
-      target: { value: 'acc1' },
-    }); // ARS
-    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
-      target: { value: 'acc3' },
-    }); // USD
+    await selectOption('Cuenta origen', 'acc1', { exact: false }); // ARS
+    await selectOption('Cuenta destino', 'acc3', { exact: false }); // USD
 
     // aparece el input de monto a acreditar en la moneda destino
     expect(await screen.findByLabelText(/Monto a acreditar \(USD\)/)).toBeInTheDocument();
@@ -129,12 +126,8 @@ describe('TransfersPage', () => {
     stubEndpoints({ onPost: (body) => { postedBody = body; } });
     renderPage();
 
-    fireEvent.change(await screen.findByLabelText('Cuenta origen', { exact: false }), {
-      target: { value: 'acc1' },
-    });
-    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
-      target: { value: 'acc2' },
-    });
+    await selectOption('Cuenta origen', 'acc1', { exact: false });
+    await selectOption('Cuenta destino', 'acc2', { exact: false });
     fireEvent.change(screen.getByLabelText('Monto', { exact: false }), { target: { value: '1500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Transferir' }));
 
@@ -170,10 +163,8 @@ describe('TransfersPage', () => {
     stubEndpoints();
     renderPage(['/transfers?to=acc2']);
 
-    const toSelect = (await screen.findByLabelText('Cuenta destino', {
-      exact: false,
-    })) as HTMLSelectElement;
-    expect(toSelect.value).toBe('acc2');
+    await screen.findByLabelText('Cuenta destino', { exact: false });
+    await waitFor(() => expect(selectValue('Cuenta destino', { exact: false })).toBe('acc2'));
   });
 
   it('intra-cuenta cross-currency: permite la misma cuenta con monedas distintas y manda ambas', async () => {
@@ -181,17 +172,11 @@ describe('TransfersPage', () => {
     stubEndpoints({ onPost: (body) => { postedBody = body; } });
     renderPage();
 
-    fireEvent.change(await screen.findByLabelText('Cuenta origen', { exact: false }), {
-      target: { value: 'acc1' },
-    });
+    await selectOption('Cuenta origen', 'acc1', { exact: false });
     // misma cuenta en el destino (comprar USD dentro de Banco ARS)
-    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
-      target: { value: 'acc1' },
-    });
+    await selectOption('Cuenta destino', 'acc1', { exact: false });
     // moneda destino → "Otra…" → USD
-    fireEvent.change(screen.getByLabelText('Moneda destino', { exact: false }), {
-      target: { value: '__other__' },
-    });
+    await selectOption('Moneda destino', '__other__', { exact: false });
     fireEvent.change(screen.getByLabelText('Moneda (3 letras)', { exact: false }), {
       target: { value: 'USD' },
     });
@@ -215,12 +200,8 @@ describe('TransfersPage', () => {
     stubEndpoints();
     renderPage();
 
-    fireEvent.change(await screen.findByLabelText('Cuenta origen', { exact: false }), {
-      target: { value: 'acc1' },
-    });
-    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
-      target: { value: 'acc1' },
-    });
+    await selectOption('Cuenta origen', 'acc1', { exact: false });
+    await selectOption('Cuenta destino', 'acc1', { exact: false });
 
     expect(
       await screen.findByText('Elegí cuentas distintas, o monedas distintas dentro de la misma cuenta.'),

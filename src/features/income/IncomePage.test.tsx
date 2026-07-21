@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { IncomePage } from './IncomePage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
+import { openSelect, selectOption } from '../../test/selectOption';
 
 const activeSource = {
   id: 'src1',
@@ -138,8 +139,10 @@ describe('IncomePage', () => {
     expect(await screen.findByText('Freelance viejo')).toBeInTheDocument();
     expect(screen.getByText('(inactiva)')).toBeInTheDocument();
 
-    const sourceSelect = screen.getByLabelText('Fuente', { exact: false }) as HTMLSelectElement;
-    const optionLabels = Array.from(sourceSelect.options).map((o) => o.textContent);
+    const listbox = await openSelect('Fuente', { exact: false });
+    const optionLabels = within(listbox)
+      .getAllByRole('option')
+      .map((o) => o.textContent);
     expect(optionLabels.some((label) => label?.includes('Freelance viejo'))).toBe(false);
     expect(optionLabels.some((label) => label?.includes('Sueldo'))).toBe(true);
   });
@@ -156,12 +159,8 @@ describe('IncomePage', () => {
 
     // el select existe recién cuando las fuentes cargaron — esperar el label, no el heading
     // (Fuente/Cuenta destino/Monto bruto son required: el label agrega "*" → exact:false)
-    fireEvent.change(await screen.findByLabelText('Fuente', { exact: false }), {
-      target: { value: 'src1' },
-    });
-    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
-      target: { value: 'acc1' },
-    });
+    await selectOption('Fuente', 'src1', { exact: false });
+    await selectOption('Cuenta destino', 'acc1', { exact: false });
     fireEvent.change(screen.getByLabelText('Monto bruto', { exact: false }), {
       target: { value: '10000' },
     });
@@ -189,12 +188,8 @@ describe('IncomePage', () => {
     });
     renderPage();
 
-    fireEvent.change(await screen.findByLabelText('Fuente', { exact: false }), {
-      target: { value: 'src3' },
-    });
-    fireEvent.change(screen.getByLabelText('Cuenta destino', { exact: false }), {
-      target: { value: 'acc1' }, // cuenta ARS
-    });
+    await selectOption('Fuente', 'src3', { exact: false });
+    await selectOption('Cuenta destino', 'acc1', { exact: false }); // cuenta ARS
     fireEvent.change(screen.getByLabelText('Monto bruto', { exact: false }), {
       target: { value: '320' },
     });

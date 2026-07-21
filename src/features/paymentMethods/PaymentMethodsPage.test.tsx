@@ -6,6 +6,7 @@ import { PaymentMethodsPage } from './PaymentMethodsPage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { PaymentMethod } from './api';
 import { jsonResponse } from '../../test/mockResponse';
+import { selectOption } from '../../test/selectOption';
 
 const visa: PaymentMethod = {
   id: 'pm-1',
@@ -110,9 +111,9 @@ describe('PaymentMethodsPage', () => {
 
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: 'Nuevo método de pago' }));
-    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-1' } });
+    await selectOption('Cuenta', 'acc-1', { exact: false });
     fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), { target: { value: 'MP' } });
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'DIGITAL_WALLET' } });
+    await selectOption('Tipo', 'DIGITAL_WALLET');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     expect(await screen.findByText('MP')).toBeInTheDocument();

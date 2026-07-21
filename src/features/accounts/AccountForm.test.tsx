@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { AccountForm } from './AccountForm';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
+import { openSelect, selectOption } from '../../test/selectOption';
 import type { Account } from './api';
 
 const creditAccount: Account = {
@@ -83,20 +84,24 @@ describe('AccountForm', () => {
     expect(screen.queryByLabelText('Día de vencimiento (1-28)')).not.toBeInTheDocument();
   });
 
-  it('el alta NO ofrece "Tarjeta de crédito" (una tarjeta nace desde el bloque, D9)', () => {
+  it('el alta NO ofrece "Tarjeta de crédito" (una tarjeta nace desde el bloque, D9)', async () => {
     renderForm();
 
-    const typeSelect = screen.getByLabelText('Tipo') as HTMLSelectElement;
-    const values = Array.from(typeSelect.options).map((o) => o.value);
+    const listbox = await openSelect('Tipo');
+    const values = within(listbox)
+      .getAllByRole('option')
+      .map((o) => o.getAttribute('data-value'));
     expect(values).toEqual(['CASH', 'BANK', 'WALLET', 'INVESTMENT', 'CRYPTO', 'DEBT']);
     expect(values).not.toContain('CREDIT');
   });
 
-  it('la edición ofrece las 7 opciones, incluida Tarjeta de crédito', () => {
+  it('la edición ofrece las 7 opciones, incluida Tarjeta de crédito', async () => {
     renderForm(bank);
 
-    const typeSelect = screen.getByLabelText('Tipo') as HTMLSelectElement;
-    const values = Array.from(typeSelect.options).map((o) => o.value);
+    const listbox = await openSelect('Tipo');
+    const values = within(listbox)
+      .getAllByRole('option')
+      .map((o) => o.getAttribute('data-value'));
     expect(values).toHaveLength(7);
     expect(values).toContain('CREDIT');
   });
@@ -124,7 +129,7 @@ describe('AccountForm', () => {
     renderForm(linkedCard, [bank, linkedCard]);
 
     // el selector "Vinculada a" arranca en la madre; pasarlo a "— ninguna —" desvincula
-    fireEvent.change(screen.getByLabelText('Vinculada a'), { target: { value: '' } });
+    await selectOption('Vinculada a', '');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
     await vi.waitFor(() => expect(patchBody).toBeDefined());

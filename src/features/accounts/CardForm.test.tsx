@@ -5,6 +5,7 @@ import { AuthContext } from '../auth/context';
 import { CardForm } from './CardForm';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
+import { selectOption } from '../../test/selectOption';
 import type { Account } from './api';
 
 const bank: Account = {
@@ -96,7 +97,7 @@ describe('CardForm', () => {
     fireEvent.change(screen.getByLabelText('Nombre', { exact: false }), {
       target: { value: 'Visa *8190' },
     });
-    fireEvent.change(screen.getByLabelText('Tipo'), { target: { value: 'CREDIT' } });
+    await selectOption('Tipo', 'CREDIT');
     fireEvent.change(screen.getByLabelText('Día de cierre (1-28)', { exact: false }), {
       target: { value: '10' },
     });

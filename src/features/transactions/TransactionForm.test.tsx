@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { TransactionForm } from './TransactionForm';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import type { TransactionListItem } from './api';
 import { jsonResponse } from '../../test/mockResponse';
+import { openSelect, selectOption, selectValue } from '../../test/selectOption';
 
 const account = {
   id: 'acc-1',
@@ -171,11 +172,9 @@ describe('TransactionForm en alta (Sprint 22, moneda)', () => {
   it('cuenta no-CREDIT: muestra el selector con la principal por defecto y manda esa moneda', async () => {
     renderCreateForm();
 
-    // esperar a que las cuentas carguen (la option existe) antes de seleccionar
-    await screen.findByRole('option', { name: /Efectivo/ });
-    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-1' } });
-    const currencySelect = (await screen.findByLabelText('Moneda', { exact: false })) as HTMLSelectElement;
-    expect(currencySelect.value).toBe('ARS'); // principal por defecto
+    // selectOption espera a que las cuentas carguen y la opción exista
+    await selectOption('Cuenta', 'acc-1', { exact: false });
+    await waitFor(() => expect(selectValue('Moneda', { exact: false })).toBe('ARS')); // principal por defecto
 
     fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '500' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
@@ -187,8 +186,7 @@ describe('TransactionForm en alta (Sprint 22, moneda)', () => {
   it('cuenta CREDIT: la moneda es un chip fijo (mono-moneda), sin selector editable (S23 D8)', async () => {
     renderCreateForm();
 
-    await screen.findByRole('option', { name: /Visa/ });
-    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-2' } });
+    await selectOption('Cuenta', 'acc-2', { exact: false });
 
     // Sprint 23 (D8): el ¼ muestra la moneda de la CREDIT como chip fijo deshabilitado —
     // no un select (no hay opción "Otra…").
@@ -201,9 +199,8 @@ describe('TransactionForm en alta (Sprint 22, moneda)', () => {
   it('"Otra…": permite cargar una moneda nueva (uppercase) y la manda', async () => {
     renderCreateForm();
 
-    await screen.findByRole('option', { name: /Efectivo/ });
-    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'acc-1' } });
-    fireEvent.change(await screen.findByLabelText('Moneda', { exact: false }), { target: { value: '__other__' } });
+    await selectOption('Cuenta', 'acc-1', { exact: false });
+    await selectOption('Moneda', '__other__', { exact: false });
     fireEvent.change(await screen.findByLabelText('Moneda (3 letras)', { exact: false }), {
       target: { value: 'eur' },
     });
@@ -262,19 +259,20 @@ describe('TransactionForm ruteo de tarjeta (Sprint 22.2)', () => {
 
     renderCreate();
 
-    await screen.findByRole('option', { name: /Banco/ });
+    // abrir el selector de cuenta y esperar a que carguen
+    const cuentaListbox = await openSelect('Cuenta', { exact: false });
+    await within(cuentaListbox).findByRole('option', { name: /Banco/ });
     // la tarjeta vinculada NO es opción de cuenta (D7)
-    expect(screen.queryByRole('option', { name: /Visa \*8190 \(ARS\)/ })).not.toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText('Cuenta', { exact: false }), { target: { value: 'bank-1' } });
+    expect(within(cuentaListbox).queryByRole('option', { name: /Visa \*8190 \(ARS\)/ })).not.toBeInTheDocument();
+    // elegir la cuenta banco (dentro del listbox ya abierto)
+    fireEvent.click(within(cuentaListbox).getByRole('option', { name: /Banco/ }));
 
     // …pero sí aparece en el selector de método (D6). Sprint 23: label "- Crédito".
-    const cardOption = await screen.findByRole('option', { name: /Visa \*8190 - Crédito/ });
+    const metodoListbox = await openSelect('Método de pago', { exact: false });
+    const cardOption = await within(metodoListbox).findByRole('option', { name: /Visa \*8190 - Crédito/ });
     expect(cardOption).toBeInTheDocument();
+    fireEvent.click(cardOption);
 
-    fireEvent.change(screen.getByLabelText('Método de pago', { exact: false }), {
-      target: { value: 'card:card-1' },
-    });
     fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '300' } });
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
