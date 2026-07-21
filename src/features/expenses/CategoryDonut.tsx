@@ -14,14 +14,18 @@ export function CategoryDonut({ slices, currency }: CategoryDonutProps) {
   return (
     <ResponsiveContainer width="100%" height={220}>
       <PieChart>
+        {/* El borde (separadores + contorno externo/interno del anillo) se define en CSS con
+            `.donut-pie .recharts-sector` — var(--donut-stroke) NO resuelve como atributo SVG
+            (por eso el viejo stroke="var(--surface)" no se veía). El color propio contrasta
+            con el fondo en claro y oscuro, así los gajos no se fusionan. */}
         <Pie
+          className="donut-pie"
           data={slices}
           dataKey="value"
           nameKey="name"
           innerRadius={55}
           outerRadius={85}
           paddingAngle={2}
-          stroke="var(--surface)"
         >
           {slices.map((slice, i) => (
             <Cell key={i} fill={slice.color} />

@@ -17,9 +17,8 @@ const CategoryDonut = lazy(() =>
 
 // S24.2 (B): categorías con share redondeado < 5% del subset visible colapsan en la lista
 // (detrás de "Ver todos") y forman "Otras" en el donut. Reemplaza el top-8 arbitrario.
+// Sin tope de cantidad (fix Marko): TODAS las ≥5% se muestran; sólo las <5% colapsan en "Otras".
 const SHARE_THRESHOLD = 5;
-// Tope del listado: las "primeras 7" (fix Marko). Visible = las ≥5%, hasta 7; el resto colapsa.
-const MAX_VISIBLE = 7;
 
 type CategoryFilter = 'all' | 'essential' | 'non-essential';
 
@@ -70,18 +69,17 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
   const shareOf = (amount: number) =>
     subsetTotal > 0 ? Math.round((amount / subsetTotal) * 100) : 0;
 
-  // Visibles = las categorías ≥5% del subset, tope 7 (las "primeras 7" por monto — subset ya
-  // viene DESC). El resto colapsa: las ≥5% pasadas del 7 + todas las <5%. Como toda ≥5% tiene
-  // más monto que cualquier <5%, la concatenación queda DESC. Si colapsaría UNA sola, se
-  // muestra directo (un "Ver todos (1)" es ridículo).
+  // Visibles = TODAS las categorías ≥5% del subset (sin tope de cantidad). Colapsan sólo las
+  // <5% en "Otras". El subset viene DESC y toda ≥5% pesa más que cualquier <5%, así ambas
+  // listas quedan DESC. Si colapsaría UNA sola, se muestra directo (un "Ver todos (1)" es ridículo).
   const { visible, collapsed } = useMemo(() => {
     const above: CategoryExpense[] = [];
     const below: CategoryExpense[] = [];
     for (const c of subset) {
       (shareOf(c.amount) >= SHARE_THRESHOLD ? above : below).push(c);
     }
-    let vis = above.slice(0, MAX_VISIBLE);
-    let col = [...above.slice(MAX_VISIBLE), ...below];
+    let vis = above;
+    let col = below;
     if (col.length === 1) {
       vis = [...vis, col[0]];
       col = [];

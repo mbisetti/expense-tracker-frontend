@@ -105,10 +105,12 @@ describe('CategoryBreakdown', () => {
     expect(onDrill).toHaveBeenCalledWith(expect.objectContaining({ categoryId: null }));
   });
 
-  it('lista tope 7: con 9 categorías ≥5% muestra 7 y colapsa el resto tras "Ver todos"', () => {
-    // 9 categorías, todas ≥5% del total → visible top 7, colapsan 2.
-    const amounts = [200, 190, 180, 170, 160, 150, 140, 130, 120];
-    const nineCats: CurrencyExpenses = {
+  it('sin tope: muestra TODAS las ≥5% (aunque sean 9) y sólo colapsa las <5% tras "Ver todos"', () => {
+    // 9 categorías ≥5% (grandes) + 2 <5% (chicas). Total 1480 → grandes 8-14%, chicas ≈1%.
+    const bigs = [200, 190, 180, 170, 160, 150, 140, 130, 120]; // 9, todas ≥5%
+    const smalls = [20, 20]; // 2, ambas <5%
+    const amounts = [...bigs, ...smalls];
+    const cats: CurrencyExpenses = {
       ...data,
       total: amounts.reduce((s, a) => s + a, 0),
       byCategory: amounts.map((amount, i) => ({
@@ -124,16 +126,16 @@ describe('CategoryBreakdown', () => {
         maxTxAmount: amount,
       })),
     };
-    renderBreakdown(vi.fn(), nineCats);
+    renderBreakdown(vi.fn(), cats);
 
-    // 7 filas visibles + botón "Ver todos (2)"
-    expect(screen.getAllByRole('listitem')).toHaveLength(7);
+    // las 9 ≥5% se muestran (sin tope) + botón "Ver todos (2)" para las 2 <5%
+    expect(screen.getAllByRole('listitem')).toHaveLength(9);
     expect(screen.getByRole('button', { name: 'Ver todos (2)' })).toBeInTheDocument();
-    // las 2 de menor monto no están hasta expandir
-    expect(screen.queryByText('Cat8')).not.toBeInTheDocument();
+    // las 2 chicas (<5%) no están hasta expandir
+    expect(screen.queryByText('Cat10')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Ver todos (2)' }));
-    expect(screen.getAllByRole('listitem')).toHaveLength(9);
-    expect(screen.getByText('Cat8')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(11);
+    expect(screen.getByText('Cat10')).toBeInTheDocument();
   });
 });

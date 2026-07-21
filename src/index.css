@@ -95,6 +95,9 @@
   --exceeded: #b91c1c;
   /* Cursor de hover de los charts (S24.2): gris clarito visible sobre el Card blanco. */
   --chart-cursor: #eceae9;
+  /* Borde del donut (separadores + contorno del anillo): tono propio que se nota sobre el
+     fondo claro, NO el color de fondo (si no, se funde y los gajos se fusionan). */
+  --donut-stroke: #a8a29e;
   /* Paleta categórica (S24.2 fix): 8 hues validados (dataviz), fallback del donut para
      categorías sin color propio. Orden fijo, no cíclico (CVD-safe). Light. */
   --cat-1: #2a78d6; --cat-2: #008300; --cat-3: #e87ba4; --cat-4: #eda100;
@@ -158,8 +161,12 @@
     --exceeded: #fca5a5;
     /* Cursor de hover de los charts (S24.2): ACLARA sobre el Card oscuro (#1c1917). */
     --chart-cursor: rgba(250, 250, 249, 0.07);
-    /* Paleta categórica (dataviz) — steps para superficie oscura. */
-    --cat-1: #3987e5; --cat-2: #008300; --cat-3: #d55181; --cat-4: #c98500;
+    /* Borde del donut (separadores + contorno del anillo): tono propio claro que se nota
+       sobre el fondo oscuro, NO el color de fondo. */
+    --donut-stroke: #8c847d;
+    /* Paleta categórica (dataviz) — steps para superficie oscura. cat-2: el verde #008300
+       quedaba casi negro contra el fondo oscuro → subido de luminosidad a #33a532. */
+    --cat-1: #3987e5; --cat-2: #33a532; --cat-3: #d55181; --cat-4: #c98500;
     --cat-5: #199e70; --cat-6: #d95926; --cat-7: #9085e9; --cat-8: #e66767;
 
     --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -200,7 +207,11 @@
   --warning: #fbbf24;
   --exceeded: #fca5a5;
   --chart-cursor: rgba(250, 250, 249, 0.07);
-  --cat-1: #3987e5; --cat-2: #008300; --cat-3: #d55181; --cat-4: #c98500;
+  /* Borde del donut (separadores + contorno del anillo): tono propio claro que se nota
+     sobre el fondo oscuro, NO el color de fondo. */
+  --donut-stroke: #8c847d;
+  /* cat-2: verde #008300 → #33a532 (subido de luminosidad, no se pierde contra el fondo). */
+  --cat-1: #3987e5; --cat-2: #33a532; --cat-3: #d55181; --cat-4: #c98500;
   --cat-5: #199e70; --cat-6: #d95926; --cat-7: #9085e9; --cat-8: #e66767;
 
   --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3);
@@ -230,6 +241,9 @@
   --exceeded: #b91c1c;
   /* Cursor de hover de los charts (S24.2): gris clarito visible sobre el Card blanco. */
   --chart-cursor: #eceae9;
+  /* Borde del donut (separadores + contorno del anillo): tono propio que se nota sobre el
+     fondo claro, NO el color de fondo (si no, se funde y los gajos se fusionan). */
+  --donut-stroke: #a8a29e;
   /* Paleta categórica (S24.2 fix): 8 hues validados (dataviz), fallback del donut para
      categorías sin color propio. Orden fijo, no cíclico (CVD-safe). Light. */
   --cat-1: #2a78d6; --cat-2: #008300; --cat-3: #e87ba4; --cat-4: #eda100;
@@ -324,6 +338,15 @@ input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   appearance: none;
   margin: 0;
+}
+
+/* Borde de los gajos del donut (CategoryDonut): separadores entre sectores + contorno externo
+   e interno del anillo. Va en CSS (no como atributo SVG) para que var() resuelva y siga el tema.
+   --donut-stroke tiene valor propio en claro/oscuro — NO es el color de fondo, así los gajos no
+   se fusionan entre sí ni con el fondo. */
+.donut-pie .recharts-sector {
+  stroke: var(--donut-stroke);
+  stroke-width: 1.5px;
 }
 
 /* Drawer lateral (nav mobile): se desliza de izquierda a derecha al abrir. */
