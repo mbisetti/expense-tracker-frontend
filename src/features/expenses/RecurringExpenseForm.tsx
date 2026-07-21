@@ -8,10 +8,13 @@ import { Switch } from '../../components/ui/Switch';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
 import { useCategories } from '../categories/useCategories';
+import { useAccounts } from '../accounts/useAccounts';
+import { usePaymentMethods } from '../paymentMethods/usePaymentMethods';
 import { numberToAmountDisplay, parseAmountInput } from '../../lib/money';
 import { transactionErrorMessage } from '../transactions/errorMessages';
 import { RecurringConfigFields } from './RecurringConfigFields';
 import {
+  buildAutoDebitPayload,
   buildConfigPayload,
   configFromRecurring,
   emptyRecurringConfig,
@@ -50,6 +53,12 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
 
   const patchConfig = (patch: Partial<RecurringConfig>) => setConfig((c) => ({ ...c, ...patch }));
 
+  const { data: accounts } = useAccounts();
+  // Métodos de la cuenta de débito elegida (sólo cuando el débito automático está prendido).
+  const { data: paymentMethods } = usePaymentMethods(
+    config.autoDebit && config.debitAccountId ? config.debitAccountId : undefined,
+  );
+
   const createMutation = useCreateRecurringExpense();
   const updateMutation = useUpdateRecurringExpense();
   const isPending = createMutation.isPending || updateMutation.isPending;
@@ -59,6 +68,7 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const payload = buildConfigPayload(config);
+    const autoDebit = buildAutoDebitPayload(config);
 
     if (isEdit) {
       // frequency presente → el server re-configura el bloque entero con estos campos.
@@ -73,6 +83,7 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
         dueMonth: payload.dueMonth ?? null,
         installmentsTotal: payload.installmentsTotal ?? null,
         cashPrice: payload.cashPrice ?? null,
+        ...autoDebit,
       };
       updateMutation.mutate(
         { id: existing.id, changes },
@@ -92,6 +103,7 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
         categoryId,
         frequency: config.frequency,
         ...payload,
+        ...autoDebit,
       };
       createMutation.mutate(input, {
         onSuccess: () => {
@@ -103,7 +115,12 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
     }
   };
 
-  const canSubmit = name.trim() !== '' && parseAmountInput(amount) > 0 && categoryId !== '';
+  // El débito automático exige elegir la cuenta de débito (el backend también lo valida).
+  const canSubmit =
+    name.trim() !== '' &&
+    parseAmountInput(amount) > 0 &&
+    categoryId !== '' &&
+    (!config.autoDebit || config.debitAccountId !== '');
 
   return (
     <Modal
@@ -167,6 +184,64 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
         </Select>
 
         <RecurringConfigFields value={config} onChange={patchConfig} idPrefix="rec" disabled={isPending} />
+
+        {/* Sprint 24.4: débito automático. Al prender, aparecen los selects de cuenta y método. */}
+        <div className="flex flex-col gap-3 rounded-md border border-line bg-surface-sunken p-3">
+          <Switch
+            id="rec-auto-debit"
+            label="Débito automático"
+            helper="La app genera la transacción sola el día del vencimiento."
+            checked={config.autoDebit}
+            onChange={(checked) =>
+              patchConfig(
+                checked
+                  ? { autoDebit: true }
+                  : { autoDebit: false, debitAccountId: '', debitPaymentMethodId: '' },
+              )
+            }
+            disabled={isPending}
+          />
+
+          {config.autoDebit && (
+            <>
+              <Select
+                label="Cuenta de débito"
+                id="rec-debit-account"
+                value={config.debitAccountId}
+                onChange={(e) =>
+                  // cambiar la cuenta resetea el método (depende de la cuenta)
+                  patchConfig({ debitAccountId: e.target.value, debitPaymentMethodId: '' })
+                }
+                required
+                disabled={isPending}
+              >
+                <option value="">Elegí una cuenta</option>
+                {accounts?.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name} ({account.currency})
+                  </option>
+                ))}
+              </Select>
+
+              <Select
+                label="Método de pago"
+                id="rec-debit-method"
+                value={config.debitPaymentMethodId}
+                onChange={(e) => patchConfig({ debitPaymentMethodId: e.target.value })}
+                disabled={isPending || !config.debitAccountId}
+              >
+                <option value="">
+                  {config.debitAccountId ? 'Sin método' : 'Elegí una cuenta primero'}
+                </option>
+                {paymentMethods?.map((pm) => (
+                  <option key={pm.id} value={pm.id}>
+                    {pm.name}
+                  </option>
+                ))}
+              </Select>
+            </>
+          )}
+        </div>
 
         {isEdit && (
           <Switch id="rec-active" label="Activo" checked={active} onChange={setActive} disabled={isPending} />

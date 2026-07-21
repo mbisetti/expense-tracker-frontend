@@ -14,6 +14,10 @@ export type CreateRecurringExpenseInput = {
   dueMonth?: number;
   installmentsTotal?: number;
   cashPrice?: number;
+  // Sprint 24.4: débito automático.
+  autoDebit?: boolean;
+  debitAccountId?: string;
+  debitPaymentMethodId?: string;
 };
 
 // PATCH parcial. Mandar `frequency` re-configura el bloque entero (el server revalida); mandar
@@ -29,7 +33,14 @@ export type UpdateRecurringExpenseInput = {
   dueMonth?: number | null;
   installmentsTotal?: number | null;
   cashPrice?: number | null;
+  // Sprint 24.4: bloque de débito automático (presente = autoritativo en el backend).
+  autoDebit?: boolean;
+  debitAccountId?: string;
+  debitPaymentMethodId?: string;
 };
+
+// Respuesta de POST .../debits/retry (S24.4).
+export type RetryDebitsResult = { executed: number; stillFailed: number };
 
 // Un recurrente cambia el comprometido/proyección de la tab Gastos y el vínculo desde el form:
 // invalidar summary y transactions además de la lista propia.
@@ -76,6 +87,18 @@ export function useDeleteRecurringExpense() {
 
   return useMutation<void, ApiError, string>({
     mutationFn: (id) => http<void>(`/recurring-expenses/${id}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
+  });
+}
+
+// Sprint 24.4 (D4): reintenta los débitos que fallaron por saldo. Invalida summary (badge/caja),
+// la lista y transactions (la nueva tx aparece en el feed y el historial).
+export function useRetryDebits() {
+  const http = useHttp();
+  const invalidate = useInvalidateRecurring();
+
+  return useMutation<RetryDebitsResult, ApiError, string>({
+    mutationFn: (id) => http<RetryDebitsResult>(`/recurring-expenses/${id}/debits/retry`, { method: 'POST' }),
     onSuccess: invalidate,
   });
 }

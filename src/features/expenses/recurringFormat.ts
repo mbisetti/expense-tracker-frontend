@@ -65,6 +65,13 @@ export function stateBadge(item: Pick<RecurringItem, 'state' | 'expectedCount' |
   }
 }
 
+// Sprint 24.4: etiqueta de la cuenta/método de débito para el detalle. Cuenta borrada (nombre
+// ausente) → cartel accionable. Método vacío no agrega sufijo.
+export function autoDebitTargetLabel(accountName?: string, methodName?: string): string {
+  if (!accountName) return 'Configurá la cuenta de débito';
+  return methodName ? `${accountName} · ${methodName}` : accountName;
+}
+
 export type FinancingCost = { totalInInstallments: number; diff: number; pct: number };
 
 // Costo del financiamiento DERIVADO (D5): total en cuotas vs contado. null si no hay cuotas o

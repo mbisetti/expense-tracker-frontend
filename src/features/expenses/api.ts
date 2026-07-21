@@ -43,6 +43,11 @@ export type RecurringExpense = {
   dueMonth: number | null;
   installmentsTotal: number | null;
   cashPrice: number | null;
+  // Sprint 24.4: débito automático. autoDebit true → el runner genera la tx sola desde
+  // debitAccountId (null = cuenta borrada → cartel). debitPaymentMethodId opcional.
+  autoDebit: boolean;
+  debitAccountId: string | null;
+  debitPaymentMethodId: string | null;
   active: boolean;
   createdAt: string;
 };
@@ -65,6 +70,11 @@ export type RecurringItem = {
   isEssential: boolean;
   categoryId: string | null;
   categoryName: string | null;
+  // Sprint 24.4: autoDebit pinta el sufijo "· Auto"; debitAccountId null con autoDebit = cuenta
+  // borrada → cartel; failedCount = débitos del mes fallidos por saldo → badge "Sin saldo".
+  autoDebit: boolean;
+  debitAccountId: string | null;
+  failedCount: number;
 };
 
 export type RecurringSummary = {

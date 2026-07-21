@@ -11,16 +11,19 @@ const item1: RecurringItem = {
   id: 'r1', name: 'Alquiler', amount: 50000, frequency: 'MONTHLY', billingDay: 1, weekday: null,
   dueMonth: null, state: 'PENDING', expectedCount: 1, paidCount: 0, installmentsPaid: 0,
   installmentsTotal: null, cashPrice: null, isEssential: true, categoryId: 'c1', categoryName: 'Vivienda',
+  autoDebit: false, debitAccountId: null, failedCount: 0,
 };
 const item2: RecurringItem = {
   id: 'r2', name: 'Streaming', amount: 6000, frequency: 'BIWEEKLY', billingDay: 5, weekday: null,
   dueMonth: null, state: 'PARTIAL', expectedCount: 2, paidCount: 1, installmentsPaid: 0,
   installmentsTotal: null, cashPrice: null, isEssential: false, categoryId: 'c2', categoryName: 'Ocio',
+  autoDebit: false, debitAccountId: null, failedCount: 0,
 };
 
 const inactiveRec: RecurringExpense = {
   id: 'r3', name: 'Viejo', amount: 1000, currency: 'ARS', categoryId: 'c1', frequency: 'MONTHLY',
   billingDay: 1, weekday: null, dueMonth: null, installmentsTotal: null, cashPrice: null,
+  autoDebit: false, debitAccountId: null, debitPaymentMethodId: null,
   active: false, createdAt: '2026-01-01T00:00:00',
 };
 
@@ -92,5 +95,25 @@ describe('RecurringSection', () => {
     renderSection(makeData([]));
     expect(await screen.findByText(/Declará tus suscripciones/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Nuevo' })).toBeInTheDocument();
+  });
+
+  // ── Sprint 24.4: débito automático ──────────────────────────────────────────
+
+  it('item con débito automático: sufijo Auto y badge Sin saldo si falló', async () => {
+    const autoItem: RecurringItem = {
+      ...item1, id: 'ra', name: 'Spotify', autoDebit: true, debitAccountId: 'acc1', failedCount: 1,
+    };
+    renderSection(makeData([autoItem]));
+    expect(await screen.findByText('Spotify')).toBeInTheDocument();
+    expect(screen.getByText(/· Auto/)).toBeInTheDocument();
+    expect(screen.getByText('Sin saldo')).toBeInTheDocument();
+  });
+
+  it('cartel de cuenta faltante cuando autoDebit sin debitAccountId', async () => {
+    const orphan: RecurringItem = {
+      ...item1, id: 'ro', name: 'HBO', autoDebit: true, debitAccountId: null, failedCount: 0,
+    };
+    renderSection(makeData([orphan]));
+    expect(await screen.findByText('Configurá la cuenta de débito')).toBeInTheDocument();
   });
 });

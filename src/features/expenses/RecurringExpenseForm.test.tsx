@@ -21,6 +21,10 @@ beforeEach(() => {
         return jsonResponse(201, { id: 'rec-new' });
       }
       if (url.includes('/categories')) return jsonResponse(200, [expenseCat]);
+      if (url.includes('/payment-methods'))
+        return jsonResponse(200, [{ id: 'pm1', accountId: 'acc1', name: 'Débito', type: 'DEBIT', isDefault: false }]);
+      if (url.includes('/accounts'))
+        return jsonResponse(200, [{ id: 'acc1', name: 'Caja', type: 'CASH', currency: 'ARS', balance: 0, balances: [] }]);
       return jsonResponse(200, []);
     }),
   );
@@ -79,6 +83,42 @@ describe('RecurringExpenseForm', () => {
     expect(postCalls[0].body).toMatchObject({
       name: 'Netflix', amount: 5990, currency: 'ARS', categoryId: 'c1', frequency: 'MONTHLY', billingDay: 15,
     });
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  // ── Sprint 24.4: débito automático ──────────────────────────────────────────
+
+  it('la sección de débito aparece al prender el switch y exige cuenta', async () => {
+    renderForm();
+    // apagado: no hay select de cuenta
+    expect(await screen.findByRole('switch', { name: 'Débito automático' })).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Cuenta de débito/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Débito automático' }));
+    expect(await screen.findByLabelText(/Cuenta de débito/)).toBeInTheDocument();
+
+    // con nombre/monto/categoría pero SIN cuenta de débito → Guardar deshabilitado
+    fireEvent.change(screen.getByLabelText(/Nombre/), { target: { value: 'Netflix' } });
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '5990' } });
+    fireEvent.change(screen.getByLabelText(/Día de cobro/), { target: { value: '15' } });
+    await selectOption('Categoría', 'c1', { exact: false });
+    expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+  });
+
+  it('crea con débito automático: manda autoDebit + debitAccountId', async () => {
+    const onClose = renderForm();
+    fireEvent.change(await screen.findByLabelText(/Nombre/), { target: { value: 'Netflix' } });
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '5990' } });
+    fireEvent.change(screen.getByLabelText(/Día de cobro/), { target: { value: '15' } });
+    await selectOption('Categoría', 'c1', { exact: false });
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Débito automático' }));
+    await selectOption('Cuenta de débito', 'acc1', { exact: false });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(postCalls).toHaveLength(1));
+    expect(postCalls[0].body).toMatchObject({ autoDebit: true, debitAccountId: 'acc1' });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });

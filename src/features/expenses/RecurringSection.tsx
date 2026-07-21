@@ -31,6 +31,8 @@ function Stat({ label, amount, currency, tone }: { label: string; amount: number
 
 function ItemRow({ item, currency, onClick }: { item: RecurringItem; currency: string; onClick: () => void }) {
   const badge = stateBadge(item);
+  // Sprint 24.4: cuenta de débito borrada (FK SET NULL) → el flag quedó sin cuenta.
+  const needsAccount = item.autoDebit && !item.debitAccountId;
   return (
     <li>
       <button
@@ -42,12 +44,17 @@ function ItemRow({ item, currency, onClick }: { item: RecurringItem; currency: s
           <span className="truncate text-sm text-ink">{item.name}</span>
           <span className="text-xs text-muted">
             {dueLabel(item)}
+            {item.autoDebit && <> · Auto</>}
             {item.installmentsTotal != null && (
               <> · cuota {Math.min(item.installmentsPaid, item.installmentsTotal)}/{item.installmentsTotal}</>
             )}
           </span>
+          {needsAccount && (
+            <span className="text-xs text-warning">Configurá la cuenta de débito</span>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {item.failedCount > 0 && <Badge status="warning" label="Sin saldo" />}
           <Badge status={badge.status} label={badge.label} />
           <Amount amount={item.amount} currency={currency} tone="neutral" size="sm" />
         </div>

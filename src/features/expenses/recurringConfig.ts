@@ -12,6 +12,11 @@ export type RecurringConfig = {
   inInstallments: boolean;
   installmentsTotal: string;
   cashPrice: string;
+  // Sprint 24.4: débito automático. debitAccountId/PaymentMethodId como strings de <select>
+  // ('' = sin elegir / "Sin método").
+  autoDebit: boolean;
+  debitAccountId: string;
+  debitPaymentMethodId: string;
 };
 
 export const emptyRecurringConfig: RecurringConfig = {
@@ -22,6 +27,9 @@ export const emptyRecurringConfig: RecurringConfig = {
   inInstallments: false,
   installmentsTotal: '',
   cashPrice: '',
+  autoDebit: false,
+  debitAccountId: '',
+  debitPaymentMethodId: '',
 };
 
 export function configFromRecurring(r: RecurringExpense): RecurringConfig {
@@ -33,6 +41,25 @@ export function configFromRecurring(r: RecurringExpense): RecurringConfig {
     inInstallments: r.installmentsTotal != null,
     installmentsTotal: r.installmentsTotal != null ? String(r.installmentsTotal) : '',
     cashPrice: r.cashPrice != null ? numberToAmountDisplay(r.cashPrice) : '',
+    autoDebit: r.autoDebit,
+    debitAccountId: r.debitAccountId ?? '',
+    debitPaymentMethodId: r.debitPaymentMethodId ?? '',
+  };
+}
+
+// Payload de débito automático para el mutation (S24.4). Cuando autoDebit está prendido, el
+// backend exige debitAccountId; debitPaymentMethodId vacío = "Sin método" (se omite → null). En el
+// PATCH `autoDebit` es autoritativo (apagar = mandar false y basta).
+export function buildAutoDebitPayload(c: RecurringConfig): {
+  autoDebit: boolean;
+  debitAccountId?: string;
+  debitPaymentMethodId?: string;
+} {
+  if (!c.autoDebit) return { autoDebit: false };
+  return {
+    autoDebit: true,
+    debitAccountId: c.debitAccountId || undefined,
+    debitPaymentMethodId: c.debitPaymentMethodId || undefined,
   };
 }
 
