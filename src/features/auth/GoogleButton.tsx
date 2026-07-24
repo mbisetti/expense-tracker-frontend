@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { renderGoogleButton } from '../../lib/googleAuth';
-import { useTheme } from '../../lib/useTheme';
+import { loadGoogleIdentity, signInWithGoogle } from '../../lib/googleAuth';
 import { useGoogleLogin } from './useGoogleLogin';
 import { useToast } from '../../components/ui/toastContext';
+import { Button } from '../../components/ui/Button';
 import type { ApiError } from '../../lib/http';
 
 function googleErrorMessage(error: ApiError): string {
@@ -22,16 +22,40 @@ function googleErrorMessage(error: ApiError): string {
   }
 }
 
-// Botón oficial "Continuar con Google" (branding de Google, no customizable). Se pinta apenas
-// carga el script GIS; si el script no carga (adblock), el login con contraseña sigue intacto.
+// Logo "G" oficial de Google (4 colores). Multicolor sobre cualquier fondo → legible en
+// claro y oscuro. aria-hidden: el nombre accesible lo da el texto/aria-label del botón.
+function GoogleGIcon() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+      <path
+        fill="#EA4335"
+        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+      />
+      <path
+        fill="#4285F4"
+        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+      />
+      <path
+        fill="#34A853"
+        d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+      />
+    </svg>
+  );
+}
+
+// "Continuar con Google" — botón PROPIO (design system, variant secondary → theme-aware por
+// tokens: claro con borde sutil, oscuro coherente con la Card/inputs). Al click dispara One Tap
+// (mismo ID token → POST /auth/google). Reemplaza al widget renderButton de GIS, cuyo iframe no
+// respetaba el dark en Firefox (FedCM off) y no se podía estilar.
 export function GoogleButton() {
-  const ref = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
-  const { mutate } = useGoogleLogin();
+  const { mutate, isPending } = useGoogleLogin();
   const toast = useToast();
 
-  // Handler siempre actualizado, pero leído SOLO desde el efecto (no durante el render): así
-  // el efecto que pinta el botón depende únicamente del theme y no se re-pinta en cada render.
+  // Handler siempre actualizado, leído desde el callback de GIS (no durante el render).
   const onCredentialRef = useRef<(idToken: string) => void>(() => {});
   useEffect(() => {
     onCredentialRef.current = (idToken: string) => {
@@ -39,23 +63,34 @@ export function GoogleButton() {
     };
   });
 
+  // Precargamos el script GIS al montar → el primer click abre One Tap sin demora.
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let cancelled = false;
-    el.innerHTML = ''; // re-pintar limpio si cambia el theme
-    renderGoogleButton(el, {
-      theme,
-      onCredential: (idToken) => {
-        if (!cancelled) onCredentialRef.current(idToken);
-      },
-    }).catch(() => {
-      // Script no cargó (adblock/red): sin ruido, el login con contraseña sigue disponible.
+    loadGoogleIdentity().catch(() => {
+      // Script no cargó (adblock/red): el login con contraseña sigue intacto.
     });
-    return () => {
-      cancelled = true;
-    };
-  }, [theme]);
+  }, []);
 
-  return <div ref={ref} className="flex justify-center" />;
+  const handleClick = () => {
+    signInWithGoogle(
+      (idToken) => onCredentialRef.current(idToken),
+      () =>
+        toast.error(
+          'No se pudo abrir el acceso con Google. Revisá bloqueadores o cookies de terceros.',
+        ),
+    ).catch(() => toast.error('No se pudo abrir el acceso con Google.'));
+  };
+
+  return (
+    <Button
+      type="button"
+      variant="secondary"
+      className="w-full"
+      onClick={handleClick}
+      loading={isPending}
+      leftIcon={<GoogleGIcon />}
+      aria-label="Continuar con Google"
+    >
+      Continuar con Google
+    </Button>
+  );
 }

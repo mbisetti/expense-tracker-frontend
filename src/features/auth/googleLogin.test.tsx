@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { AuthProvider } from './AuthContext';
@@ -8,21 +8,14 @@ import { RegisterPage } from './RegisterPage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { jsonResponse } from '../../test/mockResponse';
 
-// Mock del módulo GIS: NUNCA se carga el script real. Capturamos el onCredential que la página
-// pasa al botón para simular el "credential" de Google, y pintamos un <button> real en el contenedor.
-const mocks = vi.hoisted(() => ({
-  captured: { onCredential: null as ((idToken: string) => void) | null },
-}));
+// Mock del módulo GIS: NUNCA se carga el script real. signInWithGoogle simula que el usuario
+// eligió su cuenta en One Tap → dispara el callback con un ID token fake.
 vi.mock('../../lib/googleAuth', () => ({
   GOOGLE_CLIENT_ID: 'test-client-id',
-  renderGoogleButton: vi.fn(
-    async (el: HTMLElement, opts: { onCredential: (idToken: string) => void }) => {
-      mocks.captured.onCredential = opts.onCredential;
-      const btn = document.createElement('button');
-      btn.textContent = 'Continuar con Google';
-      el.appendChild(btn);
-    },
-  ),
+  loadGoogleIdentity: vi.fn(() => Promise.resolve({})),
+  signInWithGoogle: vi.fn(async (onCredential: (idToken: string) => void) => {
+    onCredential('fake-jwt');
+  }),
 }));
 
 // Body del último POST a /auth/google (para asertar el idToken enviado).
@@ -69,7 +62,6 @@ function stubFetch(googleResponder: (input: RequestInfo | URL) => Promise<Respon
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  mocks.captured.onCredential = null;
   googleReq.body = undefined;
 });
 
@@ -90,15 +82,13 @@ describe('login con Google', () => {
     expect(await screen.findByRole('button', { name: 'Continuar con Google' })).toBeInTheDocument();
   });
 
-  it('al recibir el credential postea a /auth/google con el idToken y redirige', async () => {
+  it('al hacer click postea a /auth/google con el idToken y redirige', async () => {
     stubFetch(() => jsonResponse(200, { accessToken: 'tok' }));
     renderApp(['/login']);
 
-    await screen.findByRole('button', { name: 'Continuar con Google' });
-    expect(mocks.captured.onCredential).not.toBeNull();
-
+    const btn = await screen.findByRole('button', { name: 'Continuar con Google' });
     await act(async () => {
-      mocks.captured.onCredential!('fake-jwt');
+      fireEvent.click(btn);
     });
 
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
@@ -106,13 +96,13 @@ describe('login con Google', () => {
     expect(JSON.parse(googleReq.body!)).toEqual({ idToken: 'fake-jwt' });
   });
 
-  it('un error del backend en Google no rompe la página (muestra toast y no redirige)', async () => {
+  it('un error del backend en Google muestra toast y no redirige', async () => {
     stubFetch(() => jsonResponse(409, { error: 'GOOGLE_ACCOUNT_MISMATCH' }));
     renderApp(['/login']);
 
-    await screen.findByRole('button', { name: 'Continuar con Google' });
+    const btn = await screen.findByRole('button', { name: 'Continuar con Google' });
     await act(async () => {
-      mocks.captured.onCredential!('fake-jwt');
+      fireEvent.click(btn);
     });
 
     expect(

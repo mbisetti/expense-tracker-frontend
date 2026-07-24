@@ -1,6 +1,8 @@
-// S25.1 — Google Identity Services (GIS) en modo botón/popup. El botón oficial devuelve un
-// ID token (JWT firmado por Google) que mandamos al backend. Sin One Tap / prompt() (D5).
-// GIS en modo botón funciona sin third-party cookies (Google migró a FedCM) — nada que configurar.
+// S25.1 — Google Identity Services (GIS), flujo de ID token programático. El widget oficial
+// `renderButton` se descartó (S25.1 fix): en Firefox con FedCM off renderiza una tarjeta blanca
+// dentro del iframe de accounts.google.com que ningún `theme` corrige y que no podemos estilar.
+// En su lugar usamos un botón PROPIO (theme-aware) que al click dispara One Tap (`prompt()`):
+// mismo callback e ID token de siempre → POST /auth/google, sin tocar el backend.
 
 // Client ID público (D6): hardcodeado, no es secreto. Mismo valor que el default del backend.
 export const GOOGLE_CLIENT_ID =
@@ -11,16 +13,16 @@ type GoogleIdConfig = {
   client_id: string;
   callback: (response: { credential: string }) => void;
 };
-type GoogleButtonOptions = {
-  theme?: 'outline' | 'filled_black' | 'filled_blue';
-  size?: 'large' | 'medium' | 'small';
-  text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
-  locale?: string;
-  width?: number;
+type PromptMomentNotification = {
+  isDisplayed?: () => boolean;
+  isNotDisplayed?: () => boolean;
+  getNotDisplayedReason?: () => string;
+  isSkippedMoment?: () => boolean;
+  getSkippedReason?: () => string;
 };
 type GoogleAccountsId = {
   initialize: (config: GoogleIdConfig) => void;
-  renderButton: (parent: HTMLElement, options: GoogleButtonOptions) => void;
+  prompt: (listener?: (notification: PromptMomentNotification) => void) => void;
 };
 
 declare global {
@@ -58,26 +60,21 @@ export function loadGoogleIdentity(): Promise<GoogleAccountsId> {
   return scriptPromise;
 }
 
-export type RenderGoogleButtonOptions = {
-  theme: 'light' | 'dark';
-  onCredential: (idToken: string) => void;
-};
-
-// Renderiza el botón oficial "Continuar con Google" dentro de `el`. El branding lo dicta
-// Google (no se customiza con nuestro design system): outline en claro, filled_black en oscuro.
-export async function renderGoogleButton(
-  el: HTMLElement,
-  { theme, onCredential }: RenderGoogleButtonOptions,
+// Inicializa GIS con nuestro callback (recibe el ID token) y dispara One Tap. Mismo flujo de
+// siempre: el ID token va a POST /auth/google. `onUnavailable` se llama SOLO si la card no se
+// pudo mostrar (bloqueada/cooldown/sin sesión), no cuando el usuario la cierra (acción normal).
+// Re-inicializar en cada click es idempotente (sólo actualiza la config) y evita ordenar
+// mount-init vs click.
+export async function signInWithGoogle(
+  onCredential: (idToken: string) => void,
+  onUnavailable?: () => void,
 ): Promise<void> {
   const id = await loadGoogleIdentity();
   id.initialize({
     client_id: GOOGLE_CLIENT_ID,
     callback: (response) => onCredential(response.credential),
   });
-  id.renderButton(el, {
-    theme: theme === 'dark' ? 'filled_black' : 'outline',
-    size: 'large',
-    text: 'continue_with',
-    locale: 'es',
+  id.prompt((notification) => {
+    if (notification.isNotDisplayed?.()) onUnavailable?.();
   });
 }
