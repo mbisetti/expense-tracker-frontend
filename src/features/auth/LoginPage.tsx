@@ -4,6 +4,7 @@ import { useLogin } from './useLogin';
 import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { GoogleButton } from './GoogleButton';
 import { useToast } from '../../components/ui/toastContext';
 import type { ApiError } from '../../lib/http';
 
@@ -65,6 +66,14 @@ export function LoginPage() {
           <Button type="submit" loading={isPending} className="mt-2">
             {isPending ? 'Ingresando...' : 'Ingresar'}
           </Button>
+
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <span className="h-px flex-1 bg-line" />
+            <span className="text-xs text-muted">o</span>
+            <span className="h-px flex-1 bg-line" />
+          </div>
+
+          <GoogleButton />
 
           <p className="text-center text-sm text-body">
             ¿No tenés cuenta?{' '}
