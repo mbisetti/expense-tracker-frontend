@@ -16,9 +16,7 @@ describe('LandingPage', () => {
     renderLanding();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Manguitos' })).toBeInTheDocument();
-    expect(
-      screen.getByText('Tus finanzas personales, en serio pero humano.'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Cuidá tus manguitos.')).toBeInTheDocument();
 
     const registerLinks = screen.getAllByRole('link', { name: 'Crear cuenta' });
     expect(registerLinks.length).toBeGreaterThan(0);
@@ -29,12 +27,15 @@ describe('LandingPage', () => {
     loginLinks.forEach((link) => expect(link).toHaveAttribute('href', '/login'));
   });
 
-  it('renderiza las 4 secciones de features y la sección de confianza', () => {
+  it('renderiza las 5 secciones de features y la sección de confianza', () => {
     renderLanding();
 
     expect(screen.getByRole('heading', { name: 'Lo que ya podés hacer' })).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'Controlá cada gasto, sin planillas' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Dónde recortar, sin adivinar' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'Presupuestos con proyección a fin de mes' }),

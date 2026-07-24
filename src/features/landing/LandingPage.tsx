@@ -107,7 +107,7 @@ function ExpensesPreview() {
     <Card className="text-left">
       <ul className="flex flex-col gap-3">
         <li className="flex items-center justify-between gap-3">
-          <span className="text-sm text-body">Supermercado — Coto</span>
+          <span className="text-sm text-body">Supermercado · Coto</span>
           <Amount amount={-18500} currency="ARS" tone="expense" size="sm" />
         </li>
         <li className="flex items-center justify-between gap-3">
@@ -115,10 +115,40 @@ function ExpensesPreview() {
           <Amount amount={450000} currency="ARS" tone="income" size="sm" />
         </li>
         <li className="flex items-center justify-between gap-3">
-          <span className="text-sm text-body">Nafta — YPF</span>
+          <span className="text-sm text-body">Nafta · YPF</span>
           <Amount amount={-9200} currency="ARS" tone="expense" size="sm" />
         </li>
       </ul>
+    </Card>
+  );
+}
+
+function CutInsightsPreview() {
+  return (
+    <Card className="text-left">
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <span className="font-medium text-ink">Dónde recortar</span>
+        <Badge status="warning" label="No esencial" />
+      </div>
+      <div className="mt-3 flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-body">Delivery</span>
+          <Amount amount={-38500} currency="ARS" tone="expense" size="sm" />
+        </div>
+        <p className="text-xs text-muted">4 pedidos más que tu promedio de los últimos meses.</p>
+      </div>
+      <div className="mt-2 flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-3 text-sm">
+          <span className="text-body">Suscripciones</span>
+          <Amount amount={-21900} currency="ARS" tone="expense" size="sm" />
+        </div>
+        <p className="text-xs text-muted">Subió 35% contra tu promedio de 3 meses.</p>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-2 text-sm">
+        <span className="text-body">Recortando un 20%</span>
+        <Amount amount={12080} currency="ARS" tone="income" size="sm" />
+      </div>
+      <p className="mt-1 text-xs text-muted">quedan en tu bolsillo a fin de mes.</p>
     </Card>
   );
 }
@@ -188,10 +218,16 @@ type Feature = {
 
 const FEATURES: Feature[] = [
   {
-    eyebrow: 'Gastos',
+    eyebrow: 'Transacciones',
     title: 'Controlá cada gasto, sin planillas',
     blurb: 'Registrá transacciones y organizalas por categoría. Vas a saber en qué se te va la plata, en serio.',
     preview: <ExpensesPreview />,
+  },
+  {
+    eyebrow: 'Gastos',
+    title: 'Dónde recortar, sin adivinar',
+    blurb: 'Separá lo esencial de lo que no, y la app te marca qué categorías se te fueron de las manos y cuánto te queda si recortás un 10, un 20 o un 30%.',
+    preview: <CutInsightsPreview />,
   },
   {
     eyebrow: 'Presupuestos',
@@ -208,7 +244,7 @@ const FEATURES: Feature[] = [
   {
     eyebrow: 'Ingresos',
     title: 'De bruto a neto, con las deducciones claras',
-    blurb: 'Cargá tu ingreso bruto y las deducciones — vemos juntos cuánto te queda en mano.',
+    blurb: 'Cargá tu ingreso bruto y las deducciones: vemos juntos cuánto te queda en mano.',
     preview: <IncomePreview />,
   },
 ];
@@ -257,10 +293,10 @@ export function LandingPage() {
                 Manguitos
               </h1>
               <p className="mt-3 text-xl font-semibold leading-[1.2] text-ink sm:text-2xl">
-                Tus finanzas personales, en serio pero humano.
+                Cuidá tus manguitos.
               </p>
               <p className="mt-4 text-base leading-relaxed text-body">
-                Gastos, presupuestos, ingresos y transferencias en un solo lugar — sin planillas,
+                Gastos, presupuestos, ingresos y transferencias en un solo lugar. Sin planillas,
                 sin vueltas, sin venderte nada más que orden.
               </p>
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center lg:justify-start">
