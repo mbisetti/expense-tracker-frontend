@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { ChevronDownIcon } from '../../components/ui/icons';
+import { ExportSection } from '../export/ExportSection';
 
 const ROW_CLASS =
   'flex min-h-11 items-center justify-between gap-3 rounded-sm px-3 text-ink transition-colors duration-200 ease-out hover:bg-brand-bg';
@@ -30,6 +31,9 @@ export function DataPage() {
           </nav>
         </div>
       </Card>
+
+      {/* Sprint 26: exportación de reportes .xlsx (dump por dataset). */}
+      <ExportSection />
     </section>
   );
 }

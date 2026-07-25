@@ -10,6 +10,7 @@ import { useTransfers } from '../transfers/useTransfers';
 import { useDeleteTransfer } from '../transfers/useTransferMutations';
 import { transferErrorMessage } from '../transfers/errorMessages';
 import { TransferForm } from '../transfers/TransferForm';
+import { ExportTransactionsButton } from '../export/ExportTransactionsButton';
 import { Select } from '../../components/ui/Select';
 import { DateField } from '../../components/ui/DateField';
 import { Input } from '../../components/ui/Input';
@@ -132,6 +133,24 @@ export function TransactionsPage() {
     }),
     [accountId, type, categoryId, dateFrom, dateTo, search],
   );
+
+  // Sprint 26: los mismos filtros, mapeados al contrato de /export/transactions. El tipo
+  // "Entre cuentas" del feed no existe como TransactionType → viaja como onlyTransferLegs.
+  const exportFilters = useMemo(
+    () => ({
+      accountId: accountId || undefined,
+      type: type === 'INCOME' || type === 'EXPENSE' ? type : undefined,
+      onlyTransferLegs: type === 'TRANSFER' ? true : undefined,
+      categoryId:
+        type !== 'TRANSFER' && categoryId && categoryId !== CATEGORY_NONE ? categoryId : undefined,
+      uncategorized: type !== 'TRANSFER' && categoryId === CATEGORY_NONE ? true : undefined,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      search: search || undefined,
+    }),
+    [accountId, type, categoryId, dateFrom, dateTo, search],
+  );
+  const hasFilters = Boolean(accountId || type || categoryId || dateFrom || dateTo || search);
 
   const { data: txData, isPending: txPending, isError: txError, isPlaceholderData } =
     useTransactions(filters);
@@ -318,6 +337,11 @@ export function TransactionsPage() {
           )}
         </div>
       )}
+
+      {/* Sprint 26: exportar lo que estás viendo (o todo) a .xlsx. */}
+      <div className="flex justify-end">
+        <ExportTransactionsButton filters={exportFilters} hasFilters={hasFilters} />
+      </div>
 
       <form
         aria-label="Filtros"
