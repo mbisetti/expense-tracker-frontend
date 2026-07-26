@@ -1,6 +1,6 @@
-# Design Principles — Finanzas personales (nombre TBD)
+# Design Principles — "Manguitos" (nombre provisional)
 
-**Sprint 18 · Bloque 1 · Opus 4.8 · Julio 2026 · Estado: PENDIENTE DE APROBACIÓN de Marko**
+**Sprint 18 · Bloque 1 · Opus 4.8 · Julio 2026 · Estado: APROBADO y en producción desde S18-S19** *(paleta índigo provisional hasta el informe de diseño pendiente)*
 
 > **La constitución de diseño del proyecto.** Todo componente y pantalla se genera contra este doc.
 > **Regla anti-frankenstein (S18+):** ningún componente nuevo se crea sin usar los tokens y los componentes base de acá. Vale para el revamp y para toda la Fase 4.
