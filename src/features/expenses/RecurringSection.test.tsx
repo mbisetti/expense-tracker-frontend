@@ -67,8 +67,8 @@ function renderSection(data: CurrencyExpenses) {
 describe('RecurringSection', () => {
   it('muestra totales, % recurrente y el leak no esencial', async () => {
     renderSection(makeData([item1, item2]));
-    expect(await screen.findByRole('heading', { name: 'Gastos recurrentes' })).toBeInTheDocument();
-    expect(screen.getByText('Comprometido')).toBeInTheDocument();
+    // S29.1: el h2 "Gastos recurrentes" vive en el <Section> colapsable de la página, no acá.
+    expect(await screen.findByText('Comprometido')).toBeInTheDocument();
     expect(screen.getByText('Pagado')).toBeInTheDocument();
     // committed = 50000 + 6000*2 = 62000 sobre total 100000 → 62%
     expect(screen.getByText(/62% de tu gasto del mes es recurrente/)).toBeInTheDocument();

@@ -138,19 +138,14 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
     );
   };
 
+  // S29.1: solo el body — la card y el h2 ("Por categoría") los pone el <Section> de la página.
   if (data.byCategory.length === 0) {
-    return (
-      <section className="rounded-xl border border-line bg-surface p-4">
-        <h2>Por categoría</h2>
-        <p className="text-body">No hay gastos con categoría este mes.</p>
-      </section>
-    );
+    return <p className="text-body">No hay gastos con categoría este mes.</p>;
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-4">
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2>Por categoría</h2>
         {/* Triple toggle (B.1): filtra donut + lista; los % se recalculan sobre el subset. */}
         <div role="group" aria-label="Filtrar categorías" className="flex gap-2">
           {FILTERS.map((f) => (
@@ -250,6 +245,6 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
           )}
         </>
       )}
-    </section>
+    </div>
   );
 }

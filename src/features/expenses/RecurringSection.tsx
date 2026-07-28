@@ -89,19 +89,17 @@ export function RecurringSection({ data }: { data: CurrencyExpenses }) {
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-line bg-surface p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h2>Gastos recurrentes</h2>
-        <Button type="button" variant="secondary" onClick={() => setForm({})}>
-          Nuevo
-        </Button>
-      </div>
-
+    // S29.1: solo el body — la card y el h2 los pone el <Section> colapsable de la página.
+    // El botón "Nuevo" bajó del header (que ahora es el toggle) al cuerpo.
+    <div className="flex flex-col gap-3">
       {summary.items.length === 0 ? (
         <div className="flex flex-col items-start gap-2 py-2">
           <p className="text-sm text-body">
             Declará tus suscripciones, alquiler, servicios y cuotas para ver cuánto tenés comprometido cada mes.
           </p>
+          <Button type="button" variant="secondary" onClick={() => setForm({})}>
+            Nuevo
+          </Button>
         </div>
       ) : (
         <>
@@ -127,6 +125,12 @@ export function RecurringSection({ data }: { data: CurrencyExpenses }) {
               <ItemRow key={item.id} item={item} currency={currency} onClick={() => openItem(item)} />
             ))}
           </ul>
+
+          <div>
+            <Button type="button" variant="secondary" onClick={() => setForm({})}>
+              Nuevo
+            </Button>
+          </div>
         </>
       )}
 
@@ -176,6 +180,6 @@ export function RecurringSection({ data }: { data: CurrencyExpenses }) {
           onEdit={startEdit}
         />
       )}
-    </section>
+    </div>
   );
 }

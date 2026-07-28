@@ -40,9 +40,8 @@ export function InsightsSection({ data, months, selectedMonth }: InsightsSection
   const sim = simulateSavings(data.nonEssentialTotal, pct);
 
   return (
-    <section className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-4">
-      <h2>Dónde recortar</h2>
-
+    // S29.1: solo el body — la card y el h2 los pone el <Section> colapsable de la página.
+    <div className="flex flex-col gap-4">
       {peak && (
         <p className="text-sm text-body">
           Tu mes más alto de la ventana, empujado por{' '}
@@ -113,6 +112,6 @@ export function InsightsSection({ data, months, selectedMonth }: InsightsSection
           por mes (≈ {formatMoney(sim.yearly, data.currency)} al año).
         </p>
       </div>
-    </section>
+    </div>
   );
 }

@@ -33,22 +33,19 @@ export function SharedSection() {
 
   return (
     <>
-      <section className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-4">
-        <h2>Hoy por vos, mañana por mí</h2>
-
-        <ul className="flex flex-col divide-y divide-line">
-          {data.people.map((person) => (
-            <PersonRow
-              key={person.personId}
-              person={person}
-              expanded={expanded === person.personId}
-              onToggle={() => toggle(person.personId)}
-              onSettle={(share) => setSettling({ share, person: person.name })}
-              dateFmt={dateFmt}
-            />
-          ))}
-        </ul>
-      </section>
+      {/* S29.1: solo el body — la card y el h2 los pone el <Section> colapsable de la página. */}
+      <ul className="flex flex-col divide-y divide-line">
+        {data.people.map((person) => (
+          <PersonRow
+            key={person.personId}
+            person={person}
+            expanded={expanded === person.personId}
+            onToggle={() => toggle(person.personId)}
+            onSettle={(share) => setSettling({ share, person: person.name })}
+            dateFmt={dateFmt}
+          />
+        ))}
+      </ul>
 
       {settling && (
         <SettleDialog

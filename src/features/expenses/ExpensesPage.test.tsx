@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { ExpensesPage } from './ExpensesPage';
@@ -66,7 +66,13 @@ beforeEach(() => {
   );
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  // S29.1: el abierto/colapsado persiste en localStorage y el hash abre secciones — sin esto
+  // un test contamina al siguiente.
+  localStorage.clear();
+  window.location.hash = '';
+});
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -91,9 +97,37 @@ describe('ExpensesPage', () => {
     expect((await screen.findAllByText('Ocio')).length).toBeGreaterThan(0);
     expect(screen.getByText('Vivienda')).toBeInTheDocument(); // esencial → solo en el desglose
     expect(screen.getAllByText('Sin categoría').length).toBeGreaterThan(0);
-    // insights
+    // insights: colapsada por default (S29.1) — el heading está, el body recién al abrir
     expect(screen.getByRole('heading', { name: 'Dónde recortar' })).toBeInTheDocument();
-    expect(screen.getByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
+    expect(screen.queryByText(/Recortando 20% de lo no esencial/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Dónde recortar' }));
+    expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
+  });
+
+  it('S29.1: los chips saltan a la sección y la abren; sin deudas no hay chip Compartidos', async () => {
+    renderPage();
+
+    const nav = await screen.findByRole('navigation', { name: 'Ir a sección' });
+    expect(within(nav).queryByText('Compartidos')).not.toBeInTheDocument();
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'Recortar' }));
+    expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
+  });
+
+  it('S29.1: el abierto/colapsado persiste entre visitas (localStorage)', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Dónde recortar' }));
+    await screen.findByText(/Recortando 20% de lo no esencial/);
+
+    cleanup();
+    renderPage();
+    expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
+  });
+
+  it('S29.1: el hash de la URL abre la sección al cargar', async () => {
+    window.location.hash = '#recortar';
+    renderPage();
+    expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
   });
 
   it('muestra la card de Gastos recurrentes', async () => {
