@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth } from '../features/auth/useAuth';
 import { refreshAccessToken } from '../features/auth/refreshManager';
-import { ApiError, http, httpBlob, type BlobDownload } from './http';
+import { ApiError, http, httpBlob, httpUpload, type BlobDownload } from './http';
 
 function withAuth(options: RequestInit | undefined, token: string | null): RequestInit {
   const authHeader: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
@@ -60,6 +60,17 @@ export function useHttpBlob() {
   return useCallback(
     (path: string, options?: RequestInit): Promise<BlobDownload> =>
       request(path, (token) => httpBlob(path, withAuth(options, token))),
+    [request],
+  );
+}
+
+// Import batch: subida multipart autenticada. Mismo silent refresh que useHttp/useHttpBlob.
+export function useHttpUpload() {
+  const request = useAuthorizedRequest();
+
+  return useCallback(
+    <T>(path: string, body: FormData, options?: RequestInit): Promise<T> =>
+      request(path, (token) => httpUpload<T>(path, body, withAuth(options, token))),
     [request],
   );
 }

@@ -38,6 +38,30 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+// Subida multipart (import batch): FormData SIN Content-Type manual — el browser arma el
+// boundary solo. Función aparte de http(), que hardcodea JSON: tocarlo arriesga a todos sus
+// llamadores para ahorrar 10 líneas.
+export async function httpUpload<T>(path: string, body: FormData, options?: RequestInit): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    ...options,
+    body,
+    credentials: 'include',
+    headers: { ...options?.headers },
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new ApiError(
+      response.status,
+      errorBody.error ?? 'UNKNOWN_ERROR',
+      errorBody.message ?? response.statusText
+    );
+  }
+
+  return response.json() as Promise<T>;
+}
+
 /** Descarga binaria (Sprint 26): el archivo llega como Blob y el nombre viaja en el header. */
 export type BlobDownload = {
   blob: Blob;

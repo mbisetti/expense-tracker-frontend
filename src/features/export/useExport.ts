@@ -6,7 +6,8 @@ import { exportErrorMessage } from './errorMessages';
 
 // Dispara la descarga real: el Blob se vuelve una URL efímera, un <a download> invisible la
 // clickea y la URL se revoca enseguida (si no, el Blob queda vivo hasta recargar la página).
-function triggerDownload(blob: Blob, filename: string) {
+// Exportada: la plantilla del import (features/import) baja archivos por el mismo camino.
+export function triggerDownload(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
