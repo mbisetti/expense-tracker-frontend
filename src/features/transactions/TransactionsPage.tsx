@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
@@ -20,8 +20,12 @@ import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { EditButton } from '../../components/ui/ActionsMenu';
+import { SharedInfoButton } from '../shared/SharedInfoButton';
 import { useToast } from '../../components/ui/toastContext';
 import { formatDate, useDateFormat } from '../../lib/dateFormat';
+import { formatMoney } from '../../lib/money';
+import { SharedExpenseModal } from '../shared/SharedExpenseModal';
 import type { TransactionFilters, TransactionListItem, TransactionType } from './api';
 import type { TransferListItem } from '../transfers/api';
 
@@ -70,14 +74,29 @@ export function TransactionsPage() {
   const [newKind, setNewKind] = useState<NewMovementKind>('EXPENSE');
   const [editing, setEditing] = useState<TransactionListItem | null>(null);
   const [editingTransfer, setEditingTransfer] = useState<TransferListItem | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{ kind: 'tx' | 'transfer'; id: string } | null>(
-    null,
-  );
+  // V36: settledCount viaja en el confirm para poder avisar cuántos cobros se van a arrastrar
+  // (D9) sin abrir el detalle.
+  const [confirmDelete, setConfirmDelete] = useState<{
+    kind: 'tx' | 'transfer';
+    id: string;
+    settledCount?: number;
+  } | null>(null);
+  const [sharedDetail, setSharedDetail] = useState<string | null>(null);
 
   const toast = useToast();
   const { pref: dateFmt } = useDateFormat();
   const deleteTx = useDeleteTransaction();
   const deleteTransfer = useDeleteTransfer();
+
+  // Llevar la vista al form cuando se abre (o cuando se pasa a editar otra fila). Efecto
+  // legítimo: sincroniza el DOM con el estado, no setea estado. `?.()` porque jsdom no
+  // implementa scrollIntoView y los tests lo llamarían igual.
+  const formRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!formOpen) return;
+    formRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+    formRef.current?.focus?.({ preventScroll: true });
+  }, [formOpen, editing?.id, editingTransfer?.id]);
 
   useEffect(() => {
     const handle = setTimeout(() => {
@@ -240,13 +259,21 @@ export function TransactionsPage() {
     const done = () => setConfirmDelete(null);
     if (confirmDelete.kind === 'tx') {
       deleteTx.mutate(confirmDelete.id, {
-        onSuccess: () => toast.success('Transacción borrada.'),
+        // El borrado ahora se dispara desde DENTRO del form de edición → al confirmar hay que
+        // cerrarlo, o queda editando algo que ya no existe.
+        onSuccess: () => {
+          toast.success('Transacción borrada.');
+          closeForm();
+        },
         onError: (error) => toast.error(transactionErrorMessage(error)),
         onSettled: done,
       });
     } else {
       deleteTransfer.mutate(confirmDelete.id, {
-        onSuccess: () => toast.success('Transferencia borrada.'),
+        onSuccess: () => {
+          toast.success('Transferencia borrada.');
+          closeForm();
+        },
         onError: (error) => toast.error(transferErrorMessage(error)),
         onSettled: done,
       });
@@ -297,7 +324,11 @@ export function TransactionsPage() {
       )}
 
       {formOpen && (
-        <div className="flex flex-col gap-3">
+        // tabIndex={-1} para poder enfocarlo: el form vive arriba de todo y el lápiz puede
+        // haberse clickeado en la última fila de la página. Sin esto el usuario queda abajo
+        // editando algo que no ve. Enfocar además de scrollear hace que el próximo Tab entre al
+        // form y que un lector de pantalla anuncie el cambio de contexto.
+        <div ref={formRef} tabIndex={-1} className="flex flex-col gap-3 outline-none">
           <div className="flex flex-wrap items-center justify-between gap-2">
             {editing ? (
               <span className="text-sm font-medium text-ink">Editar transacción</span>
@@ -324,13 +355,30 @@ export function TransactionsPage() {
           </div>
 
           {editingTransfer ? (
-            <TransferForm key={editingTransfer.id} transfer={editingTransfer} onDone={closeForm} />
+            <TransferForm
+              key={editingTransfer.id}
+              transfer={editingTransfer}
+              onDone={closeForm}
+              onDelete={() => setConfirmDelete({ kind: 'transfer', id: editingTransfer.id })}
+            />
           ) : editing || newKind !== 'TRANSFER' ? (
             <TransactionForm
               key={editing?.id ?? `new-${newKind}`}
               transaction={editing ?? undefined}
               lockedType={editing ? undefined : (newKind as TransactionType)}
               onClose={closeForm}
+              // El aviso de la cascada necesita cuántos cobros hay: se calcula acá, donde está
+              // la fila con los conteos, y no dentro del form.
+              onDelete={
+                editing
+                  ? () =>
+                      setConfirmDelete({
+                        kind: 'tx',
+                        id: editing.id,
+                        settledCount: editing.shareCount - editing.pendingCount,
+                      })
+                  : undefined
+              }
             />
           ) : (
             <TransferForm />
@@ -435,11 +483,32 @@ export function TransactionsPage() {
 
       {movements.length > 0 && (
         <>
-          <div className={`overflow-x-auto ${isPlaceholderData ? 'opacity-60' : ''}`}>
-            <table className="w-full border-collapse text-sm">
+          {/* El scroll horizontal sólo hace falta por debajo del min-w de la tabla (mobile). En
+              desktop se apaga: `overflow-x-auto` crea un contexto de recorte que le cortaría el
+              globito del tooltip a las últimas filas. En mobile no hay hover, así que no se pierde
+              nada. */}
+          <div className={`overflow-x-auto lg:overflow-visible ${isPlaceholderData ? 'opacity-60' : ''}`}>
+            <table className="w-full min-w-[48rem] table-fixed border-collapse text-sm">
               {/* Sprint 23 (D3): una línea por celda — todo `whitespace-nowrap` salvo la
                   descripción, que trunca con tooltip (title). +8px de aire (pr-4). El wrapper
                   scrollea en horizontal. D10: la columna Fecha con la voz de los montos. */}
+              {/* Anchos fijos por columna (table-fixed): con layout automático la Descripción y
+                  la Cuenta estiraban la tabla más allá del contenedor y la columna de acciones
+                  quedaba fuera del área visible. Ahora Descripción se queda con el sobrante y
+                  trunca; el resto tiene ancho declarado. `min-w` mantiene el scroll horizontal
+                  del wrapper SÓLO en pantallas angostas (mobile), como antes. */}
+              <colgroup>
+                <col className="w-[6.5rem]" />
+                {/* Tipo: 7rem y no 5.5 — tiene que entrar "Ingreso" + la ⓘ del gasto compartido
+                    sin desbordar. El espacio sale de Descripción, que es la que tiene holgura. */}
+                <col className="w-[7rem]" />
+                <col />
+                <col className="w-[8rem]" />
+                <col className="w-[10rem]" />
+                <col className="w-[8.5rem]" />
+                {/* Acciones: un solo lápiz de 44px (target táctil) + aire. */}
+                <col className="w-14" />
+              </colgroup>
               <thead>
                 <tr className="border-b border-line text-left text-muted">
                   <th className="whitespace-nowrap py-2 pr-4 font-medium">Fecha</th>
@@ -448,7 +517,7 @@ export function TransactionsPage() {
                   <th className="whitespace-nowrap py-2 pr-4 font-medium">Categoría</th>
                   <th className="whitespace-nowrap py-2 pr-4 font-medium">Cuenta</th>
                   <th className="whitespace-nowrap py-2 pr-4 font-medium">Monto</th>
-                  <th className="py-2 pr-4 font-medium"></th>
+                  <th className="py-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -458,22 +527,73 @@ export function TransactionsPage() {
                       <td className="whitespace-nowrap py-2 pr-4 font-semibold tabular-nums text-ink">
                         {formatDate(row.item.date, dateFmt)}
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-4 text-body">
-                        {row.item.type === 'INCOME' ? 'Ingreso' : 'Gasto'}
+                      <td className="py-2 pr-4 text-body">
+                        <div className="flex items-center gap-1.5">
+                          <span className="whitespace-nowrap">
+                            {row.item.type === 'INCOME' ? 'Ingreso' : 'Gasto'}
+                          </span>
+                          {/* V36: el detalle del reparto, a la derecha del tipo — un gasto
+                              compartido es una variante de "Gasto", y acá el ícono queda fuera
+                              del texto libre de la descripción (que trunca y movía su posición). */}
+                          {row.item.sharedAmount > 0 && (
+                            <SharedInfoButton
+                              label="Ver detalle del gasto compartido"
+                              text={`Gasto compartido: pagaste el total y te deben una parte. Tocá para ver el reparto de ${row.item.description ? `«${row.item.description}»` : 'este gasto'}.`}
+                              onClick={() => setSharedDetail(row.item.id)}
+                            />
+                          )}
+                          {/* La contracara: este ingreso es la devolución de un gasto compartido.
+                              El tooltip nombra el gasto y el click lleva a su reparto — desde el
+                              feed, "Cobro" solo no dice de qué. */}
+                          {row.item.settledExpenseId && (
+                            <SharedInfoButton
+                              label="Ver el gasto compartido que originó este cobro"
+                              text={`Te devolvieron tu parte de ${
+                                row.item.settledExpenseDescription
+                                  ? `«${row.item.settledExpenseDescription}»`
+                                  : 'un gasto compartido'
+                              }. Suma al saldo pero no cuenta como ingreso del mes. Tocá para ver el reparto.`}
+                              onClick={() => setSharedDetail(row.item.settledExpenseId!)}
+                            />
+                          )}
+                        </div>
                       </td>
                       <td className="py-2 pr-4 text-ink">
                         <div className="flex items-center gap-1.5">
-                          <div className="max-w-[28ch] truncate" title={row.item.description ?? ''}>
+                          <div className="truncate" title={row.item.description ?? ''}>
                             {row.item.description ?? '—'}
+                            {/* V36: cuánta gente todavía no te pagó. Desaparece cuando no queda
+                                nadie — no se muestra un "(0 restantes)" colgado. */}
+                            {row.item.pendingCount > 0 && (
+                              <span className="text-muted">
+                                {' '}
+                                ({row.item.pendingCount}{' '}
+                                {row.item.pendingCount === 1 ? 'restante' : 'restantes'})
+                              </span>
+                            )}
                           </div>
                           {/* Sprint 24.4: generada por el débito automático. */}
                           {row.item.autoGenerated && <Badge status="info" label="Auto" />}
+                          {/* El chip "Cobro" vivía acá: su ícono era otra ⓘ, pero muda — no
+                              explicaba ni llevaba a ningún lado. Lo reemplaza la ⓘ de la columna
+                              Tipo, que sí hace las dos cosas; la descripción del cobro ya dice
+                              "Cobro de {persona} — {gasto}". */}
                         </div>
+                        {/* V36: lo que realmente gastaste vos — es este número el que va a
+                            categorías y presupuestos, no el total de la derecha. */}
+                        {row.item.sharedAmount > 0 && (
+                          <div className="truncate text-xs text-muted">
+                            Te corresponde{' '}
+                            <span className="tabular-nums">
+                              {formatMoney(row.item.amount - row.item.sharedAmount, row.item.currency)}
+                            </span>
+                          </div>
+                        )}
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-4 text-body">
+                      <td className="truncate py-2 pr-4 text-body">
                         {categoryName(row.item.categoryId)}
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-4 text-body">
+                      <td className="truncate py-2 pr-4 text-body">
                         {accountName(row.item.accountId)}
                       </td>
                       <td className="whitespace-nowrap py-2 pr-4">
@@ -484,55 +604,59 @@ export function TransactionsPage() {
                           size="sm"
                         />
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-4">
-                        <div className="flex gap-2">
-                          <Button type="button" variant="ghost" size="sm" onClick={() => startEdit(row.item)}>
-                            Editar
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setConfirmDelete({ kind: 'tx', id: row.item.id })}
-                          >
-                            Borrar
-                          </Button>
-                        </div>
+                      {/* Sólo el lápiz: "Borrar" se mudó DENTRO del form de edición (patrón de
+                          Cuentas/Categorías/Métodos, S21 t4) y la ⓘ, al lado de la descripción. */}
+                      <td className="py-2">
+                        <EditButton label="movimiento" onClick={() => startEdit(row.item)} />
                       </td>
                     </tr>
                   ) : (
+                    // Las filas de transferencia SIEMPRE ocupan dos renglones (cuenta + monedas),
+                    // así que llevan py-4 en vez de py-2: +16px de alto, dentro del tope de 32px.
                     <tr key={`tr-${row.item.id}`} className="border-b border-line">
-                      <td className="whitespace-nowrap py-2 pr-4 font-semibold tabular-nums text-ink">
+                      <td className="whitespace-nowrap py-4 pr-4 font-semibold tabular-nums text-ink">
                         {formatDate(row.item.date, dateFmt)}
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-4 text-body">Entre cuentas</td>
-                      <td className="py-2 pr-4 text-ink">
-                        <div className="max-w-[28ch] truncate" title={row.item.description ?? ''}>
+                      {/* "Entre / cuentas" en dos renglones: en una sola línea forzaba el ancho de
+                          la columna. Minúscula en "cuentas" para no divergir del filtro de Tipo. */}
+                      <td className="py-4 pr-4 leading-tight text-body">
+                        Entre
+                        <br />
+                        cuentas
+                      </td>
+                      <td className="py-4 pr-4 text-ink">
+                        <div className="truncate" title={row.item.description ?? ''}>
                           {row.item.description ?? '—'}
                         </div>
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-4 text-body">—</td>
+                      <td className="py-4 pr-4 text-body">—</td>
                       {/* Sprint 23 (D5): dos líneas — origen · moneda / destino · moneda.
-                          Intra-cuenta → una línea `Cuenta · ARS → USD` (Sprint 22). */}
-                      <td className="py-2 pr-4 text-body">
+                          Intra-cuenta (misma cuenta, cambio de moneda): también dos renglones,
+                          nombre arriba y el par de monedas abajo apagado — antes era una sola
+                          línea `Cuenta · ARS → USD` que estiraba la columna. */}
+                      <td className="py-4 pr-4 text-body">
                         {row.item.fromAccountId === row.item.toAccountId ? (
-                          <span className="whitespace-nowrap">
-                            {accountName(row.item.fromAccountId)} · {row.item.fromCurrency} →{' '}
-                            {row.item.toCurrency}
-                          </span>
+                          <div className="flex flex-col leading-tight">
+                            <span className="truncate">{accountName(row.item.fromAccountId)}</span>
+                            <span className="truncate text-muted">
+                              {row.item.fromCurrency} → {row.item.toCurrency}
+                            </span>
+                          </div>
                         ) : (
                           <div className="flex flex-col leading-tight">
-                            <span className="whitespace-nowrap">
+                            <span className="truncate">
                               {accountName(row.item.fromAccountId)} · {row.item.fromCurrency}
                             </span>
-                            <span className="whitespace-nowrap text-muted">
+                            <span className="truncate text-muted">
                               {accountName(row.item.toAccountId)} · {row.item.toCurrency}
                             </span>
                           </div>
                         )}
                       </td>
-                      <td className="whitespace-nowrap py-2 pr-4">
-                        <span className="tabular-nums">
+                      {/* Cross-currency apila los dos montos: en una línea no entra en la columna
+                          de ancho fijo y se derramaba sobre la de acciones. */}
+                      <td className="py-4 pr-4">
+                        <div className="flex flex-col leading-tight tabular-nums">
                           <Amount
                             amount={row.item.fromAmount}
                             currency={row.item.fromCurrency}
@@ -540,37 +664,23 @@ export function TransactionsPage() {
                             size="sm"
                           />
                           {row.item.fromCurrency !== row.item.toCurrency && (
-                            <>
-                              {' → '}
+                            <span className="text-muted">
+                              →{' '}
                               <Amount
                                 amount={row.item.toAmount}
                                 currency={row.item.toCurrency}
                                 tone="neutral"
                                 size="sm"
                               />
-                            </>
+                            </span>
                           )}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap py-2 pr-4">
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => startEditTransfer(row.item)}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setConfirmDelete({ kind: 'transfer', id: row.item.id })}
-                          >
-                            Borrar
-                          </Button>
                         </div>
+                      </td>
+                      <td className="py-4">
+                        <EditButton
+                          label="transferencia"
+                          onClick={() => startEditTransfer(row.item)}
+                        />
                       </td>
                     </tr>
                   ),
@@ -609,12 +719,28 @@ export function TransactionsPage() {
         open={confirmDelete !== null}
         danger
         title={confirmDelete?.kind === 'transfer' ? 'Borrar transferencia' : 'Borrar transacción'}
-        message="Esta acción no se puede deshacer."
+        // V36 (D9): borrar un gasto compartido arrastra los cobros ya registrados y devuelve el
+        // saldo de las cuentas. Se avisa ANTES, con el número puesto.
+        message={
+          confirmDelete?.settledCount
+            ? `Este gasto tiene ${confirmDelete.settledCount} ${
+                confirmDelete.settledCount === 1 ? 'cobro registrado' : 'cobros registrados'
+              }. También se ${confirmDelete.settledCount === 1 ? 'borra' : 'borran'} y el saldo de tus cuentas vuelve atrás.`
+            : 'Esta acción no se puede deshacer.'
+        }
         confirmLabel="Borrar"
         loading={deleteTx.isPending || deleteTransfer.isPending}
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmDelete(null)}
       />
+
+      {sharedDetail && (
+        <SharedExpenseModal
+          open
+          transactionId={sharedDetail}
+          onClose={() => setSharedDetail(null)}
+        />
+      )}
     </section>
   );
 }

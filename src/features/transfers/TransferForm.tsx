@@ -29,9 +29,19 @@ type TransferFormProps = {
   transfer?: TransferListItem;
   /** Se llama tras un alta/edición exitosa (la página lo usa para cerrar el form en edición). */
   onDone?: () => void;
+  /**
+   * Borrar la transferencia. Sólo en edición: el botón salió de la fila de la tabla y vive acá
+   * (patrón de Cuentas/Categorías/Métodos, S21 t4). La confirmación la maneja quien lo pasa.
+   */
+  onDelete?: () => void;
 };
 
-export function TransferForm({ initialToAccountId, transfer, onDone }: TransferFormProps = {}) {
+export function TransferForm({
+  initialToAccountId,
+  transfer,
+  onDone,
+  onDelete,
+}: TransferFormProps = {}) {
   const isEdit = transfer !== undefined;
   const toast = useToast();
   const { data: accounts } = useAccounts();
@@ -324,8 +334,25 @@ export function TransferForm({ initialToAccountId, transfer, onDone }: TransferF
                   : 'Transferir'}
             </Button>
             {isEdit && onDone && (
-              <Button type="button" variant="secondary" onClick={onDone} disabled={mutation.isPending}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onDone}
+                disabled={mutation.isPending}
+                className={onDelete ? 'mx-auto' : undefined}
+              >
                 Cancelar
+              </Button>
+            )}
+            {isEdit && onDelete && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onDelete}
+                disabled={mutation.isPending}
+                className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+              >
+                Borrar
               </Button>
             )}
           </div>

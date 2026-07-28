@@ -11,6 +11,7 @@ import { CategoryBreakdown } from './CategoryBreakdown';
 import { RecurringSection } from './RecurringSection';
 import { InsightsSection } from './InsightsSection';
 import { CategoryTransactionsModal } from './CategoryTransactionsModal';
+import { SharedSection } from '../shared/SharedSection';
 import { deltaVsPrev } from './format';
 import { trimLeadingEmpty } from './insights';
 import type { CategoryExpense, CurrencyExpenses } from './api';
@@ -187,6 +188,8 @@ export function ExpensesPage() {
             </Suspense>
           </section>
           <RecurringSection data={current} />
+          {/* V36 (D5): acumulado, indiferente al mes seleccionado — la deuda no es mensual. */}
+          <SharedSection />
           <InsightsSection
             data={current}
             months={trimLeadingEmpty(current.months)}

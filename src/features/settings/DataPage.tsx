@@ -3,6 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { ChevronDownIcon } from '../../components/ui/icons';
 import { ExportSection } from '../export/ExportSection';
 import { ImportSection } from '../import/ImportSection';
+import { PeopleSection } from '../shared/PeopleSection';
 
 const ROW_CLASS =
   'flex min-h-11 items-center justify-between gap-3 rounded-sm px-3 text-ink transition-colors duration-200 ease-out hover:bg-brand-bg';
@@ -32,6 +33,9 @@ export function DataPage() {
           </nav>
         </div>
       </Card>
+
+      {/* V36: las personas de "Hoy por vos, mañana por mí" — mismo estatus que categorías. */}
+      <PeopleSection />
 
       {/* Sprint 26: exportación de reportes .xlsx (dump por dataset). */}
       <ExportSection />

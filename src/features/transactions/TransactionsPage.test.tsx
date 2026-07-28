@@ -100,6 +100,8 @@ describe('TransactionsPage', () => {
     );
 
     renderPage();
+    // El borrado salió de la fila: se llega por el lápiz → form de edición → Borrar.
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar movimiento' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
     const dialog = screen.getByRole('dialog', { name: 'Borrar transacción' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
@@ -139,6 +141,8 @@ describe('TransactionsPage', () => {
     );
 
     renderPage();
+    // El borrado salió de la fila: se llega por el lápiz → form de edición → Borrar.
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar movimiento' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
     const dialog = screen.getByRole('dialog', { name: 'Borrar transacción' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
@@ -175,6 +179,8 @@ describe('TransactionsPage', () => {
     );
 
     renderPage();
+    // El borrado salió de la fila: se llega por el lápiz → form de edición → Borrar.
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar movimiento' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
     const dialog = screen.getByRole('dialog', { name: 'Borrar transacción' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));

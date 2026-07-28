@@ -21,6 +21,10 @@ import { useRecurringExpenses } from '../expenses/useRecurringExpenses';
 import { useCreateRecurringExpense } from '../expenses/useRecurringMutations';
 import { RecurringConfigFields } from '../expenses/RecurringConfigFields';
 import { buildConfigPayload, emptyRecurringConfig, type RecurringConfig } from '../expenses/recurringConfig';
+import { ShareBlock } from '../shared/ShareBlock';
+import { isShareValid, shareAmounts, type ShareMode, type ShareRow } from '../shared/api';
+import { useShares, useReplaceShares } from '../shared/useShared';
+import { sharedErrorMessage } from '../shared/errorMessages';
 import type { TransactionListItem, TransactionType } from './api';
 
 type TransactionFormProps = {
@@ -28,6 +32,12 @@ type TransactionFormProps = {
   onClose: () => void;
   /** Tipo fijado desde afuera (selector de movimiento de la página): oculta el Select de Tipo. */
   lockedType?: TransactionType;
+  /**
+   * Borrar el movimiento. Sólo en edición: el botón salió de la fila de la tabla y vive acá
+   * (patrón de Cuentas/Categorías/Métodos, S21 t4) — fuera de alcance de un click accidental,
+   * pero visible cuando ya abriste a editar. La confirmación la maneja quien lo pasa.
+   */
+  onDelete?: () => void;
 };
 
 // Fecha local, no UTC — toISOString() adelanta un día pasadas las 21:00 en UTC-3
@@ -43,7 +53,12 @@ const OTHER_CCY = '__other__';
 // Sentinela de "+ Nuevo gasto recurrente…" en el selector de recurrente (S24.3).
 const RECURRING_NEW = '__new_recurring__';
 
-export function TransactionForm({ transaction, onClose, lockedType }: TransactionFormProps) {
+export function TransactionForm({
+  transaction,
+  onClose,
+  lockedType,
+  onDelete,
+}: TransactionFormProps) {
   const isEdit = transaction !== undefined;
   const toast = useToast();
 
@@ -68,6 +83,17 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
   const [recName, setRecName] = useState('');
   const [recConfig, setRecConfig] = useState<RecurringConfig>(emptyRecurringConfig);
 
+  // V36 "Hoy por vos, mañana por mí". El monto de la tx sigue siendo el TOTAL; el reparto solo
+  // dice cuánto de ese total no es tuyo.
+  const isShared = isEdit && (transaction?.sharedAmount ?? 0) > 0;
+  const [sharedEnabled, setSharedEnabled] = useState(isShared);
+  // null = "todavía no lo tocó el usuario" → se muestra lo que vino del server. Deriva en vez de
+  // copiar con un efecto: copiar obligaba a un useEffect que pisaba lo tipeado en cada refetch.
+  const [shareRowsEdited, setShareRowsEdited] = useState<ShareRow[] | null>(null);
+  // Un gasto que ya viene repartido arranca en manual: sus montos son los que se guardaron, no
+  // los que saldrían de dividir de nuevo.
+  const [shareMode, setShareMode] = useState<ShareMode>(isShared ? 'manual' : 'even');
+
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
   // Los métodos de pago se filtran por la cuenta elegida (Sprint 20 #6): cada método
@@ -79,6 +105,22 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
   const updateMutation = useUpdateTransaction();
   const createRecurringMutation = useCreateRecurringExpense();
   const mutation = isEdit ? updateMutation : createMutation;
+
+  // V36: el reparto existente sólo se pide en edición de un gasto que YA está compartido.
+  const { data: existingShares } = useShares(isShared ? transaction!.id : undefined);
+  const replaceShares = useReplaceShares();
+
+  const serverRows: ShareRow[] = (existingShares?.shares ?? []).map((share) => ({
+    personId: share.personId,
+    amount: numberToAmountDisplay(share.amount),
+  }));
+  const shareRows = shareRowsEdited ?? serverRows;
+
+  // Personas que ya te pagaron: su parte es inmutable hasta deshacer el cobro (el server
+  // responde 409 SHARE_ALREADY_SETTLED; acá se deshabilitan los controles para no llegar a eso).
+  const settledPersonIds = (existingShares?.shares ?? [])
+    .filter((share) => share.settled)
+    .map((share) => share.personId);
 
   const categoryOptions = categories?.filter(
     (c) => c.type === type || c.type === 'BOTH',
@@ -117,8 +159,37 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
     (a) => a.type === 'CREDIT' && a.linkedAccountId === accountId,
   );
 
+  // V36: el reparto que se va a mandar. Sólo gastos; deshabilitado o vacío = lista vacía, que
+  // en el PUT significa "descompartir".
+  const sharePayload = () => {
+    if (type !== 'EXPENSE' || !sharedEnabled) return [];
+    const amounts = shareAmounts(shareRows, shareMode, parseAmountInput(amount));
+    return shareRows.map((row, i) => ({ personId: row.personId, amount: amounts[i] }));
+  };
+
+  // El PUT es idempotente, pero mandarlo cuando nada cambió invalida media cache al pedo.
+  const shareChanged = () => {
+    const next = sharePayload();
+    const prev = existingShares?.shares ?? [];
+    if (next.length !== prev.length) return true;
+    return next.some((n) => {
+      const match = prev.find((p) => p.personId === n.personId);
+      return !match || match.amount !== n.amount;
+    });
+  };
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (
+      type === 'EXPENSE' &&
+      sharedEnabled &&
+      !isShareValid(shareRows, shareMode, parseAmountInput(amount))
+    ) {
+      toast.error('Revisá el reparto: los montos tienen que ser positivos y no pasarse del total.');
+      return;
+    }
+
     if (isEdit) {
       // Solo campos que cambiaron: evita re-validaciones innecesarias del backend.
       // Vaciar un campo no se puede expresar en el PATCH (ausente = sin cambio).
@@ -141,17 +212,37 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         }
       }
 
-      if (Object.keys(changes).length === 0) {
+      // V36: el reparto es un recurso aparte (PUT /transactions/{id}/shares), así que va después
+      // del PATCH y en su propia llamada. Si el PATCH no tiene nada que mandar igual puede haber
+      // reparto nuevo — por eso el early-return sólo aplica cuando NADA cambió.
+      const applyShares = (onDone: () => void) => {
+        if (!shareChanged()) {
+          onDone();
+          return;
+        }
+        replaceShares.mutate(
+          { transactionId: transaction.id, shares: sharePayload() },
+          { onSuccess: onDone, onError: (error) => toast.error(sharedErrorMessage(error)) },
+        );
+      };
+
+      const finish = () => {
+        toast.success('Transacción actualizada.');
         onClose();
+      };
+
+      if (Object.keys(changes).length === 0) {
+        if (!shareChanged()) {
+          onClose();
+          return;
+        }
+        applyShares(finish);
         return;
       }
       updateMutation.mutate(
         { id: transaction.id, changes },
         {
-          onSuccess: () => {
-            toast.success('Transacción actualizada.');
-            onClose();
-          },
+          onSuccess: () => applyShares(finish),
           onError: (error) => toast.error(transactionErrorMessage(error)),
         },
       );
@@ -174,9 +265,29 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         createMutation.mutate(
           { ...baseInput, recurringExpenseId },
           {
-            onSuccess: () => {
-              toast.success('Transacción guardada.');
-              onClose();
+            onSuccess: (created) => {
+              const shares = sharePayload();
+              if (shares.length === 0) {
+                toast.success('Transacción guardada.');
+                onClose();
+                return;
+              }
+              // El reparto necesita el id de la tx, así que son DOS llamadas (mismo patrón que
+              // el alta inline de recurrente). Si la 2ª falla, el gasto QUEDA guardado sin
+              // repartir y el toast lo dice — no hay transacción cross-endpoint que lo evite.
+              replaceShares.mutate(
+                { transactionId: created.id, shares },
+                {
+                  onSuccess: () => {
+                    toast.success('Transacción guardada.');
+                    onClose();
+                  },
+                  onError: (error) =>
+                    toast.error(
+                      `El gasto se guardó, pero el reparto no: ${sharedErrorMessage(error)}`,
+                    ),
+                },
+              );
             },
             onError: (error) => toast.error(transactionErrorMessage(error)),
           },
@@ -228,7 +339,8 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
     }
   };
 
-  const isPending = mutation.isPending || createRecurringMutation.isPending;
+  const isPending =
+    mutation.isPending || createRecurringMutation.isPending || replaceShares.isPending;
 
   return (
     <form
@@ -474,13 +586,48 @@ export function TransactionForm({ transaction, onClose, lockedType }: Transactio
         </div>
       )}
 
-      <div className="flex gap-3">
+      {/* V36: repartir el gasto con otros. La tx guarda el TOTAL (la cuenta baja todo); lo que
+          cuenta como gasto tuyo en el mes, las categorías y los presupuestos es la resta. */}
+      {type === 'EXPENSE' && (
+        <ShareBlock
+          enabled={sharedEnabled}
+          onEnabledChange={setSharedEnabled}
+          rows={shareRows}
+          onRowsChange={setShareRowsEdited}
+          mode={shareMode}
+          onModeChange={setShareMode}
+          total={parseAmountInput(amount)}
+          currency={effectiveCurrency}
+          disabled={isPending}
+          settledPersonIds={settledPersonIds}
+        />
+      )}
+
+      {/* Guardar (izq) · Cancelar (centro) · Borrar (der), como en Cuentas/Categorías. */}
+      <div className="flex items-center gap-3">
         <Button type="submit" loading={isPending}>
           Guardar
         </Button>
-        <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onClose}
+          disabled={isPending}
+          className={isEdit && onDelete ? 'mx-auto' : undefined}
+        >
           Cancelar
         </Button>
+        {isEdit && onDelete && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onDelete}
+            disabled={isPending}
+            className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+          >
+            Borrar
+          </Button>
+        )}
       </div>
     </form>
   );
