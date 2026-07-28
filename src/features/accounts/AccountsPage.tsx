@@ -219,10 +219,14 @@ export function AccountsPage() {
         />
       </Modal>
 
+      {/* min-h: el diálogo del alta es corto (nombre + tipo + botones) y el dropdown de
+          "Tipo" se salía de su caja, obligando a scrollear apenas se abría. Con altura de
+          sobra el listbox entra dentro del modal. */}
       <Modal
         open={cardFormFor !== null}
         onClose={() => setCardFormFor(null)}
         title="Agregar tarjeta"
+        className="min-h-[26rem]"
       >
         {cardFormFor && <CardForm account={cardFormFor} onClose={() => setCardFormFor(null)} />}
       </Modal>

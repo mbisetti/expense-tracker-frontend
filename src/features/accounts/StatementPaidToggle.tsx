@@ -149,11 +149,16 @@ export function StatementPaidToggle({ card, data, parentAccount }: StatementPaid
           </div>
         }
       >
-        <p>
-          <strong>Pagar desde {parentAccount?.name}</strong> crea una transferencia por{' '}
-          {amountLabel} (lo gastado después del cierre no se incluye).{' '}
-          <strong>Marcar como pagado</strong> solo lo marca, sin mover plata.
-        </p>
+        {/* Un renglón por botón: leídas de corrido, las dos opciones se mezclaban. */}
+        <div className="flex flex-col gap-2">
+          <p>
+            <strong>Pagar desde {parentAccount?.name}</strong> crea una transferencia por{' '}
+            {amountLabel} (lo gastado después del cierre no se incluye).
+          </p>
+          <p>
+            <strong>Marcar como pagado</strong> solo lo marca, sin mover plata.
+          </p>
+        </div>
       </Modal>
 
       <ConfirmDialog

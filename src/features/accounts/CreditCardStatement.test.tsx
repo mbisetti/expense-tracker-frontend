@@ -304,6 +304,22 @@ describe('CreditCardStatement', () => {
     await waitFor(() => expect(putBody).toEqual({ periodEnd: '2026-07-10', pay: true }));
   });
 
+  // Las dos opciones se explican en renglones separados: de corrido se mezclaban.
+  it('widget: el diálogo de pago explica cada botón en su propio párrafo', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => ok(statementFor(0))));
+
+    renderStatement(card, parentBank);
+    await expand();
+    fireEvent.click(await screen.findByRole('button', { name: 'Pagado' }));
+
+    const parrafos = (await screen.findByRole('dialog')).querySelectorAll('p');
+    expect(parrafos).toHaveLength(2);
+    expect(parrafos[0].textContent).toContain('Pagar desde Banco Nación');
+    expect(parrafos[0].textContent).toContain('crea una transferencia');
+    expect(parrafos[1].textContent).toContain('Marcar como pagado');
+    expect(parrafos[1].textContent).toContain('sin mover plata');
+  });
+
   it('widget: vinculada sin saldo en la moneda → diálogo de otra moneda, sin PUT', async () => {
     const fetchMock = vi.fn((_url: string, options?: RequestInit) => {
       if (options?.method === 'PUT') return ok({});
