@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { ExpensesPage } from './ExpensesPage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
@@ -82,7 +83,9 @@ function renderPage() {
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
         <ToastProvider>
-          <ExpensesPage />
+          <MemoryRouter>
+            <ExpensesPage />
+          </MemoryRouter>
         </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
@@ -104,14 +107,22 @@ describe('ExpensesPage', () => {
     expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
   });
 
-  it('S29.1: los chips saltan a la sección y la abren; sin deudas no hay chip Compartidos', async () => {
+  it('S29.1: los chips saltan a la sección y la abren', async () => {
     renderPage();
 
     const nav = await screen.findByRole('navigation', { name: 'Ir a sección' });
-    expect(within(nav).queryByText('Compartidos')).not.toBeInTheDocument();
-
     fireEvent.click(within(nav).getByRole('button', { name: 'Recortar' }));
     expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
+  });
+
+  it('Compartidos siempre tiene chip; sin deudas abre un empty state con CTA', async () => {
+    renderPage();
+
+    const nav = await screen.findByRole('navigation', { name: 'Ir a sección' });
+    fireEvent.click(within(nav).getByRole('button', { name: 'Compartidos' }));
+
+    expect(await screen.findByText('Nadie te debe nada')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Repartir un gasto' })).toBeInTheDocument();
   });
 
   it('S29.1: el abierto/colapsado persiste entre visitas (localStorage)', async () => {

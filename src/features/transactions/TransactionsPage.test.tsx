@@ -9,7 +9,7 @@ import { jsonResponse } from '../../test/mockResponse';
 
 const emptyPage = { content: [], page: 0, size: 20, totalElements: 0, totalPages: 0 };
 
-function renderPage() {
+function renderPage(route = '/transactions') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -19,7 +19,7 @@ function renderPage() {
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
         <ToastProvider>
-          <MemoryRouter>
+          <MemoryRouter initialEntries={[route]}>
             <TransactionsPage />
           </MemoryRouter>
         </ToastProvider>
@@ -46,6 +46,20 @@ describe('TransactionsPage', () => {
   it('muestra el empty state cuando no hay transacciones', async () => {
     renderPage();
     expect(await screen.findByText('No hay transacciones para mostrar.')).toBeInTheDocument();
+  });
+
+  // V36: deep-link desde el empty state de Compartidos (Gastos) → abre el alta de gasto con el
+  // reparto "Hoy por vos, mañana por mí" ya activado.
+  it('?new=shared abre el alta de gasto con el reparto activado', async () => {
+    renderPage('/transactions?new=shared');
+
+    // El switch del reparto arranca en ON (sin el deep-link nace apagado).
+    const shareSwitch = await screen.findByRole('switch', {
+      name: 'Hoy por vos, mañana por mí',
+    });
+    expect(shareSwitch).toHaveAttribute('aria-checked', 'true');
+    // Es un alta de gasto: el botón de crear ya no está (el form ocupa su lugar).
+    expect(screen.queryByRole('button', { name: 'Nuevo movimiento' })).not.toBeInTheDocument();
   });
 
   it('manda el Authorization header en el request', async () => {

@@ -55,6 +55,9 @@ export function TransactionsPage() {
   // Sprint 24.2 (D6): los filtros se inicializan desde los query params UNA vez (deep-link
   // desde Gastos). No se sincroniza de vuelta al navegar/filtrar (v1; back/forward no re-aplica).
   const [searchParams] = useSearchParams();
+  // V36: deep-link desde el empty state de Compartidos (Gastos) — abre el alta de gasto con el
+  // reparto ya activado. Se lee una sola vez, como el resto de los params (no se sincroniza).
+  const initialNew = searchParams.get('new');
   const [accountId, setAccountId] = useState(() => searchParams.get('accountId') ?? '');
   const [type, setType] = useState<MovementTypeFilter>(() => {
     const t = searchParams.get('type');
@@ -70,8 +73,11 @@ export function TransactionsPage() {
   const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(() => initialNew === 'shared');
   const [newKind, setNewKind] = useState<NewMovementKind>('EXPENSE');
+  // Sólo el primer alta (el deep-linkeado) arranca con el reparto activado; cualquier acción
+  // posterior (cambiar de tipo, cerrar, reabrir) lo apaga.
+  const [startShared, setStartShared] = useState(() => initialNew === 'shared');
   const [editing, setEditing] = useState<TransactionListItem | null>(null);
   const [editingTransfer, setEditingTransfer] = useState<TransferListItem | null>(null);
   // V36: settledCount viaja en el confirm para poder avisar cuántos cobros se van a arrastrar
@@ -232,13 +238,22 @@ export function TransactionsPage() {
     setEditing(null);
     setEditingTransfer(null);
     setNewKind('EXPENSE');
+    setStartShared(false);
     setFormOpen(true);
+  };
+
+  // El selector de tipo (Gasto/Ingreso/Entre cuentas): al cambiarlo se apaga el pre-activado del
+  // reparto — venías del deep-link "repartir un gasto" y elegiste otra cosa.
+  const changeNewKind = (kind: NewMovementKind) => {
+    setNewKind(kind);
+    setStartShared(false);
   };
 
   const closeForm = () => {
     setFormOpen(false);
     setEditing(null);
     setEditingTransfer(null);
+    setStartShared(false);
   };
 
   const startEdit = (tx: TransactionListItem) => {
@@ -342,7 +357,7 @@ export function TransactionsPage() {
                     type="button"
                     size="sm"
                     variant={newKind === option.value ? 'primary' : 'secondary'}
-                    onClick={() => setNewKind(option.value)}
+                    onClick={() => changeNewKind(option.value)}
                   >
                     {option.label}
                   </Button>
@@ -366,6 +381,7 @@ export function TransactionsPage() {
               key={editing?.id ?? `new-${newKind}`}
               transaction={editing ?? undefined}
               lockedType={editing ? undefined : (newKind as TransactionType)}
+              initialShared={!editing && startShared}
               onClose={closeForm}
               // El aviso de la cascada necesita cuántos cobros hay: se calcula acá, donde está
               // la fila con los conteos, y no dentro del form.

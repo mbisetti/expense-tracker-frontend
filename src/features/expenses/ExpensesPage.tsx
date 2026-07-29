@@ -190,7 +190,9 @@ export function ExpensesPage() {
         [...sharedTotals.entries()].map(([cur, amount]) => formatMoney(amount, cur)).join(' · ')
       : undefined;
 
-  const navLinks = SECTION_LINKS.filter((s) => s.id !== 'compartidos' || hasShared);
+  // Compartidos ahora siempre está (chip + sección): sin deudas muestra un empty state con CTA
+  // para repartir un gasto — así se ve que no hay nada que cobrar y hay por dónde empezar.
+  const navLinks = SECTION_LINKS;
 
   const currencies = data?.byCurrency.map((c) => c.currency) ?? [];
   // Moneda activa sin useEffect: la elegida si sigue existiendo; si no, la favorita; si no, la
@@ -292,18 +294,17 @@ export function ExpensesPage() {
           </Section>
 
           {/* V36 (D5): acumulado, indiferente al mes seleccionado — la deuda no es mensual.
-              Sin deudas vivas no hay sección NI chip (misma regla que traía SharedSection). */}
-          {hasShared && (
-            <Section
-              id="compartidos"
-              title="Hoy por vos, mañana por mí"
-              open={sections.isOpen('compartidos')}
-              onToggle={() => sections.toggle('compartidos')}
-              summary={sharedSummary}
-            >
-              <SharedSection />
-            </Section>
-          )}
+              Siempre presente: con deudas resume "Te deben…", sin deudas "Nadie te debe" y adentro
+              un empty state con CTA para repartir un gasto. */}
+          <Section
+            id="compartidos"
+            title="Hoy por vos, mañana por mí"
+            open={sections.isOpen('compartidos')}
+            onToggle={() => sections.toggle('compartidos')}
+            summary={hasShared ? sharedSummary : 'Nadie te debe'}
+          >
+            <SharedSection />
+          </Section>
 
           <Section
             id="recortar"

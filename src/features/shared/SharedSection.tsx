@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { useToast } from '../../components/ui/toastContext';
 import { formatMoney } from '../../lib/money';
 import { formatDate, useDateFormat, type DateFormatPref } from '../../lib/dateFormat';
@@ -13,11 +15,13 @@ import type { PendingShareItem, PersonPending } from './api';
 // número mensual — Juan te debe la cena de mayo aunque estés mirando julio. Las flechas de mes
 // de la página no lo tocan.
 //
-// Sin nada pendiente no se renderiza (ni un EmptyState): la tab Gastos ya tiene bastante.
+// Sin nada pendiente muestra un empty state con CTA: confirma que no tenés nada que cobrar y
+// deja arrancar un reparto desde acá (deep-link al alta de gasto con el toggle activado).
 export function SharedSection() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [settling, setSettling] = useState<{ share: PendingShareItem; person: string } | null>(null);
 
+  const navigate = useNavigate();
   const toast = useToast();
   const { pref: dateFmt } = useDateFormat();
   const { data, isPending } = useSharedSummary();
@@ -25,9 +29,17 @@ export function SharedSection() {
 
   if (isPending) return <Skeleton variant="list" rows={3} />;
   // `?.` y no `data.people.length`: el bloque se monta dentro de la tab Gastos, que puede
-  // renderizarse con la respuesta a medias o vacía. Sin nada pendiente no se dibuja nada — ni
-  // un EmptyState, la tab ya tiene bastante.
-  if (!data?.people?.length) return null;
+  // renderizarse con la respuesta a medias o vacía.
+  if (!data?.people?.length) {
+    return (
+      <EmptyState
+        title="Nadie te debe nada"
+        message="Cuando pagás algo por otros y lo repartís, acá llevás la cuenta de quién te tiene que devolver."
+        actionLabel="Repartir un gasto"
+        onAction={() => navigate('/transactions?new=shared')}
+      />
+    );
+  }
 
   const toggle = (personId: string) => setExpanded((id) => (id === personId ? null : personId));
 

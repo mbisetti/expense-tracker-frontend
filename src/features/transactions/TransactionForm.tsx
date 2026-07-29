@@ -38,6 +38,11 @@ type TransactionFormProps = {
    * pero visible cuando ya abriste a editar. La confirmación la maneja quien lo pasa.
    */
   onDelete?: () => void;
+  /**
+   * V36: arrancar un alta de gasto con el reparto "Hoy por vos, mañana por mí" ya activado.
+   * Deep-link desde el empty state de Compartidos en Gastos. Sólo aplica en alta (no en edición).
+   */
+  initialShared?: boolean;
 };
 
 // Fecha local, no UTC — toISOString() adelanta un día pasadas las 21:00 en UTC-3
@@ -58,6 +63,7 @@ export function TransactionForm({
   onClose,
   lockedType,
   onDelete,
+  initialShared,
 }: TransactionFormProps) {
   const isEdit = transaction !== undefined;
   const toast = useToast();
@@ -86,7 +92,8 @@ export function TransactionForm({
   // V36 "Hoy por vos, mañana por mí". El monto de la tx sigue siendo el TOTAL; el reparto solo
   // dice cuánto de ese total no es tuyo.
   const isShared = isEdit && (transaction?.sharedAmount ?? 0) > 0;
-  const [sharedEnabled, setSharedEnabled] = useState(isShared);
+  // En alta puede venir pre-activado por deep-link (empty state de Compartidos → ?new=shared).
+  const [sharedEnabled, setSharedEnabled] = useState(isShared || (!isEdit && !!initialShared));
   // null = "todavía no lo tocó el usuario" → se muestra lo que vino del server. Deriva en vez de
   // copiar con un efecto: copiar obligaba a un useEffect que pisaba lo tipeado en cada refetch.
   const [shareRowsEdited, setShareRowsEdited] = useState<ShareRow[] | null>(null);

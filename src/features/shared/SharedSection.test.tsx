@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { SharedSection } from './SharedSection';
@@ -70,7 +71,9 @@ function renderSection() {
         value={{ accessToken: 't', status: 'authenticated', setAccessToken: () => {} }}
       >
         <ToastProvider>
-          <SharedSection />
+          <MemoryRouter>
+            <SharedSection />
+          </MemoryRouter>
         </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
@@ -103,13 +106,13 @@ describe('SharedSection', () => {
     expect(juan).toHaveAttribute('aria-expanded', 'true');
   });
 
-  it('sin nada pendiente no renderiza el bloque', async () => {
+  it('sin nada pendiente muestra un empty state con CTA para repartir un gasto', async () => {
     vi.unstubAllGlobals();
     stubFetch({ people: [] });
     renderSection();
 
-    // El título nunca aparece: la tab Gastos ya tiene bastante para mostrar un vacío más.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(screen.queryByText('Hoy por vos, mañana por mí')).not.toBeInTheDocument();
+    // Confirma que no hay nada que cobrar (en vez de una sección en blanco) y ofrece arrancar.
+    expect(await screen.findByText('Nadie te debe nada')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Repartir un gasto' })).toBeInTheDocument();
   });
 });
