@@ -12,6 +12,7 @@ import { useCalendar, type CalendarPref } from '../../lib/useCalendar';
 import { useAuth } from '../auth/useAuth';
 import { useDeleteAccount } from '../auth/useDeleteAccount';
 import { useMe, useUpdateMe } from '../auth/useMe';
+import { TelegramSection } from '../telegram/TelegramSection';
 import { MoonIcon, SunIcon } from '../../components/ui/icons';
 
 // Moneda favorita: opciones curadas (Sprint 22.1). Si el usuario tuviera otra guardada,
@@ -134,6 +135,9 @@ export function SettingsPage() {
           </Select>
         </div>
       </Card>
+
+      {/* S30: vincular el bot de Telegram (oculto si el backend no tiene bot configurado). */}
+      <TelegramSection />
 
       <Card>
         <div className="flex flex-col gap-3">
