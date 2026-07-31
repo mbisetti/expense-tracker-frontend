@@ -80,6 +80,11 @@ export function TransactionsPage() {
   const [startShared, setStartShared] = useState(() => initialNew === 'shared');
   const [editing, setEditing] = useState<TransactionListItem | null>(null);
   const [editingTransfer, setEditingTransfer] = useState<TransferListItem | null>(null);
+  // S34: deep-link del centro de notificaciones (`?edit=<txId>`) — el tap en un movimiento del
+  // bot abre esa transacción PARA EDITAR (D3). Se consume UNA vez, cuando llega el feed.
+  const [pendingEditId, setPendingEditId] = useState(() => searchParams.get('edit'));
+  const [editNotFound, setEditNotFound] = useState(false);
+  const editNotFoundToasted = useRef(false);
   // V36: settledCount viaja en el confirm para poder avisar cuántos cobros se van a arrastrar
   // (D9) sin abrir el detalle.
   const [confirmDelete, setConfirmDelete] = useState<{
@@ -226,6 +231,31 @@ export function TransactionsPage() {
     });
     return rows;
   }, [txData, transfersData, type, categoryId, accountId, dateFrom, dateTo, search]);
+
+  // S34: el deep-link se consume APENAS llega el feed, ajustando estado durante el render (el
+  // patrón "adjusting state when props change" de React, no un efecto: setState en un efecto
+  // encadena un render de más y lo prohíbe el lint). La condición se apaga sola al consumirlo.
+  // El feed llega sin filtros y con las últimas FETCH_SIZE, así que la tx que acaba de anotar
+  // el bot está ahí; si no aparece, se avisa en vez de dejar la pantalla como si nada.
+  if (pendingEditId && txData) {
+    const found = txData.content.find((tx) => tx.id === pendingEditId);
+    setPendingEditId(null);
+    if (found) {
+      setEditingTransfer(null);
+      setEditing(found);
+      setFormOpen(true);
+    } else {
+      setEditNotFound(true);
+    }
+  }
+
+  // El aviso sí va en un efecto: mostrar un toast es un efecto de verdad (toca algo de afuera
+  // del render). El ref lo hace idempotente ante el doble montaje de StrictMode.
+  useEffect(() => {
+    if (!editNotFound || editNotFoundToasted.current) return;
+    editNotFoundToasted.current = true;
+    toast.error('No encontré ese movimiento en el feed. Buscalo con los filtros.');
+  }, [editNotFound, toast]);
 
   const totalPages = Math.max(1, Math.ceil(movements.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages - 1);

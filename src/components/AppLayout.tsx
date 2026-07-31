@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useLogout } from '../features/auth/useLogout';
+import { NotificationBell } from '../features/notifications/NotificationBell';
 import { Modal } from './ui/Modal';
 import { MangoIcon, MenuIcon, UserIcon } from './ui/icons';
 
@@ -99,8 +100,13 @@ export function AppLayout() {
             ))}
           </div>
 
+          {/* S34: campanita del centro de notificaciones, a la izquierda del menú de la persona */}
+          <div className="ml-auto">
+            <NotificationBell />
+          </div>
+
           {/* Menú de la persona (todos los viewports): Datos + Ajustes y preferencias + Cerrar sesión */}
-          <div ref={accountMenuRef} className="relative ml-auto">
+          <div ref={accountMenuRef} className="relative">
             <button
               type="button"
               onClick={() => setAccountMenuOpen((open) => !open)}

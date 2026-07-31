@@ -12,6 +12,7 @@ import { useCalendar, type CalendarPref } from '../../lib/useCalendar';
 import { useAuth } from '../auth/useAuth';
 import { useDeleteAccount } from '../auth/useDeleteAccount';
 import { useMe, useUpdateMe } from '../auth/useMe';
+import { NotificationsSection } from '../notifications/NotificationsSection';
 import { TelegramSection } from '../telegram/TelegramSection';
 import { MoonIcon, SunIcon } from '../../components/ui/icons';
 
@@ -135,6 +136,9 @@ export function SettingsPage() {
           </Select>
         </div>
       </Card>
+
+      {/* S34: qué notificaciones recibir y por qué canal. */}
+      <NotificationsSection />
 
       {/* S30: vincular el bot de Telegram (oculto si el backend no tiene bot configurado). */}
       <TelegramSection />
