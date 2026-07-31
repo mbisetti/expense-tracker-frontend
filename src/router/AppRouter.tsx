@@ -11,6 +11,7 @@ import { DashboardPage } from '../features/dashboard/DashboardPage';
 import { CategoriesPage } from '../features/categories/CategoriesPage';
 import { PaymentMethodsPage } from '../features/paymentMethods/PaymentMethodsPage';
 import { SettingsPage } from '../features/settings/SettingsPage';
+import { TelegramInfoPage } from '../features/telegram/TelegramInfoPage';
 import { DataPage } from '../features/settings/DataPage';
 import { AppLayout } from '../components/AppLayout';
 import { UiGalleryPage } from '../features/dev/UiGalleryPage';
@@ -36,6 +37,8 @@ const routes: RouteObject[] = [
           { path: '/payment-methods', element: <PaymentMethodsPage /> },
           { path: '/datos', element: <DataPage /> },
           { path: '/settings', element: <SettingsPage /> },
+          // S33: mini-landing del bot — se llega desde el ícono de info en Ajustes.
+          { path: '/telegram', element: <TelegramInfoPage /> },
         ],
       },
     ],

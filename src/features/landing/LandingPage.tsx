@@ -209,6 +209,27 @@ function IncomePreview() {
   );
 }
 
+// S33: mockup del chat con el bot — burbujas estilo mensajería, sin datos reales.
+function BotPreview() {
+  return (
+    <Card className="text-left">
+      <div className="flex flex-col gap-2 text-sm">
+        <div className="max-w-[85%] self-end rounded-lg rounded-br-sm bg-brand-bg px-3 py-2 text-ink">
+          gasté 12.500 en el súper
+        </div>
+        <div className="max-w-[85%] self-start rounded-lg rounded-bl-sm bg-surface-sunken px-3 py-2 text-body">
+          <p className="m-0">📝 Para confirmar:</p>
+          <p className="m-0 mt-1 font-medium text-ink">$12.500 · súper · Alimentación · Efectivo</p>
+        </div>
+        <div className="flex gap-2 self-start pl-1">
+          <span className="rounded-md border border-line px-2.5 py-1 text-xs text-body">✅ Confirmar</span>
+          <span className="rounded-md border border-line px-2.5 py-1 text-xs text-body">❌ Cancelar</span>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 type Feature = {
   eyebrow: string;
   title: string;
@@ -246,6 +267,12 @@ const FEATURES: Feature[] = [
     title: 'De bruto a neto, con las deducciones claras',
     blurb: 'Cargá tu ingreso bruto y las deducciones: vemos juntos cuánto te queda en mano.',
     preview: <IncomePreview />,
+  },
+  {
+    eyebrow: 'Bot de Telegram',
+    title: 'Anotá gastos desde el chat',
+    blurb: 'Escribile «gasté 10k en el súper» o mandale la foto del ticket, y te lo deja listo para confirmar. Entiende cuotas, gastos compartidos y hasta quién comió qué.',
+    preview: <BotPreview />,
   },
 ];
 

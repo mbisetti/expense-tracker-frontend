@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { InfoIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/toastContext';
 import { useGenerateTelegramCode, useTelegramLink, useUnlinkTelegram } from './useTelegram';
 
@@ -28,7 +30,17 @@ export function TelegramSection() {
     <Card>
       <div className="flex flex-col gap-3">
         <div className="flex flex-col">
-          <h2 className="text-lg font-semibold text-ink">Bot de Telegram</h2>
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-lg font-semibold text-ink">Bot de Telegram</h2>
+            {/* S33: la mini-landing del bot — funciones, comandos y buzón de recomendaciones. */}
+            <Link
+              to="/telegram"
+              aria-label="Más sobre el bot"
+              className="text-muted transition-colors hover:text-brand"
+            >
+              <InfoIcon className="h-4 w-4" />
+            </Link>
+          </div>
           <span className="text-sm text-muted">
             Anotá gastos mandándole un mensaje: «gasté 10k en repuesto bici».
           </span>

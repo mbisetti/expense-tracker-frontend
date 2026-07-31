@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { AuthContext } from '../auth/context';
 import { ToastProvider } from '../../components/ui/ToastProvider';
@@ -33,7 +34,9 @@ function wrap(children: ReactNode) {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: vi.fn() }}
       >
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <MemoryRouter>{children}</MemoryRouter>
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );
@@ -55,6 +58,14 @@ describe('TelegramSection', () => {
 
     await waitFor(() => expect(requests.length).toBeGreaterThan(0));
     expect(screen.queryByText('Bot de Telegram')).toBeNull();
+  });
+
+  it('el ícono de info linkea a la mini-landing del bot', async () => {
+    stubFetch(() => jsonResponse(200, status({})));
+    wrap(<TelegramSection />);
+
+    const info = await screen.findByRole('link', { name: 'Más sobre el bot' });
+    expect(info).toHaveAttribute('href', '/telegram');
   });
 
   it('generar código muestra el código y el link al bot', async () => {
