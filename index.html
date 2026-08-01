@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#4F46E5" />
+    <!-- viewport-fit=cover: instalada en un iPhone con notch, el fondo llega hasta los
+         bordes y el layout compensa con env(safe-area-inset-*). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Default del tema claro; en runtime useTheme la sincroniza con el --bg activo. -->
+    <meta name="theme-color" content="#fafaf9" />
     <title>Manguitos</title>
     <meta
       name="description"
@@ -16,6 +19,15 @@
       content="Gastos, presupuestos, ingresos y transferencias multi-moneda en un solo lugar. Tus datos son tuyos, sin venta de datos."
     />
     <meta property="og:type" content="website" />
+
+    <!-- PWA en iOS (S35): Safari ignora el manifest, así que la instalación desde
+         "Agregar a la pantalla de inicio" se configura acá. El ícono es opaco a
+         propósito: iOS pinta de negro cualquier transparencia. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Manguitos" />
+    <link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png" />
   </head>
   <body>
     <div id="root"></div>

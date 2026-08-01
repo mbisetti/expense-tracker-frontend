@@ -141,7 +141,9 @@ export function Modal({
         tabIndex={-1}
         className={[
           isSide
-            ? 'relative z-10 flex h-full w-full max-w-xs flex-col gap-1 overflow-y-auto rounded-r-lg border-r border-line bg-surface-elevated p-6 shadow-lg animate-drawer-in'
+            ? // El drawer arranca en inset-0: instalada como PWA con viewport-fit=cover
+              // (S35), su tope quedaría debajo de la status bar del iPhone.
+              'relative z-10 flex h-full w-full max-w-xs flex-col gap-1 overflow-y-auto rounded-r-lg border-r border-line bg-surface-elevated p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-lg animate-drawer-in'
             : 'relative z-10 flex w-full max-w-md max-h-[85vh] flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-surface-elevated p-6 shadow-lg',
           'transition-all duration-200 ease-out motion-reduce:transition-none',
           className ?? '',

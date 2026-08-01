@@ -14,6 +14,7 @@ import { useDeleteAccount } from '../auth/useDeleteAccount';
 import { useMe, useUpdateMe } from '../auth/useMe';
 import { NotificationsSection } from '../notifications/NotificationsSection';
 import { TelegramSection } from '../telegram/TelegramSection';
+import { InstallSection } from './InstallSection';
 import { MoonIcon, SunIcon } from '../../components/ui/icons';
 
 // Moneda favorita: opciones curadas (Sprint 22.1). Si el usuario tuviera otra guardada,
@@ -136,6 +137,9 @@ export function SettingsPage() {
           </Select>
         </div>
       </Card>
+
+      {/* S35: instalar la PWA. Se oculta sola si ya está instalada o si el browser no sabe. */}
+      <InstallSection />
 
       {/* S34: qué notificaciones recibir y por qué canal. */}
       <NotificationsSection />

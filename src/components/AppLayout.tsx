@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useLogout } from '../features/auth/useLogout';
 import { NotificationBell } from '../features/notifications/NotificationBell';
 import { Modal } from './ui/Modal';
+import { OfflineBanner } from './OfflineBanner';
 import { MangoIcon, MenuIcon, UserIcon } from './ui/icons';
 
 const NAV_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
@@ -72,7 +73,9 @@ export function AppLayout() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-line bg-surface-elevated">
+      {/* pt de safe-area: instalada como PWA con viewport-fit=cover (S35), el header
+          sticky arranca DEBAJO de la status bar del iPhone con notch. */}
+      <header className="sticky top-0 z-40 border-b border-line bg-surface-elevated pt-[env(safe-area-inset-top)]">
         <nav aria-label="Principal" className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2">
           {/* Hamburger: sólo mobile (<lg). Abre el drawer lateral deslizante. */}
           <button
@@ -154,6 +157,9 @@ export function AppLayout() {
             )}
           </div>
         </nav>
+
+        {/* S35: va DENTRO del header sticky para que el aviso no se pierda al scrollear. */}
+        <OfflineBanner />
       </header>
 
       {/* Drawer lateral (mobile): se desliza de izquierda a derecha */}
@@ -167,7 +173,7 @@ export function AppLayout() {
         </nav>
       </Modal>
 
-      <main className="mx-auto w-full max-w-5xl px-4 pb-8">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
         <Outlet />
       </main>
     </>
