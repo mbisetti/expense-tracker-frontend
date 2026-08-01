@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Button } from './Button';
 import { Modal } from './Modal';
 
@@ -12,6 +13,13 @@ type ConfirmDialogProps = {
   /** Confirmación destructiva (borrar): botón de confirmar usa variant="danger". */
   danger?: boolean;
   loading?: boolean;
+  /**
+   * Contenido extra debajo del mensaje. Existe para las confirmaciones que además piden algo
+   * —la reautenticación de S7 antes de borrar la cuenta— sin duplicar el diálogo entero.
+   */
+  children?: ReactNode;
+  /** Deshabilita el botón de confirmar (ej: falta completar lo de `children`). */
+  confirmDisabled?: boolean;
 };
 
 // Reemplaza los "¿Borrar? Sí/No" inline de Accounts/Categories/PaymentMethods/Transactions
@@ -26,6 +34,8 @@ export function ConfirmDialog({
   onCancel,
   danger = false,
   loading = false,
+  children,
+  confirmDisabled = false,
 }: ConfirmDialogProps) {
   return (
     <Modal
@@ -38,13 +48,19 @@ export function ConfirmDialog({
           <Button variant="secondary" onClick={onCancel} disabled={loading}>
             {cancelLabel}
           </Button>
-          <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={loading}>
+          <Button
+            variant={danger ? 'danger' : 'primary'}
+            onClick={onConfirm}
+            loading={loading}
+            disabled={confirmDisabled}
+          >
             {confirmLabel}
           </Button>
         </>
       }
     >
       <p>{message}</p>
+      {children}
     </Modal>
   );
 }

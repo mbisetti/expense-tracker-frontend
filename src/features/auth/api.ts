@@ -26,6 +26,8 @@ export type Me = {
   email: string;
   name: string;
   defaultCurrency: string;
+  /** S7: false = entró solo con Google y no tiene contraseña que pedirle al reautenticar. */
+  hasPassword: boolean;
   createdAt: string;
 };
 

@@ -4,13 +4,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Select } from '../../components/ui/Select';
+import { Input } from '../../components/ui/Input';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../components/ui/toastContext';
 import { useTheme } from '../../lib/useTheme';
 import { useDateFormat, type DateFormatPref } from '../../lib/dateFormat';
 import { useCalendar, type CalendarPref } from '../../lib/useCalendar';
 import { useAuth } from '../auth/useAuth';
-import { useDeleteAccount } from '../auth/useDeleteAccount';
+import { useDeleteAccount, type DeleteAccountProof } from '../auth/useDeleteAccount';
+import { signInWithGoogle } from '../../lib/googleAuth';
 import { useMe, useUpdateMe } from '../auth/useMe';
 import { NotificationsSection } from '../notifications/NotificationsSection';
 import { TelegramSection } from '../telegram/TelegramSection';
@@ -42,6 +44,7 @@ export function SettingsPage() {
   const toast = useToast();
   const deleteAccount = useDeleteAccount();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
 
   const favCurrencyOptions =
     me && !FAV_CURRENCIES.includes(me.defaultCurrency)
@@ -58,19 +61,50 @@ export function SettingsPage() {
     );
   };
 
-  const handleDelete = () => {
-    deleteAccount.mutate(undefined, {
+  // S7: borrar la cuenta pide probar identidad de nuevo. El token dice "alguien entró alguna
+  // vez"; para algo irreversible hace falta "sos vos, ahora".
+  const runDelete = (proof: DeleteAccountProof) => {
+    deleteAccount.mutate(proof, {
       onSuccess: () => {
         // Cuenta borrada en el server → limpiamos la sesión local y salimos.
         setAccessToken(null);
         queryClient.clear();
         navigate('/login', { replace: true });
       },
-      onError: () => {
+      onError: (error) => {
+        // El 401 REAUTH_REQUIRED NO es sesión vencida: el usuario sigue logueado y el diálogo
+        // queda abierto para reintentar. Cerrarlo o desloguearlo sería castigar un typo.
+        if (error.status === 401) {
+          setDeletePassword('');
+          // El mensaje sale de la prueba que MANDAMOS, no de me?.hasPassword: si el perfil no
+          // cargó, decirle "no se pudo confirmar con Google" a alguien que acaba de tipear una
+          // contraseña es peor que no decir nada.
+          toast.error(
+            'password' in proof ? 'La contraseña no coincide.' : 'No se pudo confirmar con Google.',
+          );
+          return;
+        }
         setConfirmingDelete(false);
         toast.error('No se pudo borrar la cuenta. Intentá de nuevo.');
       },
     });
+  };
+
+  const handleDelete = () => {
+    if (me?.hasPassword === false) {
+      // Usuario Google-only: no tiene contraseña que escribir, así que revalidamos con Google.
+      void signInWithGoogle(
+        (idToken) => runDelete({ idToken }),
+        () => toast.error('No se pudo abrir la confirmación de Google.'),
+      );
+      return;
+    }
+    runDelete({ password: deletePassword });
+  };
+
+  const closeDeleteDialog = () => {
+    setConfirmingDelete(false);
+    setDeletePassword('');
   };
 
   return (
@@ -171,11 +205,32 @@ export function SettingsPage() {
         danger
         title="Borrar cuenta"
         message="Se van a eliminar tu cuenta y todos tus datos (cuentas, transacciones, categorías, todo). Esta acción no se puede deshacer."
-        confirmLabel="Borrar cuenta"
+        confirmLabel={me?.hasPassword === false ? 'Confirmar con Google' : 'Borrar cuenta'}
         loading={deleteAccount.isPending}
+        confirmDisabled={me?.hasPassword !== false && deletePassword.trim() === ''}
         onConfirm={handleDelete}
-        onCancel={() => setConfirmingDelete(false)}
-      />
+        onCancel={closeDeleteDialog}
+      >
+        {me?.hasPassword === false ? (
+          <p className="mt-3 text-sm text-muted">
+            Entraste con Google, así que te vamos a pedir que lo confirmes de nuevo antes de
+            borrar nada.
+          </p>
+        ) : (
+          <div className="mt-3">
+            <Input
+              label="Confirmá tu contraseña para continuar"
+              type="password"
+              autoComplete="current-password"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && deletePassword.trim() !== '') handleDelete();
+              }}
+            />
+          </div>
+        )}
+      </ConfirmDialog>
     </section>
   );
 }

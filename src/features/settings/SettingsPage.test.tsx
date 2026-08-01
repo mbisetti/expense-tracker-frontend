@@ -85,19 +85,83 @@ describe('SettingsPage', () => {
     expect(localStorage.getItem('holidayCalendar')).toBe('US');
   });
 
-  it('borrar cuenta: confirma, pega a DELETE /users/me y limpia la sesión', async () => {
-    const fetchMock = vi.fn(() => jsonResponse(204));
+  // ── S7: borrar la cuenta exige reautenticación ─────────────────────────────
+  //
+  // Este test antes confirmaba y borraba de una. Cambió porque cambió el contrato, no para
+  // que pasara: el token dice "alguien entró alguna vez" y esto es irreversible.
+
+  const meWithPassword = {
+    id: 'u1', email: 'a@a.com', name: 'A', defaultCurrency: 'ARS',
+    hasPassword: true, createdAt: '2026-01-01T00:00:00',
+  };
+
+  it('borrar cuenta: manda la contraseña, pega a DELETE /users/me y limpia la sesión', async () => {
+    // Distingue por MÉTODO, no por URL: GET /users/me (el perfil) y DELETE /users/me son el
+    // mismo path y tienen que contestar distinto.
+    const fetchMock = vi.fn((_url: unknown, init?: RequestInit) =>
+      init?.method === 'DELETE' ? jsonResponse(204) : jsonResponse(200, meWithPassword),
+    );
     vi.stubGlobal('fetch', fetchMock);
     const { setAccessToken } = renderSettings();
 
     fireEvent.click(screen.getByRole('button', { name: 'Borrar cuenta' }));
     const dialog = screen.getByRole('dialog', { name: 'Borrar cuenta' });
+
+    fireEvent.change(await within(dialog).findByLabelText(/Confirmá tu contraseña/i), {
+      target: { value: 'mi-password' },
+    });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar cuenta' }));
 
     await waitFor(() => expect(setAccessToken).toHaveBeenCalledWith(null));
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/users/me'),
-      expect.objectContaining({ method: 'DELETE' }),
+      expect.objectContaining({ method: 'DELETE', body: JSON.stringify({ password: 'mi-password' }) }),
     );
+  });
+
+  // El caso que motivó S7: sin la contraseña no se puede ni intentar.
+  it('borrar cuenta: sin contraseña el botón de confirmar está deshabilitado', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => jsonResponse(200, meWithPassword)));
+    renderSettings();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar cuenta' }));
+    const dialog = screen.getByRole('dialog', { name: 'Borrar cuenta' });
+
+    expect(within(dialog).getByRole('button', { name: 'Borrar cuenta' })).toBeDisabled();
+  });
+
+  // Un 401 REAUTH_REQUIRED NO es sesión vencida: el usuario sigue adentro y el diálogo queda
+  // abierto para reintentar. Desloguearlo por un typo sería el peor final posible.
+  it('borrar cuenta: si la contraseña no coincide, no cierra la sesión', async () => {
+    const fetchMock = vi.fn((_url: unknown, init?: RequestInit) =>
+      init?.method === 'DELETE'
+        ? jsonResponse(401, { error: 'REAUTH_REQUIRED', message: 'Password does not match' })
+        : jsonResponse(200, meWithPassword),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const { setAccessToken } = renderSettings();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar cuenta' }));
+    const dialog = screen.getByRole('dialog', { name: 'Borrar cuenta' });
+    fireEvent.change(await within(dialog).findByLabelText(/Confirmá tu contraseña/i), {
+      target: { value: 'la-que-no-es' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar cuenta' }));
+
+    await screen.findByText(/no coincide/i);
+    expect(setAccessToken).not.toHaveBeenCalledWith(null);
+    expect(screen.getByRole('dialog', { name: 'Borrar cuenta' })).toBeInTheDocument();
+  });
+
+  // Google-only: no tiene contraseña que escribir, así que ni se le muestra el campo.
+  it('borrar cuenta: un usuario de Google ve confirmación con Google, no un campo de contraseña', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => jsonResponse(200, { ...meWithPassword, hasPassword: false })));
+    renderSettings();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Borrar cuenta' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Borrar cuenta' });
+
+    await within(dialog).findByRole('button', { name: 'Confirmar con Google' });
+    expect(within(dialog).queryByLabelText(/Confirmá tu contraseña/i)).toBeNull();
   });
 });

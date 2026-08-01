@@ -18,6 +18,14 @@ function withAuth(options: RequestInit | undefined, token: string | null): Reque
 // afuera: un 401 ahí es credencial inválida, no token vencido.
 // Sprint 26: el patrón vive UNA sola vez y lo comparten useHttp (JSON) y useHttpBlob (archivos).
 // Duplicarlo garantizaba que las dos copias divergieran en el próximo cambio de auth.
+//
+// S7 — REAUTH_REQUIRED también queda afuera, y esto NO es un detalle. Ese 401 no dice "tu
+// sesión venció", dice "para ESTA acción probá quién sos otra vez". Si cayera acá, errarle a
+// la contraseña al borrar la cuenta dispararía un refresh y, si el refresh fallara,
+// setAccessToken(null) te sacaría de la app: perdés la sesión por un typo. Y si el refresh
+// saliera bien, reintentaría el DELETE con la misma contraseña equivocada, para nada.
+//
+// Distinguirlos exige el código, no el status: por eso el backend le puso uno propio.
 function useAuthorizedRequest() {
   const { accessToken, setAccessToken } = useAuth();
 
@@ -26,7 +34,8 @@ function useAuthorizedRequest() {
       try {
         return await execute(accessToken);
       } catch (error) {
-        const isExpired = error instanceof ApiError && error.status === 401;
+        const isExpired =
+          error instanceof ApiError && error.status === 401 && error.code !== 'REAUTH_REQUIRED';
         if (!isExpired || path.startsWith('/auth')) {
           throw error;
         }
