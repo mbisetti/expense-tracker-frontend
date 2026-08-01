@@ -6,11 +6,21 @@ import type { ApiError } from '../../lib/http';
 // (identificado por su periodEnd derivado). Invalidar `['accounts']` alcanza los statements
 // (son sub-queries), los saldos de las cuentas (el pago mueve plata) y todo lo derivado;
 // `['summary']` refresca el dashboard (los flujos del mes cambian).
+//
+// Hallazgo F4: faltaban `['transactions']` y `['transfers']`. Con `pay: true` esto crea una
+// TRANSFERENCIA REAL madre→tarjeta, o sea DOS transactions nuevas en el ledger — y el feed de
+// Movimientos no se enteraba. Todas las demás mutaciones que mueven plata (transactions,
+// transfers, income, import, shared, recurring) ya invalidaban el feed; esta era la única que no.
+//
+// No se notaba porque el staleTime default de 0 hace que navegar a Movimientos remonte la query
+// y refetchee igual: un bug tapaba al otro (RESUMEN.md §5.2).
 function useInvalidateAfterPaid() {
   const queryClient = useQueryClient();
   return () => {
     queryClient.invalidateQueries({ queryKey: ['accounts'] });
     queryClient.invalidateQueries({ queryKey: ['summary'] });
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    queryClient.invalidateQueries({ queryKey: ['transfers'] });
   };
 }
 

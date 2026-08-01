@@ -1,5 +1,3 @@
-import type { TransactionType } from '../features/transactions/api';
-
 const plain = new Intl.NumberFormat('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 // `Intl.NumberFormat({ style: 'currency', currency })` tira "invalid currency code" si
@@ -50,10 +48,5 @@ export function numberToAmountDisplay(n: number): string {
   return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(n);
 }
 
-export function amountSign(type: TransactionType): string {
-  return type === 'INCOME' ? '+' : '−';
-}
-
-export function amountToneClass(type: TransactionType): string {
-  return type === 'INCOME' ? 'text-income' : 'text-expense';
-}
+// FASE 3: se borraron amountSign y amountToneClass (hallazgo F3). Cero usos en todo el repo,
+// ni siquiera en money.test.ts. El signo y el tono los resuelve components/ui/Amount.tsx.

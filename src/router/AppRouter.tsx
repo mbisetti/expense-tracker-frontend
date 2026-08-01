@@ -14,13 +14,18 @@ import { SettingsPage } from '../features/settings/SettingsPage';
 import { TelegramInfoPage } from '../features/telegram/TelegramInfoPage';
 import { DataPage } from '../features/settings/DataPage';
 import { AppLayout } from '../components/AppLayout';
+import { RouteErrorBoundary } from '../components/RouteErrorBoundary';
 import { UiGalleryPage } from '../features/dev/UiGalleryPage';
 
+// F2: sin errorElement, un error de render desmonta el árbol y deja pantalla en blanco. Va en
+// las tres raíces (login, register y el árbol autenticado) y no solo adentro de AppLayout, para
+// que una pantalla pública que se rompa tampoco quede muda.
 const routes: RouteObject[] = [
-  { path: '/login', element: <LoginPage /> },
-  { path: '/register', element: <RegisterPage /> },
+  { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
+  { path: '/register', element: <RegisterPage />, errorElement: <RouteErrorBoundary /> },
   {
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: <AppLayout />,
@@ -46,7 +51,7 @@ const routes: RouteObject[] = [
   // `/` es la home pública (S19): PublicHome mira el estado de auth (useAuth) y
   // manda a /dashboard si ya hay sesión, o renderiza la landing (lazy, chunk propio)
   // si es un visitante anónimo. Antes redirigía siempre a /dashboard.
-  { path: '/', element: <PublicHome /> },
+  { path: '/', element: <PublicHome />, errorElement: <RouteErrorBoundary /> },
 ];
 
 // Styleguide viva (S18): sólo se registra en dev. import.meta.env.DEV es `false` en el
