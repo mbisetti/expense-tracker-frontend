@@ -1,0 +1,51 @@
+name: CI
+
+# Compuerta del frontend. Antes de la corrección post-auditoría este repo no tenía CI, y su
+# HEAD entra a producción por referencia: el Dockerfile del backend clava un FRONTEND_REF con
+# el SHA de este repo. Un commit roto acá no rompe nada hasta que alguien bumpea esa
+# referencia, que es el peor momento para enterarse.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Typecheck + tests + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      # Los tres que bloquean. `npm run build` ya corre `tsc -b` adentro, pero el typecheck va
+      # aparte a propósito: si falla, el log dice "typecheck" y no "build", que es la mitad del
+      # diagnóstico.
+      - name: Typecheck
+        run: npx tsc -b --force
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      # Informativo, NO bloqueante, y con motivo: hay 3 errores `set-state-in-effect`
+      # preexistentes (IncomeEntryForm, TransferForm, uno más), documentados como deuda en
+      # development-roadmap.md. Una compuerta que arranca en rojo se ignora a la semana.
+      # Cuando esos 3 se arreglen, esto pasa a `npm run lint` bloqueante y se borra el aviso.
+      - name: Lint (informativo — 3 errores conocidos de línea de base)
+        run: npm run lint
+        continue-on-error: true
