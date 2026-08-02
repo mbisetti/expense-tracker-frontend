@@ -9,6 +9,7 @@ export type CreateIncomeSourceInput = {
   frequency?: IncomeFrequency;
   expectedAmount?: number;
   billingDay?: number;
+  dueMonth?: number;
 };
 
 export type CreateIncomeEntryInput = {
@@ -19,6 +20,21 @@ export type CreateIncomeEntryInput = {
   netOverride?: number;
   date: string;
   notes?: string;
+  concept?: string;
+};
+
+// S36 (FR-3). El bloque de plata es ATÓMICO del lado del server: si viaja grossAmount o
+// netOverride, el neto se recalcula desde cero y netOverride ausente significa "sin override".
+// Por eso el form manda SIEMPRE los dos juntos cuando toca la plata — así se puede sacar un
+// override sin inventar un centinela numérico.
+export type UpdateIncomeEntryInput = {
+  id: string;
+  grossAmount?: number;
+  netOverride?: number;
+  accountId?: string;
+  date?: string;
+  notes?: string;
+  concept?: string;
 };
 
 // Una entry mueve el ledger: invalidar también transactions/accounts/summary
@@ -59,6 +75,20 @@ export function useCreateIncomeEntry() {
       http<IncomeEntryResponse>('/income-entries', {
         method: 'POST',
         body: JSON.stringify(input),
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUpdateIncomeEntry() {
+  const http = useHttp();
+  const invalidate = useInvalidateIncome();
+
+  return useMutation<IncomeEntryResponse, ApiError, UpdateIncomeEntryInput>({
+    mutationFn: ({ id, ...body }) =>
+      http<IncomeEntryResponse>(`/income-entries/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
       }),
     onSuccess: invalidate,
   });

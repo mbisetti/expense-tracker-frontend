@@ -67,8 +67,10 @@ export function targetPath(item: NotificationItem): string | null {
       return '/expenses#compartidos';
     case 'CARD':
       return '/accounts';
+    // S36 (FR-7/D4): con UNA sola fuente pendiente la notificación trae su id y abre el confirm
+    // de esa fuente. Con varias no hay a cuál apuntar y lleva a la página, donde están los ticks.
     case 'INCOME':
-      return '/income';
+      return item.targetId ? `/income?confirm=${item.targetId}` : '/income';
     case 'EXPENSES':
       return '/expenses';
     default:

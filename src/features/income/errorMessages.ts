@@ -29,6 +29,10 @@ export function incomeErrorMessage(error: unknown): string {
       return 'Completá los tres campos de recurrencia (frecuencia, monto y día) o dejalos vacíos.';
     case 'INVALID_BILLING_DAY':
       return 'El día de cobro debe estar entre 1 y 28.';
+    case 'INVALID_DUE_MONTH':
+      return 'Elegí en qué mes se cobra: una fuente semestral o anual necesita su mes.';
+    case 'INCOME_ENTRY_TRANSACTION_MISSING':
+      return 'La transacción de este ingreso fue borrada. Borrá la entrada y cargala de nuevo.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }
