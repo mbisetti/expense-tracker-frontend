@@ -24,17 +24,31 @@ function useInvalidateAfterPaid() {
   };
 }
 
-// `pay=false` = marca cosmética; `pay=true` = pago real (transfer madre→tarjeta). El monto
-// lo calcula el server (el client nunca lo manda).
+// Sprint 27: la marca/pago es de UN RENGLÓN (ciclo + moneda), no del ciclo entero.
+//   `pay=false` = marca cosmética; `pay=true` = pago real (transfer madre→tarjeta).
+//   Misma moneda: el monto lo calcula el server si no se manda (el caso de un tap).
+//   Cross-currency (`fromCurrency` distinta): van LOS DOS montos y son obligatorios —
+//   `fromAmount` es cuánto SALE de la cuenta y `amount` cuánta DEUDA CANCELA. La app no
+//   calcula el tipo de cambio: lo registra, y adentro de esos dos números quedan absorbidos
+//   el spread del banco y los impuestos, que no son conocibles de antemano.
+export type MarkStatementPaidVars = {
+  periodEnd: string;
+  currency: string;
+  pay: boolean;
+  fromCurrency?: string;
+  fromAmount?: number;
+  amount?: number;
+};
+
 export function useMarkStatementPaid(accountId: string) {
   const http = useHttp();
   const invalidate = useInvalidateAfterPaid();
 
-  return useMutation<void, ApiError, { periodEnd: string; pay: boolean }>({
-    mutationFn: ({ periodEnd, pay }) =>
+  return useMutation<void, ApiError, MarkStatementPaidVars>({
+    mutationFn: (vars) =>
       http<void>(`/accounts/${accountId}/statement/paid`, {
         method: 'PUT',
-        body: JSON.stringify({ periodEnd, pay }),
+        body: JSON.stringify(vars),
       }),
     onSuccess: invalidate,
   });
@@ -44,11 +58,12 @@ export function useUnmarkStatementPaid(accountId: string) {
   const http = useHttp();
   const invalidate = useInvalidateAfterPaid();
 
-  return useMutation<void, ApiError, { periodEnd: string }>({
-    mutationFn: ({ periodEnd }) =>
-      http<void>(`/accounts/${accountId}/statement/paid?periodEnd=${periodEnd}`, {
-        method: 'DELETE',
-      }),
+  return useMutation<void, ApiError, { periodEnd: string; currency: string }>({
+    mutationFn: ({ periodEnd, currency }) =>
+      http<void>(
+        `/accounts/${accountId}/statement/paid?periodEnd=${periodEnd}&currency=${currency}`,
+        { method: 'DELETE' },
+      ),
     onSuccess: invalidate,
   });
 }

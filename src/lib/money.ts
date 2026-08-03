@@ -16,6 +16,29 @@ export function formatMoney(amount: number, currency: string): string {
   }
 }
 
+// Nombre en castellano de una moneda, en plural y minúscula, para armar frases: "Compras en
+// pesos", "Compras en dólares" (Sprint 27 D9).
+//
+// El naming no es cosmético. El resumen del banco muestra un "total a pagar en pesos" que
+// incluye los dólares convertidos MÁS los impuestos; la app muestra las compras separadas y
+// limpias. Son números distintos a propósito, y llamarle "Deuda en pesos" al renglón haría que
+// el usuario compare contra el banco y crea que la app está mal. Las monedas sin nombre caen al
+// código, que es honesto y no inventa nada.
+const CURRENCY_NOUNS: Record<string, string> = {
+  ARS: 'pesos',
+  USD: 'dólares',
+  EUR: 'euros',
+  BRL: 'reales',
+  GBP: 'libras',
+  CLP: 'pesos chilenos',
+  UYU: 'pesos uruguayos',
+};
+
+export function currencyNoun(currency: string): string {
+  const code = currency?.trim().toUpperCase() ?? '';
+  return CURRENCY_NOUNS[code] ?? code;
+}
+
 // --- Helpers del MoneyInput (formato es-AR: '.' miles, ',' decimal) ---
 
 const groupInt = new Intl.NumberFormat('es-AR');

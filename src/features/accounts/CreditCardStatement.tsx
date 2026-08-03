@@ -1,9 +1,13 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Amount } from '../../components/ui/Amount';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { ChevronDownIcon } from '../../components/ui/icons';
+import { currencyNoun } from '../../lib/money';
+import { useMe } from '../auth/useMe';
 import { StatementPaidToggle } from './StatementPaidToggle';
+import { SubBalanceChip } from './SubBalanceChip';
 import { useStatement } from './useStatement';
 import type { Account } from './api';
 
@@ -37,6 +41,9 @@ export function CreditCardStatement({ account, parentAccount }: CreditCardStatem
   // período, y un botón (chevron) despliega/pliega el resto (reversible).
   const [expanded, setExpanded] = useState(false);
   const { data, isPending, isError } = useStatement(account.id, offset);
+  // La moneda favorita del usuario decide qué renglones se pueden hoverear para ver el
+  // equivalente estimado (FR-9): el que ya está en su moneda no tiene nada que convertir.
+  const { data: me } = useMe();
 
   return (
     <div className="flex flex-col gap-2 border-t border-line pt-3">
@@ -72,33 +79,97 @@ export function CreditCardStatement({ account, parentAccount }: CreditCardStatem
         </p>
       )}
 
-      {/* Detalle expandible. La deuda ya se muestra arriba a la derecha del bloque, así que
-          el "Saldo al cierre" vive sólo acá dentro. Sprint 22.3: dos columnas — stats a la
-          izquierda, widget "¿Ya lo pagaste?" a la derecha. */}
+      {/* Detalle expandible. Sprint 27: UN BLOQUE POR MONEDA. Una tarjeta argentina acumula dos
+          deudas separadas en el mismo resumen (verificado contra un resumen real: dos hileras
+          con su propio total), cierran y vencen juntas pero se pagan por separado. El
+          vencimiento, que es del ciclo, se muestra una sola vez abajo. */}
       {expanded && data && (
         <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-col gap-1 text-sm">
-              <p className="flex items-center gap-2 text-body">
-                Consumos del ciclo:{' '}
-                <Amount amount={data.totalSpent} currency={data.currency} tone="neutral" size="sm" />
-              </p>
-              <p className="flex items-center gap-2 text-body">
-                Pagos: <Amount amount={data.payments} currency={data.currency} tone="neutral" size="sm" />
-              </p>
-              <p className="flex items-center gap-2 text-ink">
-                Saldo al cierre:{' '}
-                <Amount amount={data.closingBalance} currency={data.currency} tone="neutral" size="sm" />
-              </p>
-              {/* Sprint 22.3: si el ciclo está marcado pagado, el vencimiento ya no urge → no se pinta rojo. */}
-              <p className={isPastDue(data.dueDate) && !data.paid ? 'text-expense' : 'text-body'}>
-                {isPastDue(data.dueDate) ? 'Vencido el ' : 'Vence el '}
-                {formatDate(data.dueDate)}
-              </p>
-            </div>
+          {data.lines.length === 0 && (
+            <p className="text-sm text-muted">No hubo movimientos en este ciclo.</p>
+          )}
 
-            <StatementPaidToggle card={account} data={data} parentAccount={parentAccount} />
-          </div>
+          {data.lines.map((line) => (
+            <div
+              key={line.currency}
+              className="flex flex-col gap-2 rounded-md border border-line p-3 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div className="flex flex-col gap-1 text-sm">
+                {/* D9: "Compras en pesos", NO "Deuda en pesos". El resumen del banco muestra un
+                    "total a pagar en pesos" que incluye los dólares convertidos y los impuestos;
+                    estos números son las compras limpias y separadas, distintos a propósito. */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted">
+                    Compras en {currencyNoun(line.currency)}
+                  </span>
+                  {/* FR-9: los renglones en una moneda distinta a la favorita se pueden hoverear
+                      para ver el equivalente estimado. Mismo chip de S22.1, cero concepto nuevo.
+                      Sin favorita conocida no hay a qué convertir, así que tampoco va el chip. */}
+                  {!!me?.defaultCurrency && line.currency !== me.defaultCurrency && (
+                    <SubBalanceChip
+                      currency={line.currency}
+                      balance={line.closingBalance}
+                      favoriteCurrency={me?.defaultCurrency}
+                    />
+                  )}
+                </div>
+                <p className="flex items-center gap-2 text-body">
+                  Consumos del ciclo:{' '}
+                  <Amount
+                    amount={line.totalSpent}
+                    currency={line.currency}
+                    tone="neutral"
+                    size="sm"
+                  />
+                </p>
+                <p className="flex items-center gap-2 text-body">
+                  Pagos:{' '}
+                  <Amount amount={line.payments} currency={line.currency} tone="neutral" size="sm" />
+                </p>
+                <p className="flex items-center gap-2 text-ink">
+                  Saldo al cierre:{' '}
+                  <Amount
+                    amount={line.closingBalance}
+                    currency={line.currency}
+                    tone="neutral"
+                    size="sm"
+                  />
+                </p>
+                {/* D8/FR-6: pagar de más no se bloquea, se avisa — y el aviso lleva a los
+                    movimientos para ver dónde se pifió. El excedente NO baja la deuda de la
+                    otra moneda: son deudas separadas. */}
+                {line.closingBalance > 0 && (
+                  <Link
+                    to={`/transactions?accountId=${account.id}`}
+                    className="text-sm text-expense underline underline-offset-2"
+                  >
+                    Pagaste de más: quedó saldo a favor en {currencyNoun(line.currency)}. Ver
+                    movimientos
+                  </Link>
+                )}
+              </div>
+
+              <StatementPaidToggle
+                card={account}
+                data={data}
+                line={line}
+                parentAccount={parentAccount}
+              />
+            </div>
+          ))}
+
+          {/* Del ciclo, compartido por los renglones: se muestra una sola vez. Sprint 22.3: si
+              está todo pagado, el vencimiento ya no urge → no se pinta rojo. */}
+          <p
+            className={
+              isPastDue(data.dueDate) && !data.lines.every((l) => l.paid)
+                ? 'text-sm text-expense'
+                : 'text-sm text-body'
+            }
+          >
+            {isPastDue(data.dueDate) ? 'Vencido el ' : 'Vence el '}
+            {formatDate(data.dueDate)}
+          </p>
 
           <div className="flex items-center justify-between gap-2">
             <Button
