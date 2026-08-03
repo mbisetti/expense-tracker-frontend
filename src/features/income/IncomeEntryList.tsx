@@ -1,15 +1,11 @@
-import { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Amount } from '../../components/ui/Amount';
-import { Button } from '../../components/ui/Button';
+import { EditButton } from '../../components/ui/ActionsMenu';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { useToast } from '../../components/ui/toastContext';
 import { formatMoney } from '../../lib/money';
 import { useIncomeEntries } from './useIncomeEntries';
-import { useDeleteIncomeEntry } from './useIncomeMutations';
-import { incomeErrorMessage } from './errorMessages';
+import type { IncomeEntryListItem } from './api';
 
 function formatDate(date: string): string {
   return new Date(date + 'T00:00:00').toLocaleDateString('es-AR', {
@@ -18,20 +14,13 @@ function formatDate(date: string): string {
   });
 }
 
-export function IncomeEntryList() {
-  const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
-  const toast = useToast();
-  const { data, isPending, isError } = useIncomeEntries();
-  const deleteMutation = useDeleteIncomeEntry();
+type Props = {
+  /** S36 (FR-9): el lápiz abre la edición; el Borrar vive dentro de ese form. */
+  onEdit?: (entry: IncomeEntryListItem) => void;
+};
 
-  const confirmDelete = () => {
-    if (!confirmingDeleteId) return;
-    deleteMutation.mutate(confirmingDeleteId, {
-      onSuccess: () => toast.success('Ingreso borrado.'),
-      onError: (error) => toast.error(incomeErrorMessage(error)),
-      onSettled: () => setConfirmingDeleteId(null),
-    });
-  };
+export function IncomeEntryList({ onEdit }: Props = {}) {
+  const { data, isPending, isError } = useIncomeEntries();
 
   return (
     <Card>
@@ -54,7 +43,11 @@ export function IncomeEntryList() {
           {data.content.map((entry) => (
             <li key={entry.id} className="flex items-center justify-between gap-3 py-2">
               <div>
-                <p className="text-ink">{entry.sourceName}</p>
+                <p className="text-ink">
+                  {entry.sourceName}
+                  {/* S36 (D5): el concepto es lo que hace reconocible a un extra. */}
+                  {entry.concept && <span className="text-body"> · {entry.concept}</span>}
+                </p>
                 <p className="text-sm text-body">
                   {formatDate(entry.date)}
                   {entry.notes ? ` · ${entry.notes}` : ''}
@@ -65,30 +58,17 @@ export function IncomeEntryList() {
               </div>
               <div className="flex items-center gap-3">
                 <Amount amount={entry.netAmount} currency={entry.currency} tone="income" size="sm" />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setConfirmingDeleteId(entry.id)}
-                >
-                  Borrar
-                </Button>
+                {onEdit && (
+                  <EditButton
+                    label={`ingreso de ${entry.sourceName}`}
+                    onClick={() => onEdit(entry)}
+                  />
+                )}
               </div>
             </li>
           ))}
         </ul>
       )}
-
-      <ConfirmDialog
-        open={confirmingDeleteId !== null}
-        danger
-        title="Borrar ingreso"
-        message="Esta acción no se puede deshacer."
-        confirmLabel="Borrar"
-        loading={deleteMutation.isPending}
-        onConfirm={confirmDelete}
-        onCancel={() => setConfirmingDeleteId(null)}
-      />
     </Card>
   );
 }

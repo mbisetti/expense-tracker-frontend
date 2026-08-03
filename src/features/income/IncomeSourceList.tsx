@@ -12,13 +12,24 @@ import { useCreateIncomeSource } from './useIncomeMutations';
 import { incomeErrorMessage } from './errorMessages';
 import { DeductionManager } from './DeductionManager';
 import { parseAmountInput } from '../../lib/money';
+import { needsDueMonth } from './api';
 import type { IncomeFrequency } from './api';
 
 const FREQUENCY_OPTIONS: { value: IncomeFrequency; label: string }[] = [
   { value: 'MONTHLY', label: 'Mensual' },
   { value: 'BIWEEKLY', label: 'Quincenal' },
   { value: 'WEEKLY', label: 'Semanal' },
+  // S36 (D7). No sirven para el aguinaldo colgado del sueldo (una fuente tiene UNA frecuencia):
+  // son para fuentes genuinamente anuales, como dividendos o un bono de otra empresa.
+  { value: 'SEMIANNUAL', label: 'Semestral' },
+  { value: 'ANNUAL', label: 'Anual' },
 ];
+
+// S36 (EC-4): sin mes ancla, una fuente anual mostraría expectativa los doce meses.
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, i) => {
+  const label = new Date(2026, i, 1).toLocaleDateString('es-AR', { month: 'long' });
+  return { value: i + 1, label: label.charAt(0).toUpperCase() + label.slice(1) };
+});
 
 export function IncomeSourceList() {
   const [formOpen, setFormOpen] = useState(false);
@@ -28,6 +39,7 @@ export function IncomeSourceList() {
   const [frequency, setFrequency] = useState<IncomeFrequency>('MONTHLY');
   const [expectedAmount, setExpectedAmount] = useState('');
   const [billingDay, setBillingDay] = useState('');
+  const [dueMonth, setDueMonth] = useState('1');
   const [expandedSourceId, setExpandedSourceId] = useState<string | null>(null);
 
   const toast = useToast();
@@ -42,6 +54,7 @@ export function IncomeSourceList() {
     setFrequency('MONTHLY');
     setExpectedAmount('');
     setBillingDay('');
+    setDueMonth('1');
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -55,6 +68,8 @@ export function IncomeSourceList() {
               frequency,
               expectedAmount: parseAmountInput(expectedAmount),
               billingDay: Number(billingDay),
+              // Sólo viaja donde significa algo: el server lo guarda NULL en las demás.
+              ...(needsDueMonth(frequency) ? { dueMonth: Number(dueMonth) } : {}),
             }
           : {}),
       },
@@ -152,6 +167,22 @@ export function IncomeSourceList() {
                 required
                 disabled={createMutation.isPending}
               />
+
+              {needsDueMonth(frequency) && (
+                <Select
+                  label={frequency === 'SEMIANNUAL' ? 'Primer mes de cobro' : 'Mes de cobro'}
+                  id="source-due-month"
+                  value={dueMonth}
+                  onChange={(e) => setDueMonth(e.target.value)}
+                  disabled={createMutation.isPending}
+                >
+                  {MONTH_OPTIONS.map((option) => (
+                    <option key={option.value} value={String(option.value)}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+              )}
             </>
           )}
 

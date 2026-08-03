@@ -66,16 +66,23 @@ const entriesPageFixture = {
   totalPages: 1,
 };
 
+// S36: sin fuentes esperadas la card no renderiza nada — el default deja los tests viejos igual.
+const noExpectedIncome = { month: 7, year: 2026, byCurrency: [], sources: [] };
+
 function stubEndpoints(options?: {
   sources?: unknown[];
   entriesPage?: unknown;
   accounts?: unknown[];
+  expectedIncome?: unknown;
   onPost?: (body: Record<string, unknown>) => void;
+  onPatch?: (body: Record<string, unknown>) => void;
+  onDelete?: (url: string) => void;
   postResponse?: unknown;
 }) {
   const sources = options?.sources ?? [activeSource, inactiveSource];
   const entriesPage = options?.entriesPage ?? entriesPageFixture;
   const accounts = options?.accounts ?? [account];
+  const expectedIncome = options?.expectedIncome ?? noExpectedIncome;
 
   vi.stubGlobal(
     'fetch',
@@ -86,6 +93,16 @@ function stubEndpoints(options?: {
         options?.onPost?.(body);
         return ok(options?.postResponse ?? { ...entry, accountBalance: 999 });
       }
+      if (url.includes('/income-entries') && requestInit?.method === 'PATCH') {
+        const body = JSON.parse(requestInit.body as string);
+        options?.onPatch?.(body);
+        return ok({ ...entry, ...body, accountBalance: 999 });
+      }
+      if (url.includes('/income-entries') && requestInit?.method === 'DELETE') {
+        options?.onDelete?.(url);
+        return ok(null);
+      }
+      if (url.includes('/summary/expected-income')) return ok(expectedIncome);
       if (url.includes('/deductions')) return ok([]);
       if (url.includes('/income-sources')) return ok(sources);
       if (url.includes('/income-entries')) return ok(entriesPage);
@@ -93,6 +110,11 @@ function stubEndpoints(options?: {
       throw new Error('URL inesperada: ' + url);
     }),
   );
+}
+
+// S36 (FR-8): el alta vive detrás de un botón que la expande, como en Transacciones.
+async function openEntryForm() {
+  fireEvent.click(await screen.findByRole('button', { name: 'Registrar ingreso' }));
 }
 
 function renderPage() {
@@ -123,6 +145,7 @@ describe('IncomePage', () => {
     stubEndpoints();
     renderPage();
 
+    await openEntryForm();
     expect(await screen.findByRole('heading', { name: 'Registrar ingreso' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Fuentes de ingreso' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Ingresos recientes' })).toBeInTheDocument();
@@ -139,6 +162,7 @@ describe('IncomePage', () => {
     expect(await screen.findByText('Freelance viejo')).toBeInTheDocument();
     expect(screen.getByText('(inactiva)')).toBeInTheDocument();
 
+    await openEntryForm();
     const listbox = await openSelect('Fuente', { exact: false });
     const optionLabels = within(listbox)
       .getAllByRole('option')
@@ -157,6 +181,7 @@ describe('IncomePage', () => {
     });
     renderPage();
 
+    await openEntryForm();
     // el select existe recién cuando las fuentes cargaron — esperar el label, no el heading
     // (Fuente/Cuenta destino/Monto bruto son required: el label agrega "*" → exact:false)
     await selectOption('Fuente', 'src1', { exact: false });
@@ -188,6 +213,7 @@ describe('IncomePage', () => {
     });
     renderPage();
 
+    await openEntryForm();
     await selectOption('Fuente', 'src3', { exact: false });
     await selectOption('Cuenta destino', 'acc1', { exact: false }); // cuenta ARS
     fireEvent.change(screen.getByLabelText('Monto bruto', { exact: false }), {
@@ -203,6 +229,7 @@ describe('IncomePage', () => {
     stubEndpoints({ sources: [inactiveSource] });
     renderPage();
 
+    await openEntryForm();
     expect(
       await screen.findByText('Creá una fuente de ingreso activa para registrar ingresos.'),
     ).toBeInTheDocument();
@@ -220,5 +247,87 @@ describe('IncomePage', () => {
     expect(await screen.findByText('Todavía no tenés fuentes de ingreso.')).toBeInTheDocument();
     expect(screen.getByText('Creá una para registrar ingresos.')).toBeInTheDocument();
     expect(await screen.findByText('Todavía no registraste ingresos.')).toBeInTheDocument();
+  });
+
+  // ── S36 ────────────────────────────────────────────────────────────────────
+
+  it('FR-8: el alta arranca colapsada detrás del botón y se expande al tocarlo', async () => {
+    stubEndpoints();
+    renderPage();
+
+    // El botón está; el form todavía no (las fuentes tienen que quedar a mano para los ticks).
+    expect(await screen.findByRole('button', { name: 'Registrar ingreso' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Registrar ingreso' })).not.toBeInTheDocument();
+
+    await openEntryForm();
+
+    expect(await screen.findByRole('heading', { name: 'Registrar ingreso' })).toBeInTheDocument();
+  });
+
+  it('FR-9/FR-3: el lápiz abre la edición con los datos cargados y patchea', async () => {
+    let patched: Record<string, unknown> | undefined;
+    stubEndpoints({
+      onPatch: (body) => {
+        patched = body;
+      },
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar ingreso de Sueldo' }));
+
+    expect(await screen.findByRole('heading', { name: 'Editar ingreso' })).toBeInTheDocument();
+    // la fuente no se cambia en edición: es un texto, no un select
+    expect(screen.queryByLabelText('Fuente', { exact: false })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Monto bruto', { exact: false })).toHaveValue('250.000');
+
+    fireEvent.change(screen.getByLabelText('Monto bruto', { exact: false }), {
+      target: { value: '200000' },
+    });
+    fireEvent.change(screen.getByLabelText('Concepto', { exact: false }), {
+      target: { value: 'Aguinaldo 1/2' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(await screen.findByText(/Ingreso actualizado/)).toBeInTheDocument();
+    expect(patched).toMatchObject({ grossAmount: 200000, concept: 'Aguinaldo 1/2' });
+    // el bloque de plata viaja completo: sin override, el server lo interpreta como "sin pisar"
+    expect(patched).not.toHaveProperty('netOverride');
+  });
+
+  it('FR-9: el Borrar vive dentro del form de edición y pide confirmación', async () => {
+    let deletedUrl: string | undefined;
+    stubEndpoints({
+      onDelete: (url) => {
+        deletedUrl = url;
+      },
+    });
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar ingreso de Sueldo' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Borrar' }));
+
+    // ConfirmDialog: el borrado no sale sin pasar por acá
+    const dialog = await screen.findByRole('dialog');
+    expect(
+      within(dialog).getByText(
+        'Se borra el ingreso y su movimiento. Esta acción no se puede deshacer.',
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Borrar' }));
+
+    expect(await screen.findByText('Ingreso borrado.')).toBeInTheDocument();
+    expect(deletedUrl).toContain('/income-entries/e1');
+  });
+
+  it('FR-4: el concepto de un cobro se ve en el listado de recientes', async () => {
+    stubEndpoints({
+      entriesPage: {
+        ...entriesPageFixture,
+        content: [{ ...entry, concept: 'Aguinaldo 1/2' }],
+      },
+    });
+    renderPage();
+
+    expect(await screen.findByText('· Aguinaldo 1/2')).toBeInTheDocument();
   });
 });

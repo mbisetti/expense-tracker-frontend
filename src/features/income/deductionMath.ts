@@ -1,4 +1,9 @@
-import type { AppliedDeduction, IncomeDeductionResponse } from './api';
+import type { AppliedDeduction, DeductionType } from './api';
+
+// Lo único que el cálculo necesita. S36: así el preview sirve tanto para las deducciones VIVAS de
+// la fuente (alta) como para el SNAPSHOT de una entry ya cargada (edición) — que es contra lo que
+// el backend recalcula al editar, para no reescribirle la historia a un cobro viejo.
+type DeductionSpec = { name: string; type: DeductionType; value: number };
 
 // Redondeo a 2 decimales HALF_UP — espeja el DeductionCalculator del backend para el
 // preview en vivo. El backend es la fuente de verdad; esto es solo UX.
@@ -13,7 +18,7 @@ export type NetPreview = {
 
 // Mismo criterio que el backend: PERCENTAGE sobre el bruto original, cada applied_amount
 // redondeado antes de sumar.
-export function previewNet(gross: number, deductions: IncomeDeductionResponse[]): NetPreview {
+export function previewNet(gross: number, deductions: DeductionSpec[]): NetPreview {
   const g = round2(gross);
   let total = 0;
   const lines: AppliedDeduction[] = deductions.map((d) => {
