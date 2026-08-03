@@ -191,17 +191,25 @@ describe('TransactionForm en alta (Sprint 22, moneda)', () => {
     expect(postCalls[0].body).toMatchObject({ accountId: 'acc-1', currency: 'ARS', amount: 500 });
   });
 
-  it('cuenta CREDIT: la moneda es un chip fijo (mono-moneda), sin selector editable (S23 D8)', async () => {
+  // Sprint 27: esto ANTES era un chip fijo deshabilitado (S23 D8, el espejo en la UI del guard
+  // mono-moneda de S22 D2). Con el guard levantado, el backend acepta una compra en dólares
+  // sobre una tarjeta en pesos — pero mientras el chip siguiera acá no había forma de CARGARLA
+  // desde la app, que es el punto entero del sprint.
+  it('cuenta CREDIT: la moneda es un selector editable, con "Otra…" para una moneda nueva', async () => {
     renderCreateForm();
 
     await selectOption('Cuenta', 'acc-2', { exact: false });
 
-    // Sprint 23 (D8): el ¼ muestra la moneda de la CREDIT como chip fijo deshabilitado —
-    // no un select (no hay opción "Otra…").
-    const currencyField = await screen.findByLabelText('Moneda', { exact: false });
-    expect(currencyField).toBeDisabled();
-    expect(currencyField).toHaveValue('ARS');
-    expect(screen.queryByRole('option', { name: 'Otra…' })).not.toBeInTheDocument();
+    await waitFor(() => expect(selectValue('Moneda', { exact: false })).toBe('ARS')); // principal
+    await selectOption('Moneda', '__other__', { exact: false });
+    fireEvent.change(await screen.findByLabelText('Moneda (3 letras)', { exact: false }), {
+      target: { value: 'usd' },
+    });
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(postCalls).toHaveLength(1));
+    expect(postCalls[0].body).toMatchObject({ accountId: 'acc-2', currency: 'USD', amount: 100 });
   });
 
   it('"Otra…": permite cargar una moneda nueva (uppercase) y la manda', async () => {
@@ -288,5 +296,46 @@ describe('TransactionForm ruteo de tarjeta (Sprint 22.2)', () => {
     // la tx cae en la cuenta-tarjeta, sin método de pago
     expect(postCalls[0].body).toMatchObject({ accountId: 'card-1' });
     expect(postCalls[0].body.paymentMethodId).toBeUndefined();
+  });
+
+  // Sprint 27 — el flujo real de una compra en dólares con la tarjeta, que es el caso que el
+  // sprint viene a habilitar: cuenta madre → la tarjeta como método → cambiar la moneda.
+  // Hasta S27 la moneda quedaba clavada en ARS al elegir la tarjeta y no había forma de cargarla.
+  it('ruteada a la tarjeta: la moneda arranca en la de la TARJETA y se puede cambiar a USD', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, options?: RequestInit) => {
+        if (options?.method === 'POST') {
+          const body = JSON.parse(options.body as string);
+          postCalls.push({ url, body });
+          return jsonResponse(201, { ...editTx, ...body, id: 'tx-new', accountBalance: -100 });
+        }
+        // la madre es USD y la tarjeta ARS: si la moneda se arrastrara de la madre en vez de
+        // reencuadrarse en la tarjeta, el default saldría mal y no se notaría
+        if (String(url).includes('/accounts'))
+          return jsonResponse(200, [{ ...bankAcc, currency: 'USD' }, linkedCard]);
+        return jsonResponse(200, []);
+      }),
+    );
+
+    renderCreate();
+
+    await selectOption('Cuenta', 'bank-1', { exact: false });
+    await selectOption('Método de pago', 'card:card-1', { exact: false });
+
+    // default = la principal de la TARJETA (ARS), no la de la madre (USD)
+    await waitFor(() => expect(selectValue('Moneda', { exact: false })).toBe('ARS'));
+
+    // y ahora sí se puede pasar a dólares: la tarjeta todavía no tiene sub-balance USD, así
+    // que el camino es "Otra…"
+    await selectOption('Moneda', '__other__', { exact: false });
+    fireEvent.change(await screen.findByLabelText('Moneda (3 letras)', { exact: false }), {
+      target: { value: 'usd' },
+    });
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(postCalls).toHaveLength(1));
+    expect(postCalls[0].body).toMatchObject({ accountId: 'card-1', currency: 'USD', amount: 100 });
   });
 });

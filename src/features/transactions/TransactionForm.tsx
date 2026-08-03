@@ -139,14 +139,17 @@ export function TransactionForm({
   const routedAccount = selectedCardId
     ? accounts?.find((a) => a.id === selectedCardId)
     : selectedAccount;
-  // CREDIT es mono-moneda (D2): no se muestra el selector, la moneda es la de la cuenta.
-  const isCredit = routedAccount?.type === 'CREDIT';
   // Monedas conocidas de la cuenta (principal primera) + "Otra…" para una moneda nueva.
   const currencyOptions = routedAccount?.balances?.map((b) => b.currency) ?? [];
-  // Moneda efectiva: la elegida, o la principal si aún no se tocó / es CREDIT (o tarjeta).
-  const effectiveCurrency = isCredit
-    ? routedAccount!.currency
-    : currency || selectedAccount?.currency || '';
+  // Moneda efectiva: la elegida, o la principal de la cuenta a la que ruteó la tx.
+  //
+  // Sprint 27: acá vivía el ÚLTIMO espejo del guard mono-moneda (S23 D8) — con una CREDIT, la
+  // moneda se forzaba a la de la cuenta y el selector se reemplazaba por un chip fijo. El
+  // backend ya acepta cualquier moneda en una tarjeta desde S27, pero mientras esto siguiera
+  // acá no había forma de CARGAR una compra en dólares desde la UI, que es el 100% del sprint.
+  // Ojo con el fallback: es `routedAccount`, no `selectedAccount` — eligiendo la tarjeta por el
+  // método de pago, la tx cae en la tarjeta y la moneda por defecto tiene que ser la de ella.
+  const effectiveCurrency = currency || routedAccount?.currency || '';
 
   // Sprint 24.3: recurrentes activos de la moneda efectiva (el vínculo exige moneda igual).
   const recurringOptions = (recurringList ?? []).filter(
@@ -389,7 +392,7 @@ export function TransactionForm({
         </div>
 
         <div className="col-span-1">
-          {!isEdit && routedAccount && !isCredit ? (
+          {!isEdit && routedAccount ? (
             <Select
               label="Moneda"
               id="tx-currency"
@@ -415,14 +418,16 @@ export function TransactionForm({
               <option value={OTHER_CCY}>Otra…</option>
             </Select>
           ) : (
-            // CREDIT (mono-moneda) o edición (moneda inmutable): chip fijo con la moneda efectiva.
+            // Edición: la moneda de una tx es INMUTABLE (el PATCH la rechaza) → chip fijo.
             <Input label="Moneda" id="tx-currency-fixed" value={effectiveCurrency} readOnly disabled />
           )}
         </div>
       </div>
 
-      {/* Otra moneda (D8): fila propia full-width, sólo en alta y cuenta no-CREDIT. */}
-      {!isEdit && !isCredit && currencyIsOther && (
+      {/* Otra moneda (D8): fila propia full-width, sólo en alta. Sprint 27: también en tarjetas
+          — es el camino para la PRIMERA compra en dólares, cuando la tarjeta todavía no tiene
+          sub-balance en esa moneda y por lo tanto no aparece en las opciones. */}
+      {!isEdit && currencyIsOther && (
         <Input
           label="Moneda (3 letras)"
           id="tx-currency-other"
@@ -491,7 +496,20 @@ export function TransactionForm({
         label="Método de pago"
         id="tx-payment-method"
         value={paymentMethodId}
-        onChange={(e) => setPaymentMethodId(e.target.value)}
+        onChange={(e) => {
+          const v = e.target.value;
+          setPaymentMethodId(v);
+          // Sprint 27: elegir una tarjeta como método RUTEA la tx a la cuenta-tarjeta (D6 de
+          // S22.2), así que la moneda tiene que reencuadrarse en la principal de la cuenta
+          // destino — si no, arrastraría la de la madre. Antes esto no hacía falta porque la
+          // moneda de una CREDIT estaba forzada; al soltar el candado, el reset es necesario.
+          const target = v.startsWith('card:')
+            ? accounts?.find((a) => a.id === v.slice(5))
+            : selectedAccount;
+          setCurrency(target?.currency ?? '');
+          setCurrencyIsOther(false);
+          setRecurringId(''); // el vínculo recurrente exige moneda igual (S24.3)
+        }}
         disabled={isPending || !accountId}
       >
         <option value="">

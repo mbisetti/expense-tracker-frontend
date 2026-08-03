@@ -67,12 +67,14 @@ export function TransferForm({
   const fromAccount = accounts?.find((a) => a.id === fromAccountId);
   const toAccount = accounts?.find((a) => a.id === toAccountId);
 
-  // CREDIT es mono-moneda (D2): su pata queda fija en la moneda de la cuenta.
-  const fromIsCredit = fromAccount?.type === 'CREDIT';
-  const toIsCredit = toAccount?.type === 'CREDIT';
   // Moneda resuelta de cada pata (Sprint 22): la elegida, o la principal si aún no se tocó.
-  const resolvedFromCcy = fromIsCredit ? fromAccount!.currency : fromCurrency || fromAccount?.currency || '';
-  const resolvedToCcy = toIsCredit ? toAccount!.currency : toCurrency || toAccount?.currency || '';
+  //
+  // Sprint 27: acá vivía otro espejo del guard mono-moneda (S22 D2) — la pata de una CREDIT
+  // quedaba clavada en la moneda de la cuenta. Pagar en pesos una deuda en dólares ES un
+  // transfer cross-currency hacia la tarjeta, así que con esto puesto el camino manual estaba
+  // cerrado (y también el de D4: comprar dólares primero y después pagar USD→USD a mano).
+  const resolvedFromCcy = fromCurrency || fromAccount?.currency || '';
+  const resolvedToCcy = toCurrency || toAccount?.currency || '';
 
   // crossCurrency depende de las monedas RESUELTAS (no de las cuentas): habilita el caso
   // intra-cuenta (comprar USD dentro de una cuenta) y el override de moneda por pata.
@@ -179,27 +181,19 @@ export function TransferForm({
               ))}
             </Select>
 
-            {/* Moneda de la pata origen (D5). CREDIT → chip fijo; el resto → CurrencySelect. */}
-            {fromAccount &&
-              (fromIsCredit ? (
-                <Input
-                  label="Moneda origen"
-                  id="transfer-from-currency-fixed"
-                  value={resolvedFromCcy}
-                  readOnly
-                  disabled
-                />
-              ) : (
-                <CurrencySelect
-                  key={`from-${fromAccountId}`}
-                  id="transfer-from-currency"
-                  label="Moneda origen"
-                  options={(fromAccount.balances ?? []).map((b) => b.currency)}
-                  value={fromCurrency}
-                  onChange={setFromCurrency}
-                  disabled={mutation.isPending}
-                />
-              ))}
+            {/* Moneda de la pata origen (D5). Sprint 27: también editable en una CREDIT — su
+                pata ya no está clavada en la moneda de la cuenta. */}
+            {fromAccount && (
+              <CurrencySelect
+                key={`from-${fromAccountId}`}
+                id="transfer-from-currency"
+                label="Moneda origen"
+                options={(fromAccount.balances ?? []).map((b) => b.currency)}
+                value={fromCurrency}
+                onChange={setFromCurrency}
+                disabled={mutation.isPending}
+              />
+            )}
           </div>
 
           {/* Fila 2 (D5): cuenta destino ½ | moneda destino ½ */}
@@ -221,26 +215,17 @@ export function TransferForm({
               ))}
             </Select>
 
-            {toAccount &&
-              (toIsCredit ? (
-                <Input
-                  label="Moneda destino"
-                  id="transfer-to-currency-fixed"
-                  value={resolvedToCcy}
-                  readOnly
-                  disabled
-                />
-              ) : (
-                <CurrencySelect
-                  key={`to-${toAccountId}`}
-                  id="transfer-to-currency"
-                  label="Moneda destino"
-                  options={(toAccount.balances ?? []).map((b) => b.currency)}
-                  value={toCurrency}
-                  onChange={setToCurrency}
-                  disabled={mutation.isPending}
-                />
-              ))}
+            {toAccount && (
+              <CurrencySelect
+                key={`to-${toAccountId}`}
+                id="transfer-to-currency"
+                label="Moneda destino"
+                options={(toAccount.balances ?? []).map((b) => b.currency)}
+                value={toCurrency}
+                onChange={setToCurrency}
+                disabled={mutation.isPending}
+              />
+            )}
           </div>
 
           {sameAccountSameCurrency && (

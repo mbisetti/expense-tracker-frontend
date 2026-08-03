@@ -337,7 +337,9 @@ export function TransactionsPage() {
         <div
           role="group"
           aria-label="Filtrar por cuenta"
-          className="flex gap-2 overflow-x-auto pb-1"
+          // pb-3 y no pb-1: con 4px la barra de scroll horizontal quedaba pegada a los chips y
+          // se superponía con los nombres. +8px de aire la separa del texto.
+          className="flex gap-2 overflow-x-auto pb-3"
         >
           {accounts.map((account) => {
             const active = accountId === account.id;

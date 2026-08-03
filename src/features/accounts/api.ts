@@ -29,11 +29,28 @@ export type Account = {
   linkedAccountId: string | null;
 };
 
+// Sprint 27: un renglón de deuda del resumen. Una tarjeta acumula una deuda POR MONEDA — las
+// compras en pesos y las compras en dólares cierran y vencen juntas, pero se pagan por separado.
+// Todo acá es por moneda; las fechas y `closed` son del ciclo y viven en Statement.
+export type StatementLine = {
+  currency: string;
+  totalSpent: number;
+  payments: number;
+  closingBalance: number;
+  // Sprint 22.3/22.4, ahora por renglón: esta deuda tiene una marca viva.
+  paid: boolean;
+  // La marca es un PAGO REAL (tiene transfer) vs cosmética → decide si el deshacer confirma.
+  paidWithTransfer: boolean;
+  // Lo que falta pagar DE ESTA MONEDA (deuda al cierre − pagos posteriores, piso 0).
+  remainingToPay: number;
+};
+
 export type Statement = {
   accountId: string;
   offset: number;
   statementCloseDay: number;
   paymentDueDay: number;
+  /** Moneda PRINCIPAL de la tarjeta — ya no "la del resumen" (eso es line.currency). */
   currency: string;
   /** YYYY-MM-DD */
   periodStart: string;
@@ -41,16 +58,9 @@ export type Statement = {
   periodEnd: string;
   /** YYYY-MM-DD */
   dueDate: string;
-  totalSpent: number;
-  payments: number;
-  closingBalance: number;
-  // Sprint 22.3/22.4: este ciclo está marcado como pagado (marca viva).
-  paid: boolean;
-  // Sprint 22.4: la marca es un PAGO REAL (tiene transfer) vs cosmética → decide si el
-  // deshacer pide confirmación.
-  paidWithTransfer: boolean;
-  // Sprint 22.4: el ciclo ya cerró (lo decide el server). Solo un ciclo cerrado se paga/marca.
+  // Sprint 22.4: el ciclo ya cerró (lo decide el server). Solo un ciclo cerrado se paga/marca,
+  // y vale para TODOS los renglones: las dos deudas cierran el mismo día.
   closed: boolean;
-  // Sprint 22.4: lo que falta pagar de este resumen (deuda al cierre − pagos posteriores).
-  remainingToPay: number;
+  // Sprint 27: un renglón por moneda con movimientos (o con saldo abierto). Puede venir vacío.
+  lines: StatementLine[];
 };
