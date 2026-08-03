@@ -91,7 +91,12 @@ export function ExpectedIncomeCard({ autoConfirmSourceId }: Props = {}) {
           {/* Fila en DOS líneas: arriba quién y cada cuánto, abajo la plata, el estado y la
               acción. En una sola línea, nombre + frecuencia + monto + chip + botón se apretaban
               hasta romperse en pantalla chica. */}
-          <ul className="list-none p-0 m-0 flex flex-col gap-2 divide-y divide-line">
+          {/* `divide-y` dibuja la línea en el borde SUPERIOR de cada ítem salvo el primero. Con
+              `gap-2` + solo `pt-2`, el contenido del ítem de arriba quedaba pegado a la línea de
+              abajo: el botón "Ya lo cobré" —que es más alto que el texto— la tocaba. El padding
+              va simétrico (`py-2`) y el gap se saca, así cada renglón respira igual de los dos
+              lados de su separador. */}
+          <ul className="list-none p-0 m-0 flex flex-col divide-y divide-line">
             {data.sources.map((source) => {
               // S36 (FR-5): la expectativa es una CANTIDAD de cobros, no un sí/no. Una quincenal
               // con uno cargado sigue pendiente por el segundo.
@@ -101,14 +106,21 @@ export function ExpectedIncomeCard({ autoConfirmSourceId }: Props = {}) {
               const badge = expectedStateBadge(source, dayOfMonth);
 
               return (
-                <li key={source.sourceId} className="pt-2 first:pt-0 flex flex-col gap-1">
+                <li
+                  key={source.sourceId}
+                  className="py-2 first:pt-0 last:pb-0 flex flex-col gap-1"
+                >
                   <span className="text-ink">
                     {source.name}{' '}
                     <span className="text-body text-sm">{FREQUENCY_LABEL[source.frequency]}</span>
                   </span>
 
-                  <span className="flex items-center justify-between gap-2 text-sm">
-                    <span className="flex items-center gap-2 min-w-0">
+                  {/* `items-center` sobre el CONTENEDOR centra el botón contra el bloque de la
+                      izquierda entero — si ese bloque envuelve a dos líneas en pantalla chica, el
+                      botón queda flotando al medio y se lee desalineado. Alineado arriba, el
+                      botón siempre acompaña al renglón del monto. */}
+                  <span className="flex items-start justify-between gap-2 text-sm">
+                    <span className="flex min-w-0 flex-wrap items-center gap-2">
                       <span className="tabular-nums">
                         {formatMoney(source.expectedAmount, source.currency)}
                       </span>

@@ -499,16 +499,20 @@ export function TransactionForm({
         onChange={(e) => {
           const v = e.target.value;
           setPaymentMethodId(v);
-          // Sprint 27: elegir una tarjeta como método RUTEA la tx a la cuenta-tarjeta (D6 de
-          // S22.2), así que la moneda tiene que reencuadrarse en la principal de la cuenta
-          // destino — si no, arrastraría la de la madre. Antes esto no hacía falta porque la
-          // moneda de una CREDIT estaba forzada; al soltar el candado, el reset es necesario.
-          const target = v.startsWith('card:')
-            ? accounts?.find((a) => a.id === v.slice(5))
-            : selectedAccount;
-          setCurrency(target?.currency ?? '');
-          setCurrencyIsOther(false);
-          setRecurringId(''); // el vínculo recurrente exige moneda igual (S24.3)
+          // Elegir una tarjeta como método RUTEA la tx a la cuenta-tarjeta (D6 de S22.2), así
+          // que la moneda tiene que reencuadrarse en la principal de la cuenta destino — si no,
+          // arrastraría la de la madre.
+          //
+          // Pero SOLO si la cuenta destino cambió. El campo Moneda está arriba de este y el de
+          // método abajo, así que resetear siempre le pisaba al usuario la moneda que acababa
+          // de elegir: ponías USD, elegías el método y te la volvía a pesos en silencio.
+          const newRoutedId = v.startsWith('card:') ? v.slice(5) : accountId;
+          const prevRoutedId = selectedCardId ?? accountId;
+          if (newRoutedId !== prevRoutedId) {
+            setCurrency(accounts?.find((a) => a.id === newRoutedId)?.currency ?? '');
+            setCurrencyIsOther(false);
+            setRecurringId(''); // el vínculo recurrente exige moneda igual (S24.3)
+          }
         }}
         disabled={isPending || !accountId}
       >

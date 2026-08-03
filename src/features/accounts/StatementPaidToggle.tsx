@@ -203,26 +203,34 @@ export function StatementPaidToggle({ card, data, line, parentAccount }: Stateme
       >
         <div className="flex flex-col gap-3">
           {/* La moneda del pago sale de acá y no de un botón (D5): el usuario elige de dónde
-              sale la plata, y eso ya define si el pago es directo o con conversión. */}
+              sale la plata, y eso ya define si el pago es directo o con conversión.
+              El label nombra la moneda y no la cuenta: la cuenta es SIEMPRE la madre, y
+              repetir su nombre en cada opción hacía parecer que esto elegía entre cuentas —
+              con una sola opción, que además era la misma cuenta, el selector no se entendía. */}
           <Select
-            label="Pagar desde"
+            label={`Con qué plata de ${parentAccount?.name}`}
             id="statement-pay-from"
             value={fromCurrency}
             onChange={(e) => {
               setFromCurrency(e.target.value);
               setFromAmountInput('');
             }}
+            helper={
+              parentBalances.length <= 1
+                ? `${parentAccount?.name} solo tiene ${currencyNoun(fromCurrency)}. Para pagar con otra moneda, primero metela en la cuenta desde Movimientos.`
+                : undefined
+            }
           >
             {/* Solo los sub-balances que la madre realmente tiene. Si no tiene ninguno en la
                 moneda del renglón, el único camino es la conversión — y ahora existe. */}
             {parentBalances.length > 0 ? (
               parentBalances.map((b) => (
                 <option key={b.currency} value={b.currency}>
-                  {parentAccount?.name} · {formatMoney(b.balance, b.currency)}
+                  {currencyNoun(b.currency)} · {formatMoney(b.balance, b.currency)}
                 </option>
               ))
             ) : (
-              <option value={line.currency}>{parentAccount?.name}</option>
+              <option value={line.currency}>{currencyNoun(line.currency)}</option>
             )}
           </Select>
 
