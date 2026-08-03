@@ -9,7 +9,9 @@ import { Button } from '../../components/ui/Button';
 import { ArrowRightIcon } from '../../components/ui/icons';
 import { useToast } from '../../components/ui/toastContext';
 import { formatMoney, numberToAmountDisplay, parseAmountInput } from '../../lib/money';
+import { currencyOptionsFor } from '../../lib/currencyOptions';
 import { useAccounts } from '../accounts/useAccounts';
+import { useMe } from '../auth/useMe';
 import { useCreateTransfer, useUpdateTransfer } from './useTransferMutations';
 import { useExchangeRate } from './useExchangeRate';
 import { transferErrorMessage } from './errorMessages';
@@ -45,6 +47,10 @@ export function TransferForm({
   const isEdit = transfer !== undefined;
   const toast = useToast();
   const { data: accounts } = useAccounts();
+  // S27.1: las monedas configuradas en Ajustes se ofrecen en las dos patas aunque la cuenta no
+  // tenga saldo en ellas. Gastar una que no tenés lo sigue frenando el server
+  // (INSUFFICIENT_BALANCE): esto ofrece opciones, no promete saldo.
+  const { data: me } = useMe();
   const createMutation = useCreateTransfer();
   const updateMutation = useUpdateTransfer();
   const mutation = isEdit ? updateMutation : createMutation;
@@ -188,7 +194,7 @@ export function TransferForm({
                 key={`from-${fromAccountId}`}
                 id="transfer-from-currency"
                 label="Moneda origen"
-                options={(fromAccount.balances ?? []).map((b) => b.currency)}
+                options={currencyOptionsFor(fromAccount, me?.workingCurrencies, me?.defaultCurrency)}
                 value={fromCurrency}
                 onChange={setFromCurrency}
                 disabled={mutation.isPending}
@@ -220,7 +226,7 @@ export function TransferForm({
                 key={`to-${toAccountId}`}
                 id="transfer-to-currency"
                 label="Moneda destino"
-                options={(toAccount.balances ?? []).map((b) => b.currency)}
+                options={currencyOptionsFor(toAccount, me?.workingCurrencies, me?.defaultCurrency)}
                 value={toCurrency}
                 onChange={setToCurrency}
                 disabled={mutation.isPending}

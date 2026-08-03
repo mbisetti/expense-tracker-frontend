@@ -17,6 +17,7 @@ import { useMe, useUpdateMe } from '../auth/useMe';
 import { NotificationsSection } from '../notifications/NotificationsSection';
 import { TelegramSection } from '../telegram/TelegramSection';
 import { InstallSection } from './InstallSection';
+import { WorkingCurrenciesSection } from './WorkingCurrenciesSection';
 import { MoonIcon, SunIcon } from '../../components/ui/icons';
 
 // Moneda favorita: opciones curadas (Sprint 22.1). Si el usuario tuviera otra guardada,
@@ -147,6 +148,11 @@ export function SettingsPage() {
               </option>
             ))}
           </Select>
+
+          {/* S27.1: va justo debajo de la favorita — son la misma familia de preferencia (con
+              qué monedas hablás), y leerlas juntas hace evidente que una es la de referencia y
+              las otras las de trabajo. */}
+          <WorkingCurrenciesSection />
 
           <Select
             label="Formato de fecha"
