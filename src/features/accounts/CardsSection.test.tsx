@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthContext } from '../auth/context';
 import { CardsSection } from './CardsSection';
 import type { Account } from './api';
 import type { PaymentMethod } from '../paymentMethods/api';
@@ -108,5 +110,75 @@ describe('CardsSection typography (S22.3 A1–A3)', () => {
     const title = screen.getByText('Tarjetas');
     expect(title).toHaveClass('text-sm');
     expect(title).not.toHaveClass('text-xs');
+  });
+});
+
+// Sprint 27: la deuda de una tarjeta dejó de ser un número.
+//
+// A diferencia de los de arriba, estos SÍ montan providers: los sub-balances se muestran con
+// SubBalanceChip, que por dentro pide la cotización (useExchangeRate → useHttp → useAuth) para
+// el equivalente estimado al hover. Es el mismo chip que usan las cuentas — reusarlo es lo que
+// evita inventar un segundo dialecto visual para la misma idea.
+describe('CardsSection — sub-deudas por moneda (S27)', () => {
+  const dualCard: Account = {
+    ...creditChild,
+    balances: [
+      { currency: 'ARS', balance: -1000 },
+      { currency: 'USD', balance: -100 },
+    ],
+  };
+
+  function renderWithProviders(ui: React.ReactElement) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider
+          value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
+        >
+          {ui}
+        </AuthContext.Provider>
+      </QueryClientProvider>,
+    );
+  }
+
+  // La card vive COLAPSADA la mayor parte del tiempo, y ahí solo se veía el saldo de la moneda
+  // principal: los dólares que debías no aparecían por ningún lado hasta desplegar el resumen.
+  it('la fila de la tarjeta muestra la deuda en pesos Y la de dólares', () => {
+    renderWithProviders(
+      <CardsSection
+        account={bank}
+        allAccounts={[bank, dualCard]}
+        paymentMethods={[]}
+        transactions={[]}
+        onAddCard={() => {}}
+        favoriteCurrency="ARS"
+      />,
+    );
+
+    expect(screen.getByText(/-\$\s?1\.000,00/)).toBeInTheDocument();
+    expect(screen.getByText(/US\$\s?100,00|-US\$\s?100,00/)).toBeInTheDocument();
+  });
+
+  // "No se muestran ceros" también acá: una moneda saldada no ensucia la fila.
+  it('una moneda con saldo 0 no genera chip', () => {
+    const settled: Account = {
+      ...creditChild,
+      balances: [
+        { currency: 'ARS', balance: -1000 },
+        { currency: 'USD', balance: 0 },
+      ],
+    };
+    renderWithProviders(
+      <CardsSection
+        account={bank}
+        allAccounts={[bank, settled]}
+        paymentMethods={[]}
+        transactions={[]}
+        onAddCard={() => {}}
+        favoriteCurrency="ARS"
+      />,
+    );
+
+    expect(screen.queryByText(/US\$/)).not.toBeInTheDocument();
   });
 });

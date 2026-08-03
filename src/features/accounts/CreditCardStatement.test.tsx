@@ -422,7 +422,7 @@ describe('CreditCardStatement', () => {
     expect(screen.queryByLabelText(/Sale de la cuenta/)).not.toBeInTheDocument();
 
     // pasar a pagar desde los pesos → aparece el segundo monto
-    await selectOption('Pagar desde', 'ARS');
+    await selectOption(/Con qué plata de/, 'ARS');
     const sale = await screen.findByLabelText(/Sale de la cuenta \(ARS\)/);
     fireEvent.change(sale, { target: { value: '150000' } });
 
@@ -480,8 +480,8 @@ describe('CreditCardStatement', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: TICK_ARS }));
 
-    await screen.findByLabelText('Pagar desde');
-    expect(selectValue('Pagar desde')).toBe('USD');
+    await screen.findByLabelText(/Con qué plata de/);
+    expect(selectValue(/Con qué plata de/)).toBe('USD');
     expect(screen.getByLabelText(/Sale de la cuenta \(USD\)/)).toBeInTheDocument();
   });
 

@@ -173,6 +173,7 @@ export function AccountCardBody({
           paymentMethods={paymentMethods}
           transactions={txs ?? []}
           onAddCard={onAddCard}
+          favoriteCurrency={me?.defaultCurrency}
         />
       )}
 

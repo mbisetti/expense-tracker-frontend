@@ -212,6 +212,50 @@ describe('TransactionForm en alta (Sprint 22, moneda)', () => {
     expect(postCalls[0].body).toMatchObject({ accountId: 'acc-2', currency: 'USD', amount: 100 });
   });
 
+  // REGRESIÓN (S27): el campo Moneda está ARRIBA del de Método de pago. Al soltar el candado
+  // mono-moneda se agregó un reset de la moneda en el onChange del método —para reencuadrarla
+  // cuando la tarjeta RUTEA la tx a otra cuenta— y ese reset corría siempre: elegías dólares,
+  // elegías el método y te los volvía a pesos en silencio. Plata guardada en la moneda
+  // equivocada, sin ningún aviso. Ahora solo resetea si la cuenta destino cambió de verdad.
+  it('elegir un método de pago NO pisa la moneda que el usuario ya eligió', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, options?: RequestInit) => {
+        if (options?.method === 'POST') {
+          const body = JSON.parse(options.body as string);
+          postCalls.push({ url, body });
+          return jsonResponse(201, { ...editTx, ...body, id: 'tx-new', accountBalance: 1100 });
+        }
+        if (url.includes('/accounts')) return jsonResponse(200, [account, creditAccount]);
+        if (url.includes('/payment-methods'))
+          return jsonResponse(200, [
+            { id: 'pm-1', accountId: 'acc-1', name: 'Débito', type: 'DEBIT', isDefault: false },
+          ]);
+        return jsonResponse(200, []);
+      }),
+    );
+
+    renderCreateForm();
+
+    await selectOption('Cuenta', 'acc-1', { exact: false });
+    await selectOption('Moneda', '__other__', { exact: false });
+    fireEvent.change(await screen.findByLabelText('Moneda (3 letras)', { exact: false }), {
+      target: { value: 'usd' },
+    });
+
+    // el método NO cambia la cuenta destino → la moneda elegida tiene que sobrevivir
+    await selectOption('Método de pago', 'pm-1', { exact: false });
+    await waitFor(() =>
+      expect(screen.getByLabelText('Moneda (3 letras)', { exact: false })).toHaveValue('USD'),
+    );
+
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '250' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    await waitFor(() => expect(postCalls).toHaveLength(1));
+    expect(postCalls[0].body).toMatchObject({ accountId: 'acc-1', currency: 'USD', amount: 250 });
+  });
+
   it('"Otra…": permite cargar una moneda nueva (uppercase) y la manda', async () => {
     renderCreateForm();
 

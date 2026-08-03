@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button';
 import type { PaymentMethod } from '../paymentMethods/api';
 import type { TransactionListItem } from '../transactions/api';
 import { CreditCardStatement } from './CreditCardStatement';
+import { SubBalanceChip } from './SubBalanceChip';
 import type { Account } from './api';
 
 type CardsSectionProps = {
@@ -13,6 +14,10 @@ type CardsSectionProps = {
   transactions: TransactionListItem[];
   /** Alta de tarjeta desde el bloque (D9: sólo se ofrece acá cuando hay 0 tarjetas). */
   onAddCard: () => void;
+  /** Moneda favorita del usuario: decide qué sub-balance se puede hoverear con el equivalente
+   *  estimado. Llega por prop y no por `useMe` a propósito — este componente recibe TODO por
+   *  props, y meterle un hook de datos obligaría a montar auth en cada consumidor y cada test. */
+  favoriteCurrency?: string;
 };
 
 function currentYearMonth(): string {
@@ -31,6 +36,7 @@ export function CardsSection({
   paymentMethods,
   transactions,
   onAddCard,
+  favoriteCurrency,
 }: CardsSectionProps) {
   const cardPms = paymentMethods.filter(
     (pm) => pm.accountId === account.id && (pm.type === 'DEBIT' || pm.type === 'CREDIT'),
@@ -86,9 +92,25 @@ export function CardsSection({
 
         {creditChildren.map((child) => (
           <li key={child.id} className="flex flex-col gap-1 py-2 first:pt-0">
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex items-start justify-between gap-3">
               <span className="text-sm text-body">{child.name} · Crédito</span>
-              <Amount amount={child.balance} currency={child.currency} tone="neutral" size="sm" />
+              <span className="flex flex-col items-end gap-1">
+                <Amount amount={child.balance} currency={child.currency} tone="neutral" size="sm" />
+                {/* Sprint 27: la deuda de una tarjeta dejó de ser un número. Con el resumen
+                    COLAPSADO se veían solo los pesos y los dólares que debías no aparecían por
+                    ningún lado — justo el estado en el que vive la card la mayor parte del
+                    tiempo. Los sub-balances van acá arriba, hovereables como en las cuentas. */}
+                {(child.balances ?? [])
+                  .filter((b) => b.currency !== child.currency && b.balance !== 0)
+                  .map((b) => (
+                    <SubBalanceChip
+                      key={b.currency}
+                      currency={b.currency}
+                      balance={b.balance}
+                      favoriteCurrency={favoriteCurrency}
+                    />
+                  ))}
+              </span>
             </div>
             {child.statementCloseDay != null && (
               <CreditCardStatement account={child} parentAccount={account} />
