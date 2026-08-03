@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Card } from '../../components/ui/Card';
+import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -8,6 +9,7 @@ import { formatMoney } from '../../lib/money';
 import { useExpectedIncome } from './useExpectedIncome';
 import { useDeleteIncomeEntry } from './useIncomeMutations';
 import { ConfirmIncomeDialog } from './ConfirmIncomeDialog';
+import { expectedStateBadge } from './expectedFormat';
 import { incomeErrorMessage } from './errorMessages';
 import type { ExpectedIncomeSource, IncomeFrequency } from './api';
 
@@ -86,6 +88,9 @@ export function ExpectedIncomeCard({ autoConfirmSourceId }: Props = {}) {
             ))}
           </ul>
 
+          {/* Fila en DOS líneas: arriba quién y cada cuánto, abajo la plata, el estado y la
+              acción. En una sola línea, nombre + frecuencia + monto + chip + botón se apretaban
+              hasta romperse en pantalla chica. */}
           <ul className="list-none p-0 m-0 flex flex-col gap-2 divide-y divide-line">
             {data.sources.map((source) => {
               // S36 (FR-5): la expectativa es una CANTIDAD de cobros, no un sí/no. Una quincenal
@@ -93,60 +98,44 @@ export function ExpectedIncomeCard({ autoConfirmSourceId }: Props = {}) {
               const pending = source.expectedCount - source.receivedCount;
               const isComplete = source.expectedCount > 0 && pending <= 0;
               const notDue = source.expectedCount === 0;   // anual/semestral fuera de su mes
-              const isDue = pending > 0 && source.billingDay <= dayOfMonth;
+              const badge = expectedStateBadge(source, dayOfMonth);
 
               return (
-                <li
-                  key={source.sourceId}
-                  className="pt-2 first:pt-0 flex justify-between items-baseline gap-2"
-                >
-                  <span>
-                    <span className={isDue ? 'text-warning' : 'text-ink'}>{source.name}</span>{' '}
+                <li key={source.sourceId} className="pt-2 first:pt-0 flex flex-col gap-1">
+                  <span className="text-ink">
+                    {source.name}{' '}
                     <span className="text-body text-sm">{FREQUENCY_LABEL[source.frequency]}</span>
-                    {source.expectedCount > 1 && (
-                      <span className="text-body text-sm">
-                        {' '}
-                        · {source.receivedCount} de {source.expectedCount}
-                      </span>
-                    )}
                   </span>
-                  <span className="flex items-center gap-2 text-sm shrink-0 whitespace-nowrap">
-                    <span className="tabular-nums">
-                      {formatMoney(source.expectedAmount, source.currency)}
+
+                  <span className="flex items-center justify-between gap-2 text-sm">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="tabular-nums">
+                        {formatMoney(source.expectedAmount, source.currency)}
+                      </span>
+                      <Badge status={badge.status} label={badge.label} />
                     </span>
-                    {notDue ? (
-                      <span className="text-body">no vence este mes</span>
-                    ) : isComplete ? (
-                      <>
-                        <span className="text-income opacity-80">cargado</span>
-                        {source.lastEntryId && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            aria-label={`Deshacer ${source.name}`}
-                            onClick={() => setUndoing(source)}
-                          >
-                            Deshacer
-                          </Button>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        {/* El estado se mantiene además del botón: el color solo no alcanza. */}
-                        <span className={isDue ? 'text-warning' : 'text-body'}>
-                          {isDue ? 'no cargado' : 'pendiente'}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          aria-label={`Confirmar ${source.name}`}
-                          onClick={() => setConfirming(source)}
-                        >
-                          Ya lo cobré
-                        </Button>
-                      </>
+
+                    {isComplete && source.lastEntryId && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Deshacer ${source.name}`}
+                        onClick={() => setUndoing(source)}
+                      >
+                        Deshacer
+                      </Button>
+                    )}
+                    {!isComplete && !notDue && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        aria-label={`Confirmar ${source.name}`}
+                        onClick={() => setConfirming(source)}
+                      >
+                        Ya lo cobré
+                      </Button>
                     )}
                   </span>
                 </li>

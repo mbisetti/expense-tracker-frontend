@@ -70,7 +70,9 @@ export function IncomePage() {
             onDelete={(entry) => setConfirmingDelete(entry)}
           />
         ) : (
-          <Button type="button" onClick={openCreate}>
+          // Ancho completo, como las cards: un botón chico suelto en una columna de cards se
+          // leía como un elemento fuera de la grilla.
+          <Button type="button" className="w-full" onClick={openCreate}>
             Registrar ingreso
           </Button>
         )}

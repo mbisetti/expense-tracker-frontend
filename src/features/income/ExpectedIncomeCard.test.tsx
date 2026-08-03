@@ -100,7 +100,7 @@ describe('ExpectedIncomeCard', () => {
     renderCard();
 
     expect(await screen.findByText('Sueldo')).toBeInTheDocument();
-    expect(screen.getByText('no cargado')).toBeInTheDocument();
+    expect(screen.getByText('Sin cargar')).toBeInTheDocument();
   });
 
   it('fuente recibida muestra "cargado" y no se resalta', async () => {
@@ -114,8 +114,8 @@ describe('ExpectedIncomeCard', () => {
 
     renderCard();
 
-    expect(await screen.findByText('cargado')).toBeInTheDocument();
-    expect(screen.queryByText('no cargado')).not.toBeInTheDocument();
+    expect(await screen.findByText('Cargado')).toBeInTheDocument();
+    expect(screen.queryByText('Sin cargar')).not.toBeInTheDocument();
   });
 
   it('fuente pendiente con billingDay futuro no se resalta como vencida', async () => {
@@ -130,8 +130,8 @@ describe('ExpectedIncomeCard', () => {
     renderCard();
 
     expect(await screen.findByText('Freelance')).toBeInTheDocument();
-    expect(screen.getByText('pendiente')).toBeInTheDocument();
-    expect(screen.queryByText('no cargado')).not.toBeInTheDocument();
+    expect(screen.getByText('Pendiente')).toBeInTheDocument();
+    expect(screen.queryByText('Sin cargar')).not.toBeInTheDocument();
   });
 
   it('muestra error si falla el fetch', async () => {
@@ -168,10 +168,10 @@ describe('ExpectedIncomeCard', () => {
     renderCard();
 
     expect(await screen.findByText('Sueldo quincenal')).toBeInTheDocument();
-    expect(screen.getByText('· 1 de 2')).toBeInTheDocument();
-    // sigue reclamando la segunda quincena, no dice "cargado"
+    expect(screen.getByText('Parcial 1/2')).toBeInTheDocument();
+    // sigue reclamando la segunda quincena, no dice "Cargado"
     expect(screen.getByRole('button', { name: 'Confirmar Sueldo quincenal' })).toBeInTheDocument();
-    expect(screen.queryByText('cargado')).not.toBeInTheDocument();
+    expect(screen.queryByText('Cargado')).not.toBeInTheDocument();
   });
 
   it('FR-1/D1: el tick abre un confirm con el monto esperado precargado y editable', async () => {
@@ -264,7 +264,7 @@ describe('ExpectedIncomeCard', () => {
 
     renderCard();
 
-    expect(await screen.findByText('no vence este mes')).toBeInTheDocument();
+    expect(await screen.findByText('No vence este mes')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Confirmar Dividendos' })).not.toBeInTheDocument();
   });
 });
