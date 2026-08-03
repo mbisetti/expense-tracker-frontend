@@ -17,6 +17,8 @@ import { Switch } from '../../components/ui/Switch';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
 import { numberToAmountDisplay, parseAmountInput } from '../../lib/money';
+import { currencyOptionsFor } from '../../lib/currencyOptions';
+import { useMe } from '../auth/useMe';
 import { useRecurringExpenses } from '../expenses/useRecurringExpenses';
 import { useCreateRecurringExpense } from '../expenses/useRecurringMutations';
 import { RecurringConfigFields } from '../expenses/RecurringConfigFields';
@@ -102,6 +104,9 @@ export function TransactionForm({
   const [shareMode, setShareMode] = useState<ShareMode>(isShared ? 'manual' : 'even');
 
   const { data: accounts } = useAccounts();
+  // S27.1: las monedas configuradas en Ajustes se ofrecen aunque la cuenta no tenga saldo en
+  // ellas — es lo que destraba la PRIMERA compra en una moneda nueva sin pasar por "Otra…".
+  const { data: me } = useMe();
   const { data: categories } = useCategories();
   // Los métodos de pago se filtran por la cuenta elegida (Sprint 20 #6): cada método
   // pertenece a una cuenta.
@@ -139,8 +144,9 @@ export function TransactionForm({
   const routedAccount = selectedCardId
     ? accounts?.find((a) => a.id === selectedCardId)
     : selectedAccount;
-  // Monedas conocidas de la cuenta (principal primera) + "Otra…" para una moneda nueva.
-  const currencyOptions = routedAccount?.balances?.map((b) => b.currency) ?? [];
+  // Monedas de la cuenta + las que el usuario configuró en Ajustes (S27.1), + "Otra…" abajo.
+  // La lista configurada SUMA opciones y nunca las quita: un sub-balance real se ofrece siempre.
+  const currencyOptions = currencyOptionsFor(routedAccount, me?.workingCurrencies, me?.defaultCurrency);
   // Moneda efectiva: la elegida, o la principal de la cuenta a la que ruteó la tx.
   //
   // Sprint 27: acá vivía el ÚLTIMO espejo del guard mono-moneda (S23 D8) — con una CREDIT, la

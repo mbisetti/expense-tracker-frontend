@@ -26,6 +26,10 @@ export type Me = {
   email: string;
   name: string;
   defaultCurrency: string;
+  /** S27.1: monedas con las que el usuario dijo que trabaja. Se SUMAN a las que la cuenta ya
+   *  tiene para armar los selectores de moneda — nunca las reemplazan (D1). Vacía = sin
+   *  configurar; el server nunca manda null. */
+  workingCurrencies: string[];
   /** S7: false = entró solo con Google y no tiene contraseña que pedirle al reautenticar. */
   hasPassword: boolean;
   createdAt: string;
