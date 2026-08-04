@@ -8,7 +8,11 @@ import { formatMoney } from '../../lib/money';
 import { formatDate, useDateFormat } from '../../lib/dateFormat';
 import { usePeople } from '../shared/useShared';
 import { useAccounts } from '../accounts/useAccounts';
+import { useCategories } from '../categories/useCategories';
+import { usePaymentMethods } from '../paymentMethods/usePaymentMethods';
 import type { Account } from '../accounts/api';
+import type { Category } from '../categories/api';
+import type { PaymentMethod } from '../paymentMethods/api';
 import { allRows } from './statementApi';
 import type {
   HolderMode,
@@ -43,6 +47,9 @@ type Props = {
 
 type NameChoice = { personId: string | null; createName: string; decided: boolean };
 
+/** Lo que se puede cambiar en la planilla. Nada de esto toca la aritmética del resumen. */
+type RowEdit = { description?: string; categoryId?: string | null; paymentMethodId?: string | null };
+
 const MODE_LABEL: Record<HolderMode, string> = {
   OWN: 'Lo banco yo',
   REIMBURSED: 'Me lo devuelve',
@@ -60,6 +67,10 @@ export function StatementPreviewModal({
   const { pref } = useDateFormat();
   const { data: people } = usePeople();
   const { data: accounts } = useAccounts();
+  const { data: categories } = useCategories();
+  // Los métodos de la cuenta elegida: una tarjeta no tiene (la tarjeta ES el método), así que
+  // en un resumen la columna queda vacía sola, sin un caso especial.
+  const { data: paymentMethods } = usePaymentMethods(upload.accountId);
 
   const [selected, setSelected] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(allRows(report).map((row) => [row.id, row.selected])),
@@ -74,6 +85,13 @@ export function StatementPreviewModal({
         .map((row) => [row.id, row.ownTransferAccountId as string]),
     ),
   );
+
+  // S38: lo editado en la planilla, por fila. Sólo campos de CLASIFICACIÓN — descripción,
+  // categoría y método. El monto y la fecha no se tocan: la validación de que el resumen cierra
+  // se calcula contra ellos, así que editarlos rompería en silencio la red que avisa si leí mal.
+  const [edits, setEdits] = useState<Record<string, RowEdit>>({});
+  const edit = (id: string, patch: RowEdit) =>
+    setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   const [modes, setModes] = useState<Record<string, HolderMode>>(() =>
     Object.fromEntries(report.holders.map((holder) => [holder.key, holder.mode])),
   );
@@ -110,12 +128,20 @@ export function StatementPreviewModal({
       id: row.id,
       selected: Boolean(selected[row.id]) && row.status !== 'ERROR',
       date: row.date,
-      description: row.description,
+      // Lo editado gana sobre lo que leyó el server: es exactamente lo que el usuario aprobó.
+      description: edits[row.id]?.description ?? row.description,
       amount: row.amount,
       currency: row.currency,
       type: row.type,
       section: row.section,
-      categoryId: row.categoryId,
+      categoryId:
+        edits[row.id]?.categoryId !== undefined
+          ? (edits[row.id]!.categoryId ?? null)
+          : row.categoryId,
+      paymentMethodId:
+        edits[row.id]?.paymentMethodId !== undefined
+          ? (edits[row.id]!.paymentMethodId ?? null)
+          : row.paymentMethodId,
       personId: row.personId,
       holderKey: row.holderKey,
       installmentNumber: row.installmentNumber,
@@ -172,6 +198,9 @@ export function StatementPreviewModal({
       title="Revisar el resumen"
       footer={footer}
       disableClose={isImporting}
+      // S38: usa la pantalla que haya. Con el ancho de un formulario se perdía la mitad de la
+      // información y acomodar 40 renglones era tedioso justo cuando hay lugar de sobra.
+      size="wide"
     >
       <div className="flex flex-col gap-4">
         {/* 1 · D15: qué se leyó, antes de cualquier tabla. */}
@@ -381,8 +410,20 @@ export function StatementPreviewModal({
             </button>
             {section.note && <p className="px-3 pb-2 text-xs text-muted">{section.note}</p>}
             {openSections[section.key] && (
-              <div className="max-h-[40vh] overflow-y-auto border-t border-line">
-                <table className="w-full text-sm">
+              // La planilla scrollea sola, en los dos ejes: con seis columnas en mobile la fila
+              // no entra, y romperla en varias líneas es justamente lo que hacía perder la info.
+              <div className="max-h-[55vh] overflow-auto border-t border-line">
+                <table className="w-full min-w-[900px] text-sm">
+                  <thead className="sticky top-0 z-10 bg-surface text-left text-xs text-muted">
+                    <tr>
+                      <th className="w-8 px-2 py-1.5 font-medium"> </th>
+                      <th className="w-24 px-2 py-1.5 font-medium">Fecha</th>
+                      <th className="px-2 py-1.5 font-medium">Descripción</th>
+                      <th className="w-44 px-2 py-1.5 font-medium">Categoría</th>
+                      <th className="w-44 px-2 py-1.5 font-medium">Método</th>
+                      <th className="w-32 px-2 py-1.5 text-right font-medium">Monto</th>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-line">
                     {section.rows.map((row) => (
                       <Row
@@ -394,6 +435,10 @@ export function StatementPreviewModal({
                           setSelected((prev) => ({ ...prev, [row.id]: !prev[row.id] }))
                         }
                         accounts={accounts ?? []}
+                        categories={categories ?? []}
+                        paymentMethods={paymentMethods ?? []}
+                        rowEdit={edits[row.id]}
+                        onEdit={(patch) => edit(row.id, patch)}
                         transferTarget={transferTargets[row.id] ?? ''}
                         onTransferTarget={(value) =>
                           setTransferTargets((prev) => ({ ...prev, [row.id]: value }))
@@ -478,6 +523,10 @@ function Row({
   checked,
   onToggle,
   accounts,
+  categories,
+  paymentMethods,
+  rowEdit,
+  onEdit,
   transferTarget,
   onTransferTarget,
 }: {
@@ -486,15 +535,30 @@ function Row({
   checked: boolean;
   onToggle: () => void;
   accounts: Account[];
+  categories: Category[];
+  paymentMethods: PaymentMethod[];
+  rowEdit: RowEdit | undefined;
+  onEdit: (patch: RowEdit) => void;
   transferTarget: string;
   onTransferTarget: (value: string) => void;
 }) {
   const amount =
     row.amount !== null && row.currency ? formatMoney(row.amount, row.currency) : '—';
+  const description = rowEdit?.description ?? row.description ?? '';
+  const categoryId =
+    rowEdit?.categoryId !== undefined ? rowEdit.categoryId : row.categoryId;
+  const paymentMethodId =
+    rowEdit?.paymentMethodId !== undefined ? rowEdit.paymentMethodId : row.paymentMethodId;
+  // Las categorías del tipo que corresponde: ofrecer una de gasto para un ingreso termina en un
+  // 400 del server al confirmar, después de que el usuario ya dio el OK.
+  const options = categories.filter(
+    (category) => category.type === 'BOTH' || category.type === row.type,
+  );
+
   return (
     <>
       <tr className={row.status === 'ERROR' ? 'opacity-60' : undefined}>
-        <td className="px-2 py-1.5">
+        <td className="px-2 py-1.5 align-top">
           <input
             type="checkbox"
             aria-label={`Importar ${row.description ?? 'el movimiento'}`}
@@ -503,32 +567,72 @@ function Row({
             onChange={onToggle}
           />
         </td>
-        <td className="whitespace-nowrap px-2 py-1.5 tabular-nums">
+        <td className="whitespace-nowrap px-2 py-1.5 align-top tabular-nums">
           {row.date ? formatDate(row.date, pref) : '—'}
-        </td>
-        <td className="px-2 py-1.5">
-          <span className="block truncate" title={row.description ?? undefined}>
-            {row.description ?? '—'}
-          </span>
-          {row.collapsedCount > 1 && (
-            <span className="text-xs text-muted">{row.collapsedCount} movimientos</span>
-          )}
-          {row.categoryName && (
-            <span className="text-xs text-muted">
-              {' '}
-              {row.categoryName}
-              {row.categorySource === 'HISTORY' && ' (de tus movimientos)'}
+          {row.installmentNumber && row.installmentTotal && (
+            <span className="block text-xs text-muted">
+              cuota {row.installmentNumber}/{row.installmentTotal}
             </span>
           )}
         </td>
-        <td className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums">
+        <td className="px-2 py-1.5 align-top">
+          {/* Celda de planilla: se edita donde está, sin abrir nada. */}
+          <input
+            type="text"
+            aria-label={`Descripción de ${row.description ?? 'el movimiento'}`}
+            value={description}
+            onChange={(e) => onEdit({ description: e.target.value })}
+            className="w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 hover:border-line focus:border-accent focus:outline-none"
+          />
+          {row.collapsedCount > 1 && (
+            <span className="text-xs text-muted">{row.collapsedCount} movimientos</span>
+          )}
+        </td>
+        <td className="px-2 py-1.5 align-top">
+          <select
+            aria-label={`Categoría de ${row.description ?? 'el movimiento'}`}
+            value={categoryId ?? ''}
+            onChange={(e) => onEdit({ categoryId: e.target.value || null })}
+            className="w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 hover:border-line focus:border-accent focus:outline-none"
+          >
+            <option value="">Sin categoría</option>
+            {options.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          {row.categorySource === 'HISTORY' && categoryId === row.categoryId && (
+            <span className="block text-xs text-muted">de tus movimientos</span>
+          )}
+        </td>
+        <td className="px-2 py-1.5 align-top">
+          {paymentMethods.length === 0 ? (
+            <span className="text-xs text-muted">—</span>
+          ) : (
+            <select
+              aria-label={`Método de pago de ${row.description ?? 'el movimiento'}`}
+              value={paymentMethodId ?? ''}
+              onChange={(e) => onEdit({ paymentMethodId: e.target.value || null })}
+              className="w-full rounded-sm border border-transparent bg-transparent px-1 py-0.5 hover:border-line focus:border-accent focus:outline-none"
+            >
+              <option value="">Sin método</option>
+              {paymentMethods.map((method) => (
+                <option key={method.id} value={method.id}>
+                  {method.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </td>
+        <td className="whitespace-nowrap px-2 py-1.5 text-right align-top tabular-nums">
           {row.type === 'EXPENSE' ? '-' : ''}
           {amount}
         </td>
       </tr>
       {(row.issues.length > 0 || row.ownTransferAccountId) && (
         <tr>
-          <td colSpan={4} className="px-2 pb-2 pt-0">
+          <td colSpan={6} className="px-2 pb-2 pt-0">
             <ul className="flex flex-col gap-0.5 text-xs text-muted">
               {row.issues.map((issue, i) => (
                 <li key={`${issue.code}-${i}`}>{issue.message}</li>

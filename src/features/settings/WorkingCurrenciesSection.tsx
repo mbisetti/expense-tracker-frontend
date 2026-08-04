@@ -86,6 +86,10 @@ export function WorkingCurrenciesSection() {
         </ul>
       )}
 
+      {/* El `helper` y el `error` NO van adentro del Input: viven en su wrapper, debajo del
+          campo, así que `items-end` alineaba el botón con el borde inferior de ESE texto y no
+          con el del campo — y encima el botón saltaba cada vez que el error aparecía o se iba.
+          Afuera, el wrapper del Input es label + campo, y el botón queda a la misma altura. */}
       <div className="flex items-end gap-2">
         <div className="flex-1">
           <Input
@@ -107,14 +111,21 @@ export function WorkingCurrenciesSection() {
             maxLength={3}
             placeholder="USD"
             disabled={updateMe.isPending}
-            error={alreadyThere ? 'Ya está en la lista' : undefined}
-            helper="Tres letras, como USD o EUR."
+            aria-invalid={alreadyThere ? true : undefined}
           />
         </div>
         <Button type="button" variant="secondary" onClick={add} disabled={!canAdd}>
           Agregar
         </Button>
       </div>
+
+      {alreadyThere ? (
+        <p role="alert" className="text-sm text-expense">
+          Ya está en la lista
+        </p>
+      ) : (
+        <p className="text-sm text-muted">Tres letras, como USD o EUR.</p>
+      )}
 
       <p className="text-sm text-muted">
         Estas monedas aparecen al cargar un movimiento o una transferencia, aunque la cuenta

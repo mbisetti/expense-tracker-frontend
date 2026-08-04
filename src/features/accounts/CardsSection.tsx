@@ -99,7 +99,9 @@ export function CardsSection({
                 {/* Sprint 27: la deuda de una tarjeta dejó de ser un número. Con el resumen
                     COLAPSADO se veían solo los pesos y los dólares que debías no aparecían por
                     ningún lado — justo el estado en el que vive la card la mayor parte del
-                    tiempo. Los sub-balances van acá arriba, hovereables como en las cuentas. */}
+                    tiempo. Los sub-balances van acá arriba, hovereables como en las cuentas.
+                    En `compact` porque el monto principal de esta fila ya es chico: al mismo
+                    peso, los dos saldos se leen como dos totales del mismo rango. */}
                 {(child.balances ?? [])
                   .filter((b) => b.currency !== child.currency && b.balance !== 0)
                   .map((b) => (
@@ -108,6 +110,7 @@ export function CardsSection({
                       currency={b.currency}
                       balance={b.balance}
                       favoriteCurrency={favoriteCurrency}
+                      compact
                     />
                   ))}
               </span>

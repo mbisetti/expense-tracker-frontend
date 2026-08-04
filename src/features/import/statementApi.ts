@@ -30,6 +30,7 @@ export type StatementRowResult = {
   currency: string | null;
   type: 'EXPENSE' | 'INCOME' | null;
   categoryId: string | null;
+  paymentMethodId: string | null;
   categoryName: string | null;
   /** HISTORY = salió de tus movimientos, LLM = la adivinó el modelo (D13). */
   categorySource: string | null;
@@ -152,6 +153,7 @@ export type RowDecision = {
   type: 'EXPENSE' | 'INCOME' | null;
   section: StatementSectionKey;
   categoryId: string | null;
+  paymentMethodId: string | null;
   personId: string | null;
   holderKey: string | null;
   /** D6: viajan para que el server rearme "PSA (cuota 14/15, compra del 16/05/2025)". */

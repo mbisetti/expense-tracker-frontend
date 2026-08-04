@@ -13,6 +13,13 @@ type ModalProps = {
   disableClose?: boolean;
   /** 'center' (default) = diálogo centrado; 'left' = drawer lateral que se desliza de izq a der. */
   side?: 'center' | 'left';
+  /**
+   * Ancho del diálogo. 'md' (default) es el de siempre: formularios y confirmaciones, donde un
+   * ancho corto ayuda a leer. 'wide' usa la pantalla que haya, para el contenido que se vuelve
+   * ilegible apretado — una planilla de movimientos con fecha, descripción, categoría, método y
+   * monto en la misma fila. En mobile los dos ocupan todo el ancho igual.
+   */
+  size?: 'md' | 'wide';
 };
 
 const FOCUSABLE_SELECTOR =
@@ -30,6 +37,7 @@ export function Modal({
   className,
   disableClose = false,
   side = 'center',
+  size = 'md',
 }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -144,7 +152,11 @@ export function Modal({
             ? // El drawer arranca en inset-0: instalada como PWA con viewport-fit=cover
               // (S35), su tope quedaría debajo de la status bar del iPhone.
               'relative z-10 flex h-full w-full max-w-xs flex-col gap-1 overflow-y-auto rounded-r-lg border-r border-line bg-surface-elevated p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-lg animate-drawer-in'
-            : 'relative z-10 flex w-full max-w-md max-h-[85vh] flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-surface-elevated p-6 shadow-lg',
+            : size === 'wide'
+              ? // Usa la pantalla que haya: 95vh de alto y casi todo el ancho en desktop. El
+                // padding baja en mobile para que la tabla no quede en un canal de 200px.
+                'relative z-10 flex w-full max-w-[min(1400px,95vw)] max-h-[95vh] flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-surface-elevated p-4 shadow-lg sm:p-6'
+              : 'relative z-10 flex w-full max-w-md max-h-[85vh] flex-col gap-1 overflow-y-auto rounded-lg border border-line bg-surface-elevated p-6 shadow-lg',
           'transition-all duration-200 ease-out motion-reduce:transition-none',
           className ?? '',
         ]

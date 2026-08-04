@@ -141,7 +141,6 @@ export function PaymentMethodForm({ paymentMethod, onClose, onDelete }: PaymentM
           variant="secondary"
           onClick={onClose}
           disabled={isPending}
-          className={isEdit && onDelete ? 'mx-auto' : undefined}
         >
           Cancelar
         </Button>
@@ -151,7 +150,7 @@ export function PaymentMethodForm({ paymentMethod, onClose, onDelete }: PaymentM
             variant="ghost"
             onClick={onDelete}
             disabled={isPending}
-            className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+            className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
           >
             Borrar
           </Button>

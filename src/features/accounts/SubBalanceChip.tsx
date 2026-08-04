@@ -7,13 +7,23 @@ type SubBalanceChipProps = {
   currency: string;
   balance: number;
   favoriteCurrency?: string;
+  /** Variante liviana, para cuando el chip acompaña a un monto que YA es chico (la fila de una
+   *  tarjeta dentro de la sección Tarjetas). Sin esto el saldo secundario pesa lo mismo que el
+   *  principal y la fila pierde jerarquía: se leen como dos totales del mismo rango, cuando uno
+   *  es la deuda de la moneda de la tarjeta y el otro una sub-deuda. */
+  compact?: boolean;
 };
 
 // Chip de un sub-balance no-principal (Sprint 22). Si su moneda NO es la favorita del usuario,
 // muestra un ícono info; al pasar el mouse (o con foco) aparece el equivalente ESTIMADO en la
 // moneda favorita, convertido con la cotización del backend (cacheada 1h). Si la moneda del
 // chip ya es la favorita, no hay nada que convertir → solo el monto.
-export function SubBalanceChip({ currency, balance, favoriteCurrency }: SubBalanceChipProps) {
+export function SubBalanceChip({
+  currency,
+  balance,
+  favoriteCurrency,
+  compact,
+}: SubBalanceChipProps) {
   const needsConversion = !!favoriteCurrency && currency !== favoriteCurrency;
   const { data: rate } = useExchangeRate(
     needsConversion ? currency : undefined,
@@ -28,8 +38,20 @@ export function SubBalanceChip({ currency, balance, favoriteCurrency }: SubBalan
       : 'Buscando cotización…';
 
   return (
-    <span className="group relative inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5">
-      <Amount amount={balance} currency={currency} tone="neutral" size="sm" />
+    <span
+      className={`group relative inline-flex items-center gap-1 rounded-full border border-line ${
+        compact ? 'px-1.5 py-0' : 'px-2 py-0.5'
+      }`}
+    >
+      <Amount
+        amount={balance}
+        currency={currency}
+        tone="neutral"
+        size="sm"
+        // En compacto el monto baja a text-xs y a color secundario: la jerarquía la da el
+        // contraste con el principal, no el tamaño del chip solo.
+        className={compact ? 'text-xs text-muted' : undefined}
+      />
       {needsConversion && (
         <>
           <button
