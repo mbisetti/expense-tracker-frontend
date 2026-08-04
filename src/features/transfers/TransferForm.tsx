@@ -330,7 +330,6 @@ export function TransferForm({
                 variant="secondary"
                 onClick={onDone}
                 disabled={mutation.isPending}
-                className={onDelete ? 'mx-auto' : undefined}
               >
                 Cancelar
               </Button>
@@ -341,7 +340,7 @@ export function TransferForm({
                 variant="ghost"
                 onClick={onDelete}
                 disabled={mutation.isPending}
-                className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+                className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
               >
                 Borrar
               </Button>

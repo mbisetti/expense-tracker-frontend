@@ -638,7 +638,14 @@ export function TransactionForm({
         />
       )}
 
-      {/* Guardar (izq) · Cancelar (centro) · Borrar (der), como en Cuentas/Categorías. */}
+      {/* Guardar + Cancelar JUNTOS (izq) · Borrar empujado al extremo (der). Convención de la
+          casa, compartida por los 8 formularios.
+          Antes Cancelar iba centrado con `mx-auto` y eso abría dos huecos muertos que hacían
+          leer los tres botones como pares del mismo rango. Guardar y Cancelar son UNA decisión
+          —confirmar o abandonar este form— y por proximidad van juntos; Borrar no es parte de
+          esa decisión: es destructivo e irreversible. Al otro extremo, la separación significa
+          algo, y de paso deja de estar pegado al botón que uno toca por reflejo para salir
+          (el riesgo real es el pulgar en mobile, §4). */}
       <div className="flex items-center gap-3">
         <Button type="submit" loading={isPending}>
           Guardar
@@ -648,7 +655,6 @@ export function TransactionForm({
           variant="secondary"
           onClick={onClose}
           disabled={isPending}
-          className={isEdit && onDelete ? 'mx-auto' : undefined}
         >
           Cancelar
         </Button>
@@ -658,7 +664,7 @@ export function TransactionForm({
             variant="ghost"
             onClick={onDelete}
             disabled={isPending}
-            className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+            className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
           >
             Borrar
           </Button>

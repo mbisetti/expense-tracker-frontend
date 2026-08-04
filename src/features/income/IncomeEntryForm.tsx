@@ -286,9 +286,9 @@ export function IncomeEntryForm({ editing, onClose, onDelete }: Props = {}) {
 
           <ConceptInput value={concept} onChange={setConcept} disabled={busy} />
 
-          {/* Guardar (izq) · Cancelar (centro) · Borrar (der, rojizo) — convención de la casa,
+          {/* Guardar + Cancelar juntos · Borrar al extremo opuesto — convención de la casa,
               misma que AccountForm. FR-9: el Borrar vive DENTRO del form de edición. */}
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
             <Button type="submit" loading={busy}>
               Guardar
             </Button>
@@ -297,7 +297,6 @@ export function IncomeEntryForm({ editing, onClose, onDelete }: Props = {}) {
               variant="secondary"
               onClick={() => onClose?.()}
               disabled={busy}
-              className={isEdit && onDelete ? 'mx-auto' : undefined}
             >
               Cancelar
             </Button>
@@ -307,7 +306,7 @@ export function IncomeEntryForm({ editing, onClose, onDelete }: Props = {}) {
                 variant="ghost"
                 onClick={() => onDelete(editing)}
                 disabled={busy}
-                className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+                className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
               >
                 Borrar
               </Button>

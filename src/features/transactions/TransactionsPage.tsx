@@ -470,8 +470,18 @@ export function TransactionsPage() {
       {/* Sprint 26: exportar lo que estás viendo (o todo) a .xlsx.
           Sprint 37: y las dos puertas de entrada de los lectores de PDF, acá porque es donde
           vive el feed que van a llenar. El historial y el deshacer siguen en /datos. */}
-      <div className="flex flex-wrap justify-end gap-2">
-        <ImportStatementButtons />
+      {/* Los tres botones son secundarios y se veían idénticos, apretados contra el borde
+          derecho: nada decía que DOS son la misma familia (traer plata a la app) y el tercero
+          hace lo contrario (sacarla). La jerarquía la da la PROXIMIDAD, no un color nuevo ni un
+          separador dibujado: los dos de importar van pegados (gap-2 = 8px) y entre el grupo y
+          Exportar hay el triple (gap-x-6 = 24px). Los dos valores salen de la escala de 4px
+          (§3); la relación 3:1 es lo que se lee como "esto es un grupo y aquello es otra cosa".
+          `items-center` + el wrap por grupo evita que en pantalla chica queden tres botones
+          sueltos en escalera contra el margen. */}
+      <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <ImportStatementButtons />
+        </div>
         <ExportTransactionsButton filters={exportFilters} hasFilters={hasFilters} />
       </div>
 
