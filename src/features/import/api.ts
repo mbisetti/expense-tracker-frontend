@@ -43,6 +43,10 @@ export type ImportBatch = {
   createdAt: string;
   rowCount: number;
   undoneAt: string | null;
+  // S37: de dónde vino el batch, para distinguirlo al deshacer. Los de antes de la migración
+  // llegan como plantilla, que es lo que eran.
+  sourceKind?: 'TEMPLATE' | 'ACCOUNT_STATEMENT' | 'CARD_STATEMENT' | null;
+  sourceLabel?: string | null;
 };
 
 export type ConfirmOptions = {

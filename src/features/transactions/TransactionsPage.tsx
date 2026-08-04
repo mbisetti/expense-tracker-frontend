@@ -11,6 +11,7 @@ import { useDeleteTransfer } from '../transfers/useTransferMutations';
 import { transferErrorMessage } from '../transfers/errorMessages';
 import { TransferForm } from '../transfers/TransferForm';
 import { ExportTransactionsButton } from '../export/ExportTransactionsButton';
+import { ImportStatementButtons } from '../import/ImportStatementButtons';
 import { Select } from '../../components/ui/Select';
 import { DateField } from '../../components/ui/DateField';
 import { Input } from '../../components/ui/Input';
@@ -434,8 +435,11 @@ export function TransactionsPage() {
         </div>
       )}
 
-      {/* Sprint 26: exportar lo que estás viendo (o todo) a .xlsx. */}
-      <div className="flex justify-end">
+      {/* Sprint 26: exportar lo que estás viendo (o todo) a .xlsx.
+          Sprint 37: y las dos puertas de entrada de los lectores de PDF, acá porque es donde
+          vive el feed que van a llenar. El historial y el deshacer siguen en /datos. */}
+      <div className="flex flex-wrap justify-end gap-2">
+        <ImportStatementButtons />
         <ExportTransactionsButton filters={exportFilters} hasFilters={hasFilters} />
       </div>
 

@@ -130,7 +130,7 @@ export function ImportSection() {
               {recent.map((batch) => (
                 <li key={batch.id} className="flex min-h-10 items-center justify-between gap-3 py-1">
                   <span className={`truncate text-sm ${batch.undoneAt ? 'text-muted line-through' : 'text-body'}`}>
-                    {batch.filename} · {batch.rowCount}{' '}
+                    {batch.filename} · {batch.sourceLabel ?? 'plantilla'} · {batch.rowCount}{' '}
                     {batch.rowCount === 1 ? 'movimiento' : 'movimientos'} ·{' '}
                     {formatDate(batch.createdAt.slice(0, 10), pref)}
                   </span>
