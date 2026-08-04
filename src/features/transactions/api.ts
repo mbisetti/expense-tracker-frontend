@@ -29,6 +29,10 @@ export type TransactionListItem = {
   // Ambos null salvo en las filas de cobro.
   settledExpenseId: string | null;
   settledExpenseDescription: string | null;
+  /** S38: MANUAL | IMPORT | BOT | AUTO_DEBIT. Qué lo creó. */
+  origin?: string | null;
+  /** S38: true = entró solo y todavía no lo miraste. Es lo que define la bandeja. */
+  pendingReview?: boolean;
 };
 
 export type TransactionResponse = TransactionListItem & {
@@ -55,6 +59,8 @@ export type TransactionFilters = {
   uncategorized?: boolean;
   /** Sprint 24.3: solo las vinculadas a este gasto recurrente (historial del detalle). */
   recurringExpenseId?: string;
+  /** S38: solo lo que entró solo y todavía no miraste. Mandar SOLO true (como uncategorized). */
+  pendingReview?: boolean;
   dateFrom?: string;
   dateTo?: string;
   search?: string;

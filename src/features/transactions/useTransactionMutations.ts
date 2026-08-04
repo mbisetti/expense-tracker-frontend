@@ -64,6 +64,30 @@ export function useUpdateTransaction() {
   });
 }
 
+// S38: "está bien así" — saca el movimiento de la bandeja sin editarlo. El otro camino para
+// vaciarla es el PATCH, que sella solo del lado del server: editar ES revisar.
+export function useMarkReviewed() {
+  const http = useHttp();
+  const invalidate = useInvalidateTransactions();
+
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) => http<void>(`/transactions/${id}/review`, { method: 'POST' }),
+    onSuccess: invalidate,
+  });
+}
+
+/** "Marcar todas": el usuario mira la lista, ve que está bien y la vacía de una. */
+export function useMarkReviewedBulk() {
+  const http = useHttp();
+  const invalidate = useInvalidateTransactions();
+
+  return useMutation<void, ApiError, string[]>({
+    mutationFn: (ids) =>
+      http<void>('/transactions/review', { method: 'POST', body: JSON.stringify({ ids }) }),
+    onSuccess: invalidate,
+  });
+}
+
 export function useDeleteTransaction() {
   const http = useHttp();
   const invalidate = useInvalidateTransactions();

@@ -12,6 +12,7 @@ import { transferErrorMessage } from '../transfers/errorMessages';
 import { TransferForm } from '../transfers/TransferForm';
 import { ExportTransactionsButton } from '../export/ExportTransactionsButton';
 import { ImportStatementButtons } from '../import/ImportStatementButtons';
+import { ReviewInbox } from './ReviewInbox';
 import { Select } from '../../components/ui/Select';
 import { DateField } from '../../components/ui/DateField';
 import { Input } from '../../components/ui/Input';
@@ -69,6 +70,12 @@ export function TransactionsPage() {
       ? CATEGORY_NONE
       : (searchParams.get('categoryId') ?? ''),
   );
+  // S38: la bandeja de lo que entró solo. Arranca en el feed SIEMPRE, aunque haya pendientes:
+  // abrir Transacciones y encontrarse en otra vista sin haberla pedido desorienta. La tab avisa
+  // con el número y el usuario entra cuando quiere.
+  const [tab, setTab] = useState<'feed' | 'review'>('feed');
+  const pendingReviewQuery = useTransactions({ pendingReview: true, size: 1 });
+  const pendingCount = pendingReviewQuery.data?.totalElements ?? 0;
   const [dateFrom, setDateFrom] = useState(() => searchParams.get('dateFrom') ?? '');
   const [dateTo, setDateTo] = useState(() => searchParams.get('dateTo') ?? '');
   const [searchInput, setSearchInput] = useState('');
@@ -435,6 +442,31 @@ export function TransactionsPage() {
         </div>
       )}
 
+      {/* S38: la bandeja de lo que entró solo. Es una tab y no un filtro más porque no es una
+          vista del feed: es una cola de trabajo que se vacía, y mezclarla con los filtros la
+          escondería justo cuando hay algo que hacer. */}
+      {pendingCount > 0 && (
+        <div className="flex flex-wrap gap-2 border-b border-line">
+          {(['feed', 'review'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => setTab(value)}
+              aria-current={tab === value ? 'page' : undefined}
+              className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+                tab === value
+                  ? 'border-accent font-medium text-fg'
+                  : 'border-transparent text-muted hover:text-fg'
+              }`}
+            >
+              {value === 'feed' ? 'Movimientos' : `Por revisar (${pendingCount})`}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {tab === 'review' && <ReviewInbox />}
+
       {/* Sprint 26: exportar lo que estás viendo (o todo) a .xlsx.
           Sprint 37: y las dos puertas de entrada de los lectores de PDF, acá porque es donde
           vive el feed que van a llenar. El historial y el deshacer siguen en /datos. */}
@@ -443,6 +475,10 @@ export function TransactionsPage() {
         <ExportTransactionsButton filters={exportFilters} hasFilters={hasFilters} />
       </div>
 
+      {/* S38: en la bandeja los filtros no van. Filtrar una cola de trabajo que se vacía sola no
+          tiene sentido, y dejarlos ahí sugiere que la lista está filtrada cuando no lo está.
+          El estado de los filtros NO se pierde: se conserva y vuelve tal cual al feed. */}
+      {tab === 'feed' && (
       <form
         aria-label="Filtros"
         onSubmit={(e) => e.preventDefault()}
@@ -516,16 +552,17 @@ export function TransactionsPage() {
           onChange={(e) => setSearchInput(e.target.value)}
         />
       </form>
+      )}
 
-      {isPending && <Skeleton variant="list" rows={8} />}
+      {tab === 'feed' && isPending && <Skeleton variant="list" rows={8} />}
 
-      {isError && (
+      {tab === 'feed' && isError && (
         <p role="alert" className="text-expense">
           No pudimos cargar las transacciones. Intentá de nuevo.
         </p>
       )}
 
-      {!isPending && !isError && movements.length === 0 && (
+      {tab === 'feed' && !isPending && !isError && movements.length === 0 && (
         <EmptyState
           title="No hay transacciones para mostrar."
           actionLabel={page > 0 ? 'Volver a la primera página' : undefined}
@@ -533,7 +570,7 @@ export function TransactionsPage() {
         />
       )}
 
-      {movements.length > 0 && (
+      {tab === 'feed' && movements.length > 0 && (
         <>
           {/* El scroll horizontal sólo hace falta por debajo del min-w de la tabla (mobile). En
               desktop se apaga: `overflow-x-auto` crea un contexto de recorte que le cortaría el

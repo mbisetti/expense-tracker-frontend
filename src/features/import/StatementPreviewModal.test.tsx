@@ -51,6 +51,7 @@ function row(overrides: Partial<StatementRowResult> = {}): StatementRowResult {
     currency: 'ARS',
     type: 'EXPENSE',
     categoryId: null,
+    paymentMethodId: null,
     categoryName: null,
     categorySource: null,
     installmentNumber: null,
@@ -328,10 +329,33 @@ describe('StatementPreviewModal', () => {
     );
 
     expect(screen.getByText(/Entran desmarcados/)).toBeInTheDocument();
-    // Arranca cerrada porque su default es desmarcado.
-    expect(screen.queryByText('Impuesto de Sellos')).not.toBeInTheDocument();
+    // Arranca cerrada porque su default es desmarcado. S38: la descripción es una celda editable,
+    // así que se busca por su valor y no por texto suelto.
+    expect(screen.queryByDisplayValue('Impuesto de Sellos')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Impuestos y percepciones (1)'));
-    expect(screen.getByText('Impuesto de Sellos')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Impuesto de Sellos')).toBeInTheDocument();
+  });
+
+  it('S38: la planilla edita descripción y categoría en la fila, y eso es lo que se manda', () => {
+    const onConfirm = vi.fn();
+    renderModal(report(), onConfirm);
+
+    fireEvent.change(screen.getByLabelText('Descripción de Pago con QR Super'), {
+      target: { value: 'Supermercado del barrio' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Importar 1 movimiento/ }));
+
+    const payload = onConfirm.mock.calls[0][0] as StatementConfirmPayload;
+    expect(payload.rows[0].description).toBe('Supermercado del barrio');
+  });
+
+  it('S38: el monto y la fecha NO se editan, porque la validación se calcula contra ellos', () => {
+    renderModal(report());
+
+    expect(screen.queryByLabelText(/Monto de/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Fecha de/)).not.toBeInTheDocument();
+    // Y siguen a la vista, que es lo que hace falta para controlar contra el papel.
+    expect(screen.getByText(/45\.000,00/)).toBeInTheDocument();
   });
 
   it('el confirm manda las filas revisadas, no las originales (D12)', () => {
