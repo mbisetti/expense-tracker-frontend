@@ -13,7 +13,8 @@ export function importErrorMessage(error: unknown): string {
     case 'TOO_MANY_ROWS':
       return 'El archivo tiene demasiadas filas (máximo 500 por import).';
     case 'FILE_TOO_LARGE':
-      return 'El archivo supera el límite de 2MB.';
+      // El server valida el tope por endpoint desde S37 y lo dice en el mensaje.
+      return error.message || 'El archivo supera el límite de 2MB.';
     case 'MISSING_FILE':
       return 'No llegó ningún archivo. Intentá de nuevo.';
     case 'IMPORT_HAS_ERRORS':
@@ -24,5 +25,31 @@ export function importErrorMessage(error: unknown): string {
       return 'No encontramos ese import.';
     default:
       return 'No pudimos procesar el archivo. Intentá de nuevo.';
+  }
+}
+
+// S37 — errores de los lectores de PDF (§6). Mismo criterio: el server manda el detalle
+// accionable en es-AR y acá sólo se cubre lo que necesita un texto propio.
+export function statementErrorMessage(error: unknown): string {
+  if (!(error instanceof ApiError)) {
+    return 'No pudimos leer el PDF. Intentá de nuevo.';
+  }
+  switch (error.code) {
+    case 'SCANNED_PDF':
+    case 'PDF_PASSWORD_REQUIRED':
+    case 'PDF_PASSWORD_INVALID':
+    case 'UNRECOGNIZED_STATEMENT':
+    case 'STATEMENT_TOTALS_MISMATCH':
+    case 'LLM_UNAVAILABLE':
+    case 'INVALID_PDF':
+    case 'TOO_MANY_PAGES':
+    case 'FILE_TOO_LARGE':
+      return error.message || 'No pudimos leer el PDF. Intentá de nuevo.';
+    case 'MISSING_FILE':
+      return 'No llegó ningún archivo. Intentá de nuevo.';
+    case 'ACCOUNT_NOT_FOUND':
+      return 'No encontramos esa cuenta.';
+    default:
+      return importErrorMessage(error);
   }
 }
