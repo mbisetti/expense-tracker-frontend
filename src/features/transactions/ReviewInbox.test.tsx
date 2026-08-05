@@ -103,6 +103,15 @@ describe('ReviewInbox', () => {
     expect(screen.getByText('del archivo')).toBeInTheDocument();
   });
 
+  // S39: el archivo que se mandó por el chat se distingue del que se subió por la app. Es la
+  // diferencia entre "lo revisé cuando lo subí" y "lo aprobé de un tap desde el celular".
+  it('el PDF que cargó Vaqui por el chat se ve como tal', async () => {
+    renderInbox([row({ origin: 'TELEGRAM_IMPORT' })]);
+
+    expect(await screen.findByDisplayValue('MERPAGO*SUPERDIA')).toBeInTheDocument();
+    expect(screen.getByText('lo leyó Vaqui')).toBeInTheDocument();
+  });
+
   it('vacía dice qué va a aparecer ahí, no sólo que está vacía', async () => {
     renderInbox([]);
 
