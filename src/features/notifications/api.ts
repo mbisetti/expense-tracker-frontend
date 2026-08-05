@@ -11,7 +11,8 @@ export type NotificationTargetType =
   | 'SHARED'
   | 'SAVINGS'
   | 'INCOME'
-  | 'EXPENSES';
+  | 'EXPENSES'
+  | 'REVIEW_INBOX';
 
 export type NotificationItem = {
   id: string;
@@ -73,6 +74,10 @@ export function targetPath(item: NotificationItem): string | null {
       return item.targetId ? `/income?confirm=${item.targetId}` : '/income';
     case 'EXPENSES':
       return '/expenses';
+    // S39: el archivo que cargó Vaqui por el chat quedó entero en la bandeja. El targetId es el
+    // batch, que no tiene vista propia: lo que hay que abrir es la cola de revisión.
+    case 'REVIEW_INBOX':
+      return '/transactions?review=1';
     default:
       return null;
   }

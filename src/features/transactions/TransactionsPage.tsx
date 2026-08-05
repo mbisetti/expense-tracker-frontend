@@ -76,6 +76,13 @@ export function TransactionsPage() {
   const [tab, setTab] = useState<'feed' | 'review'>('feed');
   const pendingReviewQuery = useTransactions({ pendingReview: true, size: 1 });
   const pendingCount = pendingReviewQuery.data?.totalElements ?? 0;
+  // S39: deep-link del centro de notificaciones (`?review=1`) — el tap en "Vaqui cargó tal
+  // archivo" abre la bandeja. Se consume UNA vez, cuando llega el contador, y sólo si HAY algo
+  // pendiente: la tab no se renderiza con cero, así que abrirla dejaría la página en blanco.
+  // Sin toast: que no haya nada que revisar no es un error, es la buena noticia.
+  const [pendingReviewDeepLink, setPendingReviewDeepLink] = useState(
+    () => searchParams.get('review') === '1',
+  );
   const [dateFrom, setDateFrom] = useState(() => searchParams.get('dateFrom') ?? '');
   const [dateTo, setDateTo] = useState(() => searchParams.get('dateTo') ?? '');
   const [searchInput, setSearchInput] = useState('');
@@ -239,6 +246,16 @@ export function TransactionsPage() {
     });
     return rows;
   }, [txData, transfersData, type, categoryId, accountId, dateFrom, dateTo, search]);
+
+  // S39: mismo patrón read-once que `?edit=`, pero anclado al contador de pendientes en vez de
+  // al feed. Se apaga aunque no haya nada que abrir, así un refetch posterior no salta a la
+  // bandeja cuando el usuario ya se movió al feed a mano.
+  if (pendingReviewDeepLink && pendingReviewQuery.data) {
+    setPendingReviewDeepLink(false);
+    if (pendingCount > 0) {
+      setTab('review');
+    }
+  }
 
   // S34: el deep-link se consume APENAS llega el feed, ajustando estado durante el render (el
   // patrón "adjusting state when props change" de React, no un efecto: setState en un efecto

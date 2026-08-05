@@ -56,6 +56,8 @@ describe('TelegramInfoPage', () => {
     expect(screen.getByRole('heading', { name: 'El bot de Telegram' })).toBeInTheDocument();
     expect(screen.getByText('Qué le podés mandar')).toBeInTheDocument();
     expect(screen.getByText('La foto del ticket')).toBeInTheDocument();
+    // S39: el PDF del extracto o del resumen entra a la lista de lo que sabe leer.
+    expect(screen.getByText('El PDF del extracto o del resumen de la tarjeta')).toBeInTheDocument();
     expect(screen.getByText('/resumen')).toBeInTheDocument();
     expect(screen.getByText('/saldo')).toBeInTheDocument();
     expect(screen.getByText('/tarjeta')).toBeInTheDocument();

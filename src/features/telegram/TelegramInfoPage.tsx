@@ -18,6 +18,10 @@ const FUNCTIONS: { label: string; example: string }[] = [
   { label: 'Gastos compartidos', example: '«cena con bauti y coty, pagué yo, 20k cada uno»' },
   { label: 'Reparto por ítems (con foto)', example: '«la hamburguesa doble es mía, la simple de bauti»' },
   { label: 'Correcciones antes de confirmar', example: '«eran 12k», «usé efectivo», «era de ayer»' },
+  {
+    label: 'El PDF del extracto o del resumen de la tarjeta',
+    example: 'te pregunta la cuenta, lo lee y te lo deja en Por revisar',
+  },
 ];
 
 const COMMANDS: { command: string; description: string }[] = [
