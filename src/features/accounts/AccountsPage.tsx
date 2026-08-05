@@ -10,6 +10,11 @@ import { AccountForm } from './AccountForm';
 import { CardForm } from './CardForm';
 import { AccountCardBody } from './AccountCardBody';
 import { ReorderAccountsModal } from './ReorderAccountsModal';
+import { AdjustValueDialog } from './AdjustValueDialog';
+import { PerformanceDetailModal } from './PerformanceDetailModal';
+import { useAdjustAccountValue } from './useAccountPerformance';
+import { TransferForm } from '../transfers/TransferForm';
+import { TRANSFER_TITLES, type QuickAction } from './quickActions';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -54,6 +59,21 @@ export function AccountsPage() {
   const [editingPm, setEditingPm] = useState<PaymentMethod | null>(null);
   const [confirmingDeletePmId, setConfirmingDeletePmId] = useState<string | null>(null);
   const [reorderOpen, setReorderOpen] = useState(false);
+  // S40 (D4): las quick actions de la card. La transferencia abre el FORM DE SIEMPRE en un modal
+  // (precedente exacto: CardForm) — no se reinventa ningún form, así cross-currency, cotización
+  // sugerida y guards vienen gratis. Sólo el ajuste tiene diálogo propio: no es una
+  // transferencia, es decir cuánto vale algo.
+  const [transferFor, setTransferFor] = useState<{ account: Account; action: QuickAction } | null>(
+    null,
+  );
+  const [adjustingFor, setAdjustingFor] = useState<Account | null>(null);
+  const [performanceFor, setPerformanceFor] = useState<Account | null>(null);
+  const adjustValue = useAdjustAccountValue();
+
+  const runQuickAction = (account: Account, action: QuickAction) => {
+    if (action === 'adjust') setAdjustingFor(account);
+    else setTransferFor({ account, action });
+  };
 
   const toast = useToast();
   const { data: accounts, isPending, isError } = useAccounts();
@@ -177,6 +197,8 @@ export function AccountsPage() {
                           paymentMethods={paymentMethods ?? []}
                           onEdit={() => openEdit(account)}
                           onAddCard={() => setCardFormFor(account)}
+                          onQuickAction={(action) => runQuickAction(account, action)}
+                          onOpenPerformance={() => setPerformanceFor(account)}
                         />
                       </div>
                     ))}
@@ -230,6 +252,61 @@ export function AccountsPage() {
       >
         {cardFormFor && <CardForm account={cardFormFor} onClose={() => setCardFormFor(null)} />}
       </Modal>
+
+      {/* S40 (D4): [Agregar plata] apunta el DESTINO; [Retirar] y [Registrar pago] apuntan el
+          ORIGEN / el destino según corresponda. El resto del form es el de siempre. */}
+      <Modal
+        open={transferFor !== null}
+        onClose={() => setTransferFor(null)}
+        title={
+          transferFor && transferFor.action !== 'adjust'
+            ? TRANSFER_TITLES[transferFor.action](transferFor.account.name)
+            : ''
+        }
+        className="min-h-[26rem]"
+      >
+        {transferFor && (
+          <TransferForm
+            key={`${transferFor.account.id}-${transferFor.action}`}
+            initialToAccountId={
+              transferFor.action === 'withdraw' ? undefined : transferFor.account.id
+            }
+            initialFromAccountId={
+              transferFor.action === 'withdraw' ? transferFor.account.id : undefined
+            }
+            onDone={() => setTransferFor(null)}
+          />
+        )}
+      </Modal>
+
+      {adjustingFor && (
+        <AdjustValueDialog
+          account={adjustingFor}
+          loading={adjustValue.isPending}
+          onCancel={() => setAdjustingFor(null)}
+          onConfirm={(input) =>
+            adjustValue.mutate(
+              { accountId: adjustingFor.id, input },
+              {
+                onSuccess: (created) => {
+                  // 204 → null: el valor no cambió y no se creó nada. Decirlo es más honesto que
+                  // un "guardado" que no guardó nada.
+                  toast.success(created ? 'Ajuste registrado.' : 'El valor no cambió.');
+                  setAdjustingFor(null);
+                },
+                onError: (error) => toast.error(accountErrorMessage(error)),
+              },
+            )
+          }
+        />
+      )}
+
+      {performanceFor && (
+        <PerformanceDetailModal
+          account={performanceFor}
+          onClose={() => setPerformanceFor(null)}
+        />
+      )}
 
       <Modal
         open={editingPm !== null}

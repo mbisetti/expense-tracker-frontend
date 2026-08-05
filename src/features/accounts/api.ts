@@ -31,9 +31,95 @@ export type Account = {
   // amigos"). La marca manda, no el nombre: el usuario puede renombrarla y la card la sigue
   // reconociendo. null/ausente = cuenta normal.
   systemRole?: SystemAccountRole | null;
+  // S40 (D5): plan de pagos de un préstamo (sólo DEBT) + todo lo derivado. null = sin plan.
+  loan?: LoanProgress | null;
 };
 
 export type SystemAccountRole = 'FRIEND_DEBTS';
+
+// ── S40 (D5): préstamos ─────────────────────────────────────────────────────────────────────
+//
+// Ni entidad nueva ni recurrentes: un préstamo es metadata sobre la cuenta DEBT + derivación.
+// Nada de lo derivado se guarda — el total es cuota × cantidad y el progreso se mide contra la
+// plata efectivamente pagada (por eso no hay que "sembrar" la deuda al configurarlo).
+export type LoanProgress = {
+  installmentAmount: number;
+  installmentsTotal: number;
+  dueDay: number;
+  startedOn: string;
+  /** Lo que te dieron. Opcional: sólo sirve para mostrar el costo. */
+  principal: number | null;
+  /** cuota × cantidad — lo que vas a devolver, intereses incluidos. */
+  totalAmount: number;
+  paidAmount: number;
+  paidInstallments: number;
+  /** null si el préstamo está completo. */
+  nextDueDate: string | null;
+  completed: boolean;
+  /** total − principal. null si no cargaste el principal. */
+  cost: number | null;
+  costPct: number | null;
+};
+
+/** Los 4 campos del plan son atómicos: o los cuatro o ninguno (el server responde 400). */
+export type LoanInput = {
+  loanInstallmentAmount?: number | null;
+  loanInstallmentsTotal?: number | null;
+  loanDueDay?: number | null;
+  loanStartedOn?: string | null;
+  loanPrincipal?: number | null;
+};
+
+// ── S40 (D1/D3): rendimiento de una inversión ───────────────────────────────────────────────
+//
+// La frontera aporte/rendimiento es `transfer_id` y ya existía: mover plata tuya no es ganar.
+// Se mira en MESES y nunca en uno solo (pedido de Marko: un mes malo desinforma y deprime).
+
+export type PerformanceMonth = {
+  /** "YYYY-MM" */
+  month: string;
+  contributions: number;
+  withdrawals: number;
+  yield: number;
+  startingBalance: number;
+};
+
+export type PerformanceProjection = {
+  horizonMonths: number;
+  projectedBalance: number;
+  monthlyRatePct: number;
+  monthsWithBase: number;
+};
+
+export type CurrencyPerformance = {
+  currency: string;
+  windowYield: number;
+  windowMonths: number;
+  totalYield: number;
+  initialContribution: { amount: number; date: string } | null;
+  totalContributed: number;
+  totalWithdrawn: number;
+  currentBalance: number;
+  /** null con menos de 3 meses con base: proyectar sobre dos puntos es inventar. */
+  projection: PerformanceProjection | null;
+  series: PerformanceMonth[];
+};
+
+export type AccountPerformance = {
+  accountId: string;
+  currencies: CurrencyPerformance[];
+};
+
+/** El usuario dice cuánto vale HOY; la diferencia la calcula el server. */
+export type AdjustValueInput = {
+  currency?: string;
+  currentValue: number;
+};
+
+/** D10: CRYPTO es INVESTMENT en todo lo nuevo — un solo predicado, un solo camino. */
+export function isInvestmentAccount(type: AccountType): boolean {
+  return type === 'INVESTMENT' || type === 'CRYPTO';
+}
 
 // Sprint 27: un renglón de deuda del resumen. Una tarjeta acumula una deuda POR MONEDA — las
 // compras en pesos y las compras en dólares cierran y vencen juntas, pero se pagan por separado.

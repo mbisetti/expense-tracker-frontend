@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useHttp } from '../../lib/useHttp';
 import type { ApiError } from '../../lib/http';
-import type { Account, AccountType } from './api';
+import type { Account, AccountType, LoanInput } from './api';
 
 export type CreateAccountInput = {
   name: string;
@@ -14,7 +14,7 @@ export type CreateAccountInput = {
   // linkedAccountId es un UUID directo.
   institution?: string;
   linkedAccountId?: string;
-};
+} & LoanInput;
 
 export type UpdateAccountInput = {
   name?: string;
@@ -27,7 +27,7 @@ export type UpdateAccountInput = {
   // ausente = no tocar.
   institution?: string;
   linkedAccountId?: string;
-};
+} & LoanInput;
 
 function useInvalidateAccounts() {
   const queryClient = useQueryClient();
