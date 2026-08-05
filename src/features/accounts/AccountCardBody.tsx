@@ -11,6 +11,7 @@ import { BalanceSparkline } from './BalanceSparkline';
 import { SubBalanceChip } from './SubBalanceChip';
 import { CreditCardStatement } from './CreditCardStatement';
 import { CardsSection } from './CardsSection';
+import { FriendDebtsBreakdown } from './FriendDebtsBreakdown';
 import { TYPE_LABELS } from './typeLabels';
 import type { Account } from './api';
 
@@ -183,6 +184,10 @@ export function AccountCardBody({
       {account.type === 'CREDIT' && account.statementCloseDay != null && (
         <CreditCardStatement account={account} />
       )}
+
+      {/* S40 (D7): la cuenta sistema muestra de quién es cada peso. Se reconoce por la MARCA y
+          no por el nombre: renombrarla es libre y la card la sigue reconociendo. */}
+      {account.systemRole === 'FRIEND_DEBTS' && <FriendDebtsBreakdown />}
 
       <div className="flex justify-end border-t border-line pt-3">
         <EditButton label={account.name} onClick={onEdit} />

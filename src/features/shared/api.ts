@@ -73,6 +73,65 @@ export type SettleInput = {
   date?: string;
 };
 
+// ── S40 (Bloque C): "Debés" — la dirección inversa de todo lo de arriba ──────────────────────
+//
+// El principio también se invierte, y es el que hace que los números cierren: el gasto cuenta
+// EL DÍA QUE PASÓ. "Bauti pagó la cena, 20k" es tu gasto del martes —entra al mes, a la
+// categoría y al presupuesto— aunque le devuelvas la plata el viernes. Devolvérsela es una
+// transferencia, y una transferencia nunca es gasto.
+
+export type PersonDebtItem = {
+  debtId: string;
+  transactionId: string;
+  date: string;
+  description: string | null;
+  /** De qué fue. A diferencia del cobro (plata volviendo), esto ES un gasto y se categoriza. */
+  categoryName: string | null;
+  amount: number;
+  currency: string;
+};
+
+export type PersonOwed = {
+  personId: string;
+  name: string;
+  owed: PendingAmount[];
+  debts: PersonDebtItem[];
+};
+
+export type PersonDebts = {
+  /** La cuenta sistema "Deudas con amigos". null hasta que anotás la primera deuda. */
+  accountId: string | null;
+  people: PersonOwed[];
+};
+
+export type PersonDebtInput = {
+  /** Una de las dos: la elegiste del selector, o la tipeaste (se crea al vuelo). */
+  personId?: string;
+  personName?: string;
+  amount: number;
+  currency?: string;
+  date?: string;
+  categoryId?: string;
+  description?: string;
+};
+
+/** Sin método de pago: saldar es una transferencia, no un gasto. */
+export type SettleDebtInput = {
+  accountId: string;
+  date?: string;
+};
+
+/** Totales por moneda de una lista de pendientes — sirve para los dos lados del bloque. */
+export function totalsByCurrency(amounts: PendingAmount[][]): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const list of amounts) {
+    for (const { currency, amount } of list) {
+      totals.set(currency, (totals.get(currency) ?? 0) + amount);
+    }
+  }
+  return totals;
+}
+
 /**
  * Reparto en partes iguales entre vos y `peopleCount` personas.
  *

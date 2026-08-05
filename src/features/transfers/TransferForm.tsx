@@ -27,6 +27,12 @@ function round2(n: number): number {
 
 type TransferFormProps = {
   initialToAccountId?: string;
+  /**
+   * S40 (D4): hermana de la de arriba, para las quick actions de la card de cuenta — "Retirar"
+   * prellena el origen igual que "Agregar plata" prellena el destino. Sin esto no había forma de
+   * abrir el form apuntando a la cuenta desde la que sale la plata.
+   */
+  initialFromAccountId?: string;
   /** Modo edición (Sprint 23 D4): prefill completo + submit por PUT. */
   transfer?: TransferListItem;
   /** Se llama tras un alta/edición exitosa (la página lo usa para cerrar el form en edición). */
@@ -40,6 +46,7 @@ type TransferFormProps = {
 
 export function TransferForm({
   initialToAccountId,
+  initialFromAccountId,
   transfer,
   onDone,
   onDelete,
@@ -55,7 +62,9 @@ export function TransferForm({
   const updateMutation = useUpdateTransfer();
   const mutation = isEdit ? updateMutation : createMutation;
 
-  const [fromAccountId, setFromAccountId] = useState(transfer?.fromAccountId ?? '');
+  const [fromAccountId, setFromAccountId] = useState(
+    transfer?.fromAccountId ?? initialFromAccountId ?? '',
+  );
   const [toAccountId, setToAccountId] = useState(transfer?.toAccountId ?? initialToAccountId ?? '');
   const [fromCurrency, setFromCurrency] = useState(transfer?.fromCurrency ?? '');
   const [toCurrency, setToCurrency] = useState(transfer?.toCurrency ?? '');

@@ -39,6 +39,13 @@ describe('targetPath', () => {
     expect(targetPath(item('EXPENSES'))).toBe('/expenses');
   });
 
+  it('S40: ACCOUNT lleva a Cuentas, con o sin id (la cuenta no tiene permalink propio)', () => {
+    // Lo usa LOAN_DUE: el id es la cuenta del préstamo, y lo que hay que abrir es la pantalla
+    // donde está su card con la barra de progreso.
+    expect(targetPath(item('ACCOUNT', 'acc-1'))).toBe('/accounts');
+    expect(targetPath(item('ACCOUNT'))).toBe('/accounts');
+  });
+
   it('sin destino no lleva a ningún lado', () => {
     expect(targetPath(item(null))).toBeNull();
   });

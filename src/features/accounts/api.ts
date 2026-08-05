@@ -27,7 +27,13 @@ export type Account = {
   // Nullable; el backend puede omitirlos → se toleran como null/undefined.
   institution: string | null;
   linkedAccountId: string | null;
+  // S40 (D7): cuenta que creó la APP, no el usuario. Hoy sólo 'FRIEND_DEBTS' ("Deudas con
+  // amigos"). La marca manda, no el nombre: el usuario puede renombrarla y la card la sigue
+  // reconociendo. null/ausente = cuenta normal.
+  systemRole?: SystemAccountRole | null;
 };
+
+export type SystemAccountRole = 'FRIEND_DEBTS';
 
 // Sprint 27: un renglón de deuda del resumen. Una tarjeta acumula una deuda POR MONEDA — las
 // compras en pesos y las compras en dólares cierran y vencen juntas, pero se pagan por separado.

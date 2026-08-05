@@ -15,7 +15,9 @@ import { Section } from './Section';
 import { SectionNav, type SectionLink } from './SectionNav';
 import { useSectionsOpen } from './useSectionsOpen';
 import { SharedSection } from '../shared/SharedSection';
-import { useSharedSummary } from '../shared/useShared';
+import { OwedSection } from '../shared/OwedSection';
+import { useSharedSummary, usePersonDebts } from '../shared/useShared';
+import { totalsByCurrency } from '../shared/api';
 import { deltaVsPrev } from './format';
 import { trimLeadingEmpty } from './insights';
 import type { CategoryExpense, CurrencyExpenses } from './api';
@@ -138,6 +140,9 @@ export function ExpensesPage() {
   // Hoisteado de SharedSection (React Query dedupea): la página decide si la sección existe
   // y arma su resumen colapsado; el componente adentro consume la misma cache.
   const { data: shared } = useSharedSummary();
+  // S40: mismo hoisteo que el de arriba y por la misma razón — el header de la sección necesita
+  // el total de lo que DEBÉS sin abrirla. React Query dedupea con el fetch de OwedSection.
+  const { data: owed } = usePersonDebts();
   const sections = useSectionsOpen(SECTION_DEFAULTS);
   const scrolledToHash = useRef(false);
 
@@ -177,18 +182,19 @@ export function ExpensesPage() {
   };
 
   // Resúmenes colapsados (S29.1): el dato clave de cada sección visible sin abrirla.
-  const hasShared = (shared?.people?.length ?? 0) > 0;
-  const sharedTotals = new Map<string, number>();
-  for (const person of shared?.people ?? []) {
-    for (const pending of person.pending) {
-      sharedTotals.set(pending.currency, (sharedTotals.get(pending.currency) ?? 0) + pending.amount);
-    }
-  }
+  // S40 (D8): el header de compartidos ahora tiene DOS números, uno por dirección — "Te deben
+  // $X · Debés $Y". Que convivan es el punto: colapsada, la sección dice cómo estás en total.
+  const sharedTotals = totalsByCurrency((shared?.people ?? []).map((p) => p.pending));
+  const owedTotals = totalsByCurrency((owed?.people ?? []).map((p) => p.owed));
+  const money = (totals: Map<string, number>) =>
+    [...totals.entries()].map(([cur, amount]) => formatMoney(amount, cur)).join(' · ');
+
+  const sharedSummaryParts = [
+    sharedTotals.size > 0 ? `Te deben ${money(sharedTotals)}` : null,
+    owedTotals.size > 0 ? `Debés ${money(owedTotals)}` : null,
+  ].filter(Boolean);
   const sharedSummary =
-    sharedTotals.size > 0
-      ? 'Te deben ' +
-        [...sharedTotals.entries()].map(([cur, amount]) => formatMoney(amount, cur)).join(' · ')
-      : undefined;
+    sharedSummaryParts.length > 0 ? sharedSummaryParts.join(' · ') : 'Nadie te debe, no debés nada';
 
   // Compartidos ahora siempre está (chip + sección): sin deudas muestra un empty state con CTA
   // para repartir un gasto — así se ve que no hay nada que cobrar y hay por dónde empezar.
@@ -301,9 +307,12 @@ export function ExpensesPage() {
             title="Hoy por vos, mañana por mí"
             open={sections.isOpen('compartidos')}
             onToggle={() => sections.toggle('compartidos')}
-            summary={hasShared ? sharedSummary : 'Nadie te debe'}
+            summary={sharedSummary}
           >
+            {/* S40 (D8): los dos lados del mostrador, uno debajo del otro. Hermanos y no
+                anidados: cada uno tiene su propio empty state y su propio estado de carga. */}
             <SharedSection />
+            <OwedSection />
           </Section>
 
           <Section

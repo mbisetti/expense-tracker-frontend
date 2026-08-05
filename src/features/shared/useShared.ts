@@ -3,6 +3,10 @@ import { useHttp } from '../../lib/useHttp';
 import type { ApiError } from '../../lib/http';
 import type {
   Person,
+  PersonDebtInput,
+  PersonDebtItem,
+  PersonDebts,
+  SettleDebtInput,
   SettleInput,
   SharedExpense,
   SharedSummary,
@@ -123,5 +127,80 @@ export function useSharedSummary() {
   return useQuery({
     queryKey: SHARED_SUMMARY_KEY,
     queryFn: () => http<SharedSummary>('/summary/shared'),
+  });
+}
+
+// ── S40 (Bloque C): "Debés" ─────────────────────────────────────────────────────────────────
+
+// Misma razón que SHARED_SUMMARY_KEY para no colgar de ['summary', year, month]: la deuda es
+// acumulada y cambiar de mes en la tab Gastos no la cambia.
+const PERSON_DEBTS_KEY = ['person-debts'];
+
+// Anotar una deuda crea un GASTO REAL (mueve el mes, la categoría y el presupuesto) en una
+// cuenta que puede haber nacido recién → hay que invalidar todo, incluidas ['accounts'] por la
+// cuenta sistema nueva. Saldarla mueve el saldo de otra cuenta. Ninguna de las dos es barata.
+function useInvalidateDebts() {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.invalidateQueries({ queryKey: PERSON_DEBTS_KEY });
+    queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    queryClient.invalidateQueries({ queryKey: ['accounts'] });
+    queryClient.invalidateQueries({ queryKey: ['summary'] });
+    queryClient.invalidateQueries({ queryKey: ['expenses'] });
+  };
+}
+
+export function usePersonDebts() {
+  const http = useHttp();
+  return useQuery({
+    queryKey: PERSON_DEBTS_KEY,
+    queryFn: () => http<PersonDebts>('/person-debts'),
+  });
+}
+
+export function useCreatePersonDebt() {
+  const http = useHttp();
+  const invalidate = useInvalidateDebts();
+
+  return useMutation<PersonDebtItem, ApiError, PersonDebtInput>({
+    mutationFn: (input) =>
+      http<PersonDebtItem>('/person-debts', { method: 'POST', body: JSON.stringify(input) }),
+    onSuccess: invalidate,
+  });
+}
+
+// El monto no viaja: lo pone el server desde el gasto de la deuda.
+export function useSettlePersonDebt() {
+  const http = useHttp();
+  const invalidate = useInvalidateDebts();
+
+  return useMutation<PersonDebtItem, ApiError, { debtId: string; input: SettleDebtInput }>({
+    mutationFn: ({ debtId, input }) =>
+      http<PersonDebtItem>(`/person-debts/${debtId}/settle`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUnsettlePersonDebt() {
+  const http = useHttp();
+  const invalidate = useInvalidateDebts();
+
+  return useMutation<void, ApiError, string>({
+    mutationFn: (debtId) => http<void>(`/person-debts/${debtId}/settle`, { method: 'DELETE' }),
+    onSuccess: invalidate,
+  });
+}
+
+// Borra la deuda Y su gasto. Con la deuda ya saldada el server responde 409: primero se deshace.
+export function useDeletePersonDebt() {
+  const http = useHttp();
+  const invalidate = useInvalidateDebts();
+
+  return useMutation<void, ApiError, string>({
+    mutationFn: (debtId) => http<void>(`/person-debts/${debtId}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
   });
 }
