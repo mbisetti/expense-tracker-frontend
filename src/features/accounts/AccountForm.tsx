@@ -9,11 +9,13 @@ import { accountErrorMessage } from './errorMessages';
 import { TYPE_LABELS } from './typeLabels';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
+import { MoneyInput } from '../../components/ui/MoneyInput';
 import { Button } from '../../components/ui/Button';
 import { EditButton } from '../../components/ui/ActionsMenu';
 import { useToast } from '../../components/ui/toastContext';
+import { numberToAmountDisplay, parseAmountInput } from '../../lib/money';
 import type { PaymentMethod } from '../paymentMethods/api';
-import type { Account, AccountType } from './api';
+import type { Account, AccountType, LoanInput } from './api';
 
 // Alta: 5 activos + Deuda. "Tarjeta de crédito" NO está (nace desde el bloque, D9).
 const CREATE_TYPES: AccountType[] = ['CASH', 'BANK', 'WALLET', 'INVESTMENT', 'CRYPTO', 'DEBT'];
@@ -55,6 +57,19 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
   const [paymentDueDay, setPaymentDueDay] = useState(
     account?.paymentDueDay != null ? String(account.paymentDueDay) : '',
   );
+  // S40 (D5): el plan de pagos del préstamo. Los cuatro primeros son atómicos — el server
+  // rechaza media config con INVALID_LOAN_CONFIG y acá se piden juntos con `required`.
+  const [loanInstallment, setLoanInstallment] = useState(
+    account?.loan ? numberToAmountDisplay(account.loan.installmentAmount) : '',
+  );
+  const [loanCount, setLoanCount] = useState(
+    account?.loan ? String(account.loan.installmentsTotal) : '',
+  );
+  const [loanDueDay, setLoanDueDay] = useState(account?.loan ? String(account.loan.dueDay) : '');
+  const [loanStartedOn, setLoanStartedOn] = useState(account?.loan?.startedOn ?? '');
+  const [loanPrincipal, setLoanPrincipal] = useState(
+    account?.loan?.principal != null ? numberToAmountDisplay(account.loan.principal) : '',
+  );
 
   const createMutation = useCreateAccount();
   const updateMutation = useUpdateAccount();
@@ -80,11 +95,38 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
 
   const isBankLike = type === 'BANK' || type === 'WALLET';
 
+  // S40 (D5): el bloque de préstamo es OPT-IN dentro de DEBT. Una deuda pelada ("le debo a mi
+  // viejo") no tiene plan de pagos y no tiene por qué inventar uno; el bloque se abre solo si ya
+  // había config cargada.
+  const [loanOpen, setLoanOpen] = useState(account?.loan != null);
+  const showLoanBlock = type === 'DEBT';
+
+  // Los cuatro juntos o ninguno. Es el mismo invariante que el CHECK de V49 y el guard del
+  // service; acá evita mandar un request que ya sabemos que va a fallar.
+  const loanFilled = [loanInstallment, loanCount, loanDueDay, loanStartedOn].filter(
+    (v) => v.trim() !== '',
+  ).length;
+  const loanPartial = showLoanBlock && loanOpen && loanFilled > 0 && loanFilled < 4;
+
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (loanPartial) return; // guard cliente; el botón ya está deshabilitado
     const normalizedCurrency = currency.trim().toUpperCase();
     const closeDayNum = statementCloseDay === '' ? null : Number(statementCloseDay);
     const dueDayNum = paymentDueDay === '' ? null : Number(paymentDueDay);
+
+    // El plan viaja sólo si está COMPLETO y la cuenta es DEBT. El principal va aparte: cargar
+    // sólo "me prestaron 500k" es válido y no configura ningún plan.
+    const loanChanges: LoanInput = {};
+    if (showLoanBlock && loanOpen && loanFilled === 4) {
+      loanChanges.loanInstallmentAmount = parseAmountInput(loanInstallment);
+      loanChanges.loanInstallmentsTotal = Number(loanCount);
+      loanChanges.loanDueDay = Number(loanDueDay);
+      loanChanges.loanStartedOn = loanStartedOn;
+    }
+    if (showLoanBlock && loanOpen && loanPrincipal.trim() !== '') {
+      loanChanges.loanPrincipal = parseAmountInput(loanPrincipal);
+    }
 
     if (isEdit) {
       const changes: UpdateAccountInput = {};
@@ -110,6 +152,8 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
         changes.paymentDueDay = dueDayNum;
       }
 
+      Object.assign(changes, loanChanges);
+
       if (Object.keys(changes).length === 0) {
         onClose();
         return;
@@ -125,7 +169,9 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
         },
       );
     } else {
-      const input: CreateAccountInput = { name, type, currency: normalizedCurrency, isInformal };
+      const input: CreateAccountInput = {
+        name, type, currency: normalizedCurrency, isInformal, ...loanChanges,
+      };
       if (institution.trim() !== '') input.institution = institution;
       // El alta no ofrece CREDIT (D9) → sin ciclo ni vínculo por este camino.
       createMutation.mutate(input, {
@@ -259,6 +305,92 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
         </>
       )}
 
+      {/* S40 (D5): plan de pagos del préstamo. Patrón exacto del bloque condicional de CREDIT,
+          pero OPT-IN: una deuda pelada ("le debo a mi viejo") no tiene cuotas y no tiene por qué
+          inventarlas. Nada de esto genera movimientos — el préstamo es metadata + derivación
+          (D9: los recurrentes no se tocan); las cuotas se cargan como cualquier transferencia. */}
+      {showLoanBlock && (
+        <div className="flex flex-col gap-3 rounded-md border border-line p-3">
+          <label htmlFor="acc-loan-open" className="flex items-center gap-2 text-sm text-ink">
+            <input
+              id="acc-loan-open"
+              type="checkbox"
+              checked={loanOpen}
+              onChange={(e) => setLoanOpen(e.target.checked)}
+              disabled={isPending}
+              className="h-5 w-5 rounded-sm border border-line accent-brand"
+            />
+            Es un préstamo en cuotas
+          </label>
+
+          {loanOpen && (
+            <>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <MoneyInput
+                  label="Cuota"
+                  id="acc-loan-installment"
+                  value={loanInstallment}
+                  onValueChange={setLoanInstallment}
+                  disabled={isPending}
+                />
+                <Input
+                  label="Cantidad de cuotas"
+                  id="acc-loan-count"
+                  type="number"
+                  min={1}
+                  value={loanCount}
+                  onChange={(e) => setLoanCount(e.target.value)}
+                  disabled={isPending}
+                />
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Input
+                  label="Día de vencimiento (1-28)"
+                  id="acc-loan-due-day"
+                  type="number"
+                  min={1}
+                  max={28}
+                  value={loanDueDay}
+                  onChange={(e) => setLoanDueDay(e.target.value)}
+                  disabled={isPending}
+                  helper="Si vence el 29, 30 o 31, poné 28: el aviso llega antes, nunca después."
+                />
+                <Input
+                  label="Fecha de la primera cuota"
+                  id="acc-loan-started-on"
+                  type="date"
+                  value={loanStartedOn}
+                  onChange={(e) => setLoanStartedOn(e.target.value)}
+                  disabled={isPending}
+                />
+              </div>
+
+              <MoneyInput
+                label="Capital recibido (opcional)"
+                id="acc-loan-principal"
+                value={loanPrincipal}
+                onValueChange={setLoanPrincipal}
+                disabled={isPending}
+                helper="Lo que te dieron. Sirve para ver cuánto te cuesta el préstamo."
+              />
+
+              {loanPartial && (
+                <p role="alert" className="text-sm text-expense">
+                  Completá los cuatro datos del préstamo juntos: cuota, cantidad, día de
+                  vencimiento y fecha de la primera cuota.
+                </p>
+              )}
+
+              <p className="text-xs text-muted">
+                Esto no anota cuotas solo: las vas registrando como transferencias hacia esta
+                cuenta, y el progreso se mide contra la plata que pagaste.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+
       <label htmlFor="acc-informal" className="flex items-center gap-2 text-sm text-ink">
         <input
           id="acc-informal"
@@ -309,7 +441,7 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
       )}
 
       <div className="flex items-center gap-3">
-        <Button type="submit" loading={isPending}>
+        <Button type="submit" loading={isPending} disabled={loanPartial}>
           Guardar
         </Button>
         <Button

@@ -11,8 +11,13 @@ import { BalanceSparkline } from './BalanceSparkline';
 import { SubBalanceChip } from './SubBalanceChip';
 import { CreditCardStatement } from './CreditCardStatement';
 import { CardsSection } from './CardsSection';
+import { FriendDebtsBreakdown } from './FriendDebtsBreakdown';
+import { AccountQuickActions } from './AccountQuickActions';
+import type { QuickAction } from './quickActions';
+import { PerformanceSummary } from './PerformanceSummary';
+import { LoanProgressCard } from './LoanProgressCard';
 import { TYPE_LABELS } from './typeLabels';
-import type { Account } from './api';
+import { isInvestmentAccount, type Account } from './api';
 
 // Ventana del gráfico de saldo: ~3 meses. El backend clampea size a 100 (suficiente para una
 // cuenta personal); las 3 tx más recientes se muestran en la lista de movimientos.
@@ -50,6 +55,10 @@ type AccountCardBodyProps = {
   onEdit: () => void;
   /** Alta de tarjeta desde el bloque (sólo BANK/WALLET con 0 tarjetas, D9). */
   onAddCard: () => void;
+  /** S40 (D4): quick action de la card. La página abre el form/diálogo que corresponda. */
+  onQuickAction?: (action: QuickAction) => void;
+  /** S40 (D3): abre el detalle de rendimiento (sólo INVESTMENT/CRYPTO). */
+  onOpenPerformance?: () => void;
 };
 
 // Sprint 22.2: cuerpo reutilizable de la card de cuenta (header + saldo + chips, sparkline,
@@ -61,6 +70,8 @@ export function AccountCardBody({
   paymentMethods,
   onEdit,
   onAddCard,
+  onQuickAction,
+  onOpenPerformance,
 }: AccountCardBodyProps) {
   const { data, isPending, isError } = useTransactions({
     accountId: account.id,
@@ -132,6 +143,19 @@ export function AccountCardBody({
 
       {points.length >= 2 && <BalanceSparkline points={points} />}
 
+      {/* S40 (D4): la fila de acciones que le da vida a INVESTMENT/CRYPTO/DEBT. Va entre el
+          sparkline y "Últimos movimientos"; el resto de los tipos no la ve.
+          Ojo con la diferencia: el sparkline es BALANCE (incluye las patas de transfer) y el
+          rendimiento las EXCLUYE. Son dos preguntas distintas y no se unifican (§7.4). */}
+      <AccountQuickActions account={account} onAction={(action) => onQuickAction?.(action)} />
+
+      {isInvestmentAccount(account.type) && onOpenPerformance && (
+        <PerformanceSummary account={account} onOpenDetail={onOpenPerformance} />
+      )}
+
+      {/* S40 (D5): el plan de pagos, derivado contra la plata que efectivamente pagaste. */}
+      {account.loan && <LoanProgressCard loan={account.loan} currency={account.currency} />}
+
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium uppercase tracking-wide text-muted">
           Últimos movimientos
@@ -183,6 +207,10 @@ export function AccountCardBody({
       {account.type === 'CREDIT' && account.statementCloseDay != null && (
         <CreditCardStatement account={account} />
       )}
+
+      {/* S40 (D7): la cuenta sistema muestra de quién es cada peso. Se reconoce por la MARCA y
+          no por el nombre: renombrarla es libre y la card la sigue reconociendo. */}
+      {account.systemRole === 'FRIEND_DEBTS' && <FriendDebtsBreakdown />}
 
       <div className="flex justify-end border-t border-line pt-3">
         <EditButton label={account.name} onClick={onEdit} />

@@ -16,6 +16,14 @@ const MESSAGES: Record<string, string> = {
   AMOUNT_BELOW_SHARES:
     'El monto nuevo es menor a lo que ya repartiste con otros. Ajustá el reparto primero.',
   INSUFFICIENT_BALANCE: 'La cuenta no tiene saldo suficiente.',
+  // S40 (Bloque C) — "Debés".
+  PERSON_DEBT_NOT_FOUND: 'No encontramos esa deuda.',
+  PERSON_DEBT_SETTLED: 'Esta deuda ya está saldada. Deshacé el pago antes de borrarla.',
+  PERSON_HAS_PENDING_DEBTS:
+    'Todavía le debés plata a esta persona. Saldá lo que falta antes de borrarla.',
+  PROTECTED_TRANSACTION:
+    'Este gasto respalda una deuda con alguien: cambiale el monto desde Gastos → Debés.',
+  PERSON_REQUIRED: 'Elegí con quién es la deuda.',
 };
 
 export function sharedErrorMessage(error: unknown): string {

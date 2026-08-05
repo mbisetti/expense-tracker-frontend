@@ -12,7 +12,8 @@ export type NotificationTargetType =
   | 'SAVINGS'
   | 'INCOME'
   | 'EXPENSES'
-  | 'REVIEW_INBOX';
+  | 'REVIEW_INBOX'
+  | 'ACCOUNT';
 
 export type NotificationItem = {
   id: string;
@@ -78,6 +79,10 @@ export function targetPath(item: NotificationItem): string | null {
     // batch, que no tiene vista propia: lo que hay que abrir es la cola de revisión.
     case 'REVIEW_INBOX':
       return '/transactions?review=1';
+    // S40: la cuota del préstamo que vence. El targetId es la cuenta, que no tiene permalink
+    // propio: lo que hay que abrir es Cuentas, donde está su card con la barra de progreso.
+    case 'ACCOUNT':
+      return '/accounts';
     default:
       return null;
   }

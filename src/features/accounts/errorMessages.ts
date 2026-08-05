@@ -28,6 +28,18 @@ export function accountErrorMessage(error: unknown): string {
       return 'Completá el día de cierre y el de vencimiento juntos.';
     case 'STATEMENT_NOT_CONFIGURED':
       return 'Esta tarjeta no tiene ciclo configurado.';
+    // S40 (bloque B): préstamos.
+    case 'INVALID_LOAN_CONFIG':
+      return 'Completá los cuatro datos del préstamo juntos: cuota, cantidad, día de vencimiento y fecha de inicio.';
+    case 'NOT_A_DEBT_ACCOUNT':
+      return 'El préstamo sólo se configura en una cuenta de deuda.';
+    // S40 (bloque A): rendimiento y ajustes.
+    case 'NOT_AN_INVESTMENT_ACCOUNT':
+      return 'El rendimiento sólo aplica a cuentas de inversión.';
+    case 'NOT_AN_ADJUSTABLE_ACCOUNT':
+      return 'Sólo se puede actualizar el valor de una inversión, una cripto o una deuda.';
+    case 'INVALID_ADJUSTMENT_TARGET':
+      return 'El valor de hoy no puede ser negativo.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }

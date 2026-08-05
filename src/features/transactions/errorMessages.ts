@@ -27,6 +27,10 @@ export function transactionErrorMessage(error: unknown): string {
       return 'El gasto recurrente no existe.';
     case 'INVALID_RECURRING_CONFIG':
       return 'Revisá la configuración del gasto recurrente.';
+    // S40 (D7): el gasto respalda una deuda chica pendiente. La descripción, la categoría y la
+    // fecha sí se editan desde acá; el monto es el número de la deuda y se toca donde vive.
+    case 'PROTECTED_TRANSACTION':
+      return 'Este gasto respalda una deuda con alguien: manejalo desde Gastos → Debés.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }

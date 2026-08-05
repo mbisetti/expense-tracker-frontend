@@ -132,3 +132,28 @@ describe('TransferForm en alta — layout D5/D6 cross-currency', () => {
     });
   });
 });
+
+// S40 (D4): las quick actions de la card de cuenta abren este mismo form prellenado. "Agregar
+// plata" apunta el destino (ya existía); "Retirar" y "Registrar pago" necesitan apuntar el
+// ORIGEN, que es lo que agrega initialFromAccountId.
+describe('TransferForm prellenado desde la card de cuenta (S40 D4)', () => {
+  it('initialFromAccountId prellena el origen', async () => {
+    renderForm({ initialFromAccountId: 'a' });
+
+    await waitFor(() => expect(selectValue('Cuenta origen', { exact: false })).toBe('a'));
+    expect(selectValue('Cuenta destino', { exact: false })).toBe('');
+  });
+
+  it('initialToAccountId sigue prellenando el destino, y los dos conviven', async () => {
+    renderForm({ initialFromAccountId: 'a', initialToAccountId: 'b' });
+
+    await waitFor(() => expect(selectValue('Cuenta origen', { exact: false })).toBe('a'));
+    expect(selectValue('Cuenta destino', { exact: false })).toBe('b');
+  });
+
+  it('en edición manda el transfer, no los prefills', async () => {
+    renderForm({ transfer: editTransfer, initialFromAccountId: 'u' });
+
+    await waitFor(() => expect(selectValue('Cuenta origen', { exact: false })).toBe('a'));
+  });
+});
