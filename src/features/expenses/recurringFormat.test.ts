@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dueLabel, financingCost, frequencyLabel, monthName, stateBadge } from './recurringFormat';
+import { defaultPaidDate, dueLabel, financingCost, frequencyLabel, monthName, stateBadge } from './recurringFormat';
 
 describe('recurringFormat', () => {
   it('frequencyLabel', () => {
@@ -28,6 +28,19 @@ describe('recurringFormat', () => {
     expect(stateBadge({ state: 'PENDING', expectedCount: 1, paidCount: 0, dueMonth: null })).toEqual({ status: 'pending', label: 'Pendiente' });
     expect(stateBadge({ state: 'COMPLETED', expectedCount: 0, paidCount: 3, dueMonth: null })).toEqual({ status: 'info', label: 'Completado' });
     expect(stateBadge({ state: 'NOT_DUE', expectedCount: 0, paidCount: 0, dueMonth: 3 })).toEqual({ status: 'info', label: 'Próximo: marzo' });
+  });
+
+  it('defaultPaidDate: el pago cae en el mes que estás mirando, nunca en el futuro', () => {
+    // mes pasado → el día de vencimiento de ESE mes, no hoy
+    expect(defaultPaidDate(2026, 7, 10, '2026-08-05')).toBe('2026-07-10');
+    // mes corriente con el vencimiento ya pasado → el vencimiento
+    expect(defaultPaidDate(2026, 8, 1, '2026-08-05')).toBe('2026-08-01');
+    // mes corriente pero el vencimiento todavía no llegó → hoy, no una fecha futura
+    expect(defaultPaidDate(2026, 8, 20, '2026-08-05')).toBe('2026-08-05');
+    // día 31 en un mes que no lo tiene → clampeado al último real
+    expect(defaultPaidDate(2026, 2, 31, '2026-08-05')).toBe('2026-02-28');
+    // sin billingDay (semanales) → último día del mes mirado
+    expect(defaultPaidDate(2026, 7, null, '2026-08-05')).toBe('2026-07-31');
   });
 
   it('financingCost: total en cuotas vs contado', () => {

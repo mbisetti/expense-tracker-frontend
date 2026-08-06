@@ -6,6 +6,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../components/ui/toastContext';
+import { formatMoney } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { useTransfers } from './useTransfers';
 import { useDeleteTransfer } from './useTransferMutations';
@@ -72,6 +73,13 @@ export function TransferList() {
                     {formatDate(transfer.date)}
                     {transfer.description ? ` · ${transfer.description}` : ''}
                   </p>
+                  {/* S41: la comisión no está en ninguno de los dos montos de la derecha (el
+                      destino cobró aparte), así que sin este renglón la fila no cerraría. */}
+                  {transfer.fee != null && transfer.fee > 0 && (
+                    <p className="text-sm text-muted">
+                      Comisión {formatMoney(transfer.fee, transfer.toCurrency)}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="tabular-nums text-ink">

@@ -128,6 +128,11 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
       loanChanges.loanPrincipal = parseAmountInput(loanPrincipal);
     }
 
+    // La agrupación matchea el string EXACTO (buildGroups en AccountsPage), así que un espacio
+    // de más al final rompe el grupo sin que se vea nada raro en pantalla. Se trimea al guardar:
+    // el helper del campo promete "escribilo igual" y esto lo hace cumplible.
+    const normalizedInstitution = institution.trim();
+
     if (isEdit) {
       const changes: UpdateAccountInput = {};
       if (name !== account.name) changes.name = name;
@@ -135,7 +140,9 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
       if (normalizedCurrency !== account.currency) changes.currency = normalizedCurrency;
       if (isInformal !== account.isInformal) changes.isInformal = isInformal;
       // Institución (D8): "" borra. Sólo se manda si cambió respecto al valor actual.
-      if (institution !== (account.institution ?? '')) changes.institution = institution;
+      if (normalizedInstitution !== (account.institution ?? '')) {
+        changes.institution = normalizedInstitution;
+      }
       // Vínculo (D8): sólo relevante para CREDIT; "" desvincula. Al convertir fuera de CREDIT
       // el backend limpia el link solo → no hace falta mandarlo.
       if (type === 'CREDIT' && linkedAccountId !== (account.linkedAccountId ?? '')) {
@@ -172,7 +179,7 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
       const input: CreateAccountInput = {
         name, type, currency: normalizedCurrency, isInformal, ...loanChanges,
       };
-      if (institution.trim() !== '') input.institution = institution;
+      if (normalizedInstitution !== '') input.institution = normalizedInstitution;
       // El alta no ofrece CREDIT (D9) → sin ciclo ni vínculo por este camino.
       createMutation.mutate(input, {
         onSuccess: () => {
@@ -266,7 +273,7 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
             maxLength={100}
             list="acc-institution-list"
             disabled={isPending}
-            helper="Agrupa cuentas hermanas (ej: caja de ahorro + plazo fijo del mismo banco)."
+            helper="Agrupa cuentas hermanas (ej: caja de ahorro + plazo fijo del mismo banco). Se agrupan sólo si está escrito EXACTAMENTE igual en las dos: elegilo de la lista en vez de tipearlo."
           />
           <datalist id="acc-institution-list">
             {institutionOptions.map((i) => (

@@ -13,6 +13,11 @@ export type CreateTransferInput = {
   toCurrency?: string;
   date: string;
   description?: string;
+  // S41: comisión que cobra el DESTINO por recibir la plata, en toCurrency. No se resta de
+  // toAmount — el backend la materializa como un gasto aparte en la cuenta destino, con
+  // categoría "Comisiones", para que aparezca en la tab Gastos. Se manda el MONTO aunque el
+  // usuario la haya cargado como %: el banco cobra un número, no una fórmula.
+  fee?: number;
 };
 
 // Un transfer mueve DOS cuentas del ledger: invalidar transfers + transactions +
