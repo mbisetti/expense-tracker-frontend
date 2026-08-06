@@ -38,6 +38,8 @@ export function accountErrorMessage(error: unknown): string {
       return 'El rendimiento sólo aplica a cuentas de inversión.';
     case 'NOT_AN_ADJUSTABLE_ACCOUNT':
       return 'Sólo se puede actualizar el valor de una inversión, una cripto o una deuda.';
+    case 'INVALID_ACCOUNT_URL':
+      return 'El link tiene que ser una dirección web (empezar con http:// o https://).';
     case 'INVALID_ADJUSTMENT_TARGET':
       return 'El valor de hoy no puede ser negativo.';
     default:

@@ -62,6 +62,22 @@ export function LoanProgressCard({ loan, currency }: LoanProgressCardProps) {
           .
         </p>
       )}
+
+      {/* La tasa NO es el "+X%" de arriba, y por eso van las dos líneas: una dice cuánto de más
+          devolvés en total, la otra a qué tasa te lo prestaron. Un préstamo a 12 meses y otro a
+          36 pueden tener el mismo "+27%" y tasas completamente distintas. */}
+      {loan.monthlyRatePct != null && loan.annualRatePct != null && (
+        <p className="text-sm text-muted">
+          Tasa:{' '}
+          <span className="font-semibold tabular-nums text-ink">{loan.monthlyRatePct}% mensual</span>
+          {' · '}
+          <span className="tabular-nums text-ink">{loan.annualRatePct}% anual</span>
+          <span className="block text-xs">
+            Calculada de lo que te prestaron y las cuotas. Es efectiva: el contrato suele publicar
+            una TNA más baja, que no incluye la capitalización.
+          </span>
+        </p>
+      )}
     </div>
   );
 }

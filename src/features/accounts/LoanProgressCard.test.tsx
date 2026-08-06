@@ -16,6 +16,8 @@ const base: LoanProgress = {
   completed: false,
   cost: null,
   costPct: null,
+  monthlyRatePct: null,
+  annualRatePct: null,
 };
 
 describe('LoanProgressCard (S40 D5)', () => {
@@ -44,6 +46,35 @@ describe('LoanProgressCard (S40 D5)', () => {
     // El copy va partido en varios nodos (montos con <span> propio): se mira el texto completo.
     expect(container.textContent).toContain('220.000,00 más (+27.5%)');
     expect(container.textContent).toContain('Te prestaron');
+  });
+
+  it('la tasa es OTRA línea que el costo: responden preguntas distintas', () => {
+    const { container } = render(
+      <LoanProgressCard
+        loan={{
+          ...base,
+          principal: 800000,
+          cost: 220000,
+          costPct: 27.5,
+          monthlyRatePct: 3.95,
+          annualRatePct: 59.18,
+        }}
+        currency="ARS"
+      />,
+    );
+
+    // "+27,5%" es cuánto de más devolvés en total; "3,95% mensual" es a qué tasa te prestaron.
+    // Dos préstamos con el mismo +27% a 12 y a 36 meses tienen tasas muy distintas.
+    expect(container.textContent).toContain('220.000,00 más (+27.5%)');
+    expect(container.textContent).toContain('3.95% mensual');
+    expect(container.textContent).toContain('59.18% anual');
+    // El aviso que evita el "la app dice 59 y mi contrato 49": la efectiva no es la TNA.
+    expect(container.textContent).toContain('TNA más baja');
+  });
+
+  it('sin capital no hay tasa: no se estima nada', () => {
+    const { container } = render(<LoanProgressCard loan={base} currency="ARS" />);
+    expect(container.textContent).not.toContain('Tasa:');
   });
 
   it('completado: sin próxima cuota y con la barra llena', () => {

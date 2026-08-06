@@ -252,6 +252,10 @@ describe('DashboardPage', () => {
         if (url.includes('/savings')) return ok([]);
         if (url.includes('/summary/expected-income'))
           return ok({ month: 7, year: 2026, byCurrency: [], sources: [] });
+        // S42: los compromisos del mes resuelven vacío — sin cuotas ni recurrentes la card no se
+        // monta y no agrega skeletons al conteo de carga parcial.
+        if (url.includes('/summary/commitments'))
+          return ok({ month: 7, year: 2026, byCurrency: [] });
         if (url.includes('/summary/overview')) {
           return ok({
             byCurrency: [
@@ -286,6 +290,10 @@ describe('DashboardPage', () => {
         if (url.includes('/savings')) return ok([]);
         if (url.includes('/summary/expected-income'))
           return ok({ month: 7, year: 2026, byCurrency: [], sources: [] });
+        // S42: los compromisos del mes resuelven vacío — sin cuotas ni recurrentes la card no se
+        // monta y no agrega skeletons al conteo de carga parcial.
+        if (url.includes('/summary/commitments'))
+          return ok({ month: 7, year: 2026, byCurrency: [] });
         if (url.includes('/summary/overview')) {
           overviewCalls += 1;
           // primer fetch: dos monedas; refetch: USD ya no existe
@@ -346,6 +354,10 @@ describe('DashboardPage', () => {
         if (url.includes('/savings')) return ok([]);
         if (url.includes('/summary/expected-income'))
           return ok({ month: 7, year: 2026, byCurrency: [], sources: [] });
+        // S42: los compromisos del mes resuelven vacío — sin cuotas ni recurrentes la card no se
+        // monta y no agrega skeletons al conteo de carga parcial.
+        if (url.includes('/summary/commitments'))
+          return ok({ month: 7, year: 2026, byCurrency: [] });
         if (url.includes('/summary/overview')) {
           return ok({
             byCurrency: [
