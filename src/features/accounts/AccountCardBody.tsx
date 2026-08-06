@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { ExternalLinkIcon } from '../../components/ui/icons';
 import { Amount } from '../../components/ui/Amount';
 import { Badge } from '../../components/ui/Badge';
 import { Tooltip } from '../../components/ui/Tooltip';
@@ -38,6 +39,17 @@ function todayIso(): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+// El host pelado ("bancogalicia.com.ar") en vez de la URL entera: se lee de un vistazo y deja
+// ver a dónde lleva antes de tocarlo. Si por lo que sea no parsea, se muestra tal cual — nunca
+// se rompe la card por un dato del usuario.
+function linkHost(url: string): string {
+  try {
+    return new URL(url).host.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
 }
 
 function formatShortDate(date: string): string {
@@ -124,6 +136,21 @@ export function AccountCardBody({
             {TYPE_LABELS[account.type]}
             {account.institution ? ` · ${account.institution}` : ''} · {account.currency}
           </span>
+          {/* S42: el atajo al home banking. Sale del dato del usuario, así que se muestra el
+              HOST y no la URL entera: se lee de un vistazo y deja ver a dónde lleva antes de
+              tocarlo. El backend ya garantizó que sea http(s); noreferrer va igual por el
+              window.opener. */}
+          {account.externalUrl && (
+            <a
+              href={account.externalUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex w-fit items-center gap-1 text-sm text-brand underline-offset-2 hover:underline"
+            >
+              {linkHost(account.externalUrl)}
+              <ExternalLinkIcon className="h-3.5 w-3.5" />
+            </a>
+          )}
         </div>
         <div className="flex flex-col items-end gap-1">
           <Amount amount={account.balance} currency={account.currency} tone="neutral" size="lg" />

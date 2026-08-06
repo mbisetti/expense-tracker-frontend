@@ -50,6 +50,7 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
   const [currency, setCurrency] = useState(account?.currency ?? 'ARS');
   const [isInformal, setIsInformal] = useState(account?.isInformal ?? false);
   const [institution, setInstitution] = useState(account?.institution ?? '');
+  const [externalUrl, setExternalUrl] = useState(account?.externalUrl ?? '');
   const [linkedAccountId, setLinkedAccountId] = useState(account?.linkedAccountId ?? '');
   const [statementCloseDay, setStatementCloseDay] = useState(
     account?.statementCloseDay != null ? String(account.statementCloseDay) : '',
@@ -143,6 +144,10 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
       if (normalizedInstitution !== (account.institution ?? '')) {
         changes.institution = normalizedInstitution;
       }
+      // S42: mismo criterio — "" borra el link, no mandarlo no lo toca.
+      if (externalUrl.trim() !== (account.externalUrl ?? '')) {
+        changes.externalUrl = externalUrl.trim();
+      }
       // Vínculo (D8): sólo relevante para CREDIT; "" desvincula. Al convertir fuera de CREDIT
       // el backend limpia el link solo → no hace falta mandarlo.
       if (type === 'CREDIT' && linkedAccountId !== (account.linkedAccountId ?? '')) {
@@ -180,6 +185,7 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
         name, type, currency: normalizedCurrency, isInformal, ...loanChanges,
       };
       if (normalizedInstitution !== '') input.institution = normalizedInstitution;
+      if (externalUrl.trim() !== '') input.externalUrl = externalUrl.trim();
       // El alta no ofrece CREDIT (D9) → sin ciclo ni vínculo por este camino.
       createMutation.mutate(input, {
         onSuccess: () => {
@@ -261,6 +267,20 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
           ))}
         </Select>
       )}
+
+      {/* S42: el atajo al home banking. Va después de la moneda porque es del mismo tenor que
+          la institución: describe DÓNDE vive la cuenta, no cómo se comporta la plata. */}
+      <Input
+        label="Link al home banking (opcional)"
+        id="acc-external-url"
+        type="text"
+        value={externalUrl}
+        onChange={(e) => setExternalUrl(e.target.value)}
+        maxLength={500}
+        placeholder="bancogalicia.com.ar"
+        disabled={isPending}
+        helper="Para entrar directo desde la card. Podés escribir sólo el dominio."
+      />
 
       {showInstitution && (
         <>

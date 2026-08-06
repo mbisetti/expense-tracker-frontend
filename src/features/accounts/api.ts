@@ -27,6 +27,14 @@ export type Account = {
   // Nullable; el backend puede omitirlos → se toleran como null/undefined.
   institution: string | null;
   linkedAccountId: string | null;
+  /**
+   * S42: link al home banking de la cuenta (o al portal donde vive el préstamo). Es un atajo,
+   * no una integración: la app no lee nada de ahí.
+   *
+   * El backend garantiza que sea http(s) — se renderiza como href, así que cualquier otro
+   * esquema sería XSS. Igual va con rel="noreferrer" por el opener.
+   */
+  externalUrl?: string | null;
   // S40 (D7): cuenta que creó la APP, no el usuario. Hoy sólo 'FRIEND_DEBTS' ("Deudas con
   // amigos"). La marca manda, no el nombre: el usuario puede renombrarla y la card la sigue
   // reconociendo. null/ausente = cuenta normal.

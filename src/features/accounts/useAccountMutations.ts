@@ -14,6 +14,7 @@ export type CreateAccountInput = {
   // linkedAccountId es un UUID directo.
   institution?: string;
   linkedAccountId?: string;
+  externalUrl?: string;
 } & LoanInput;
 
 export type UpdateAccountInput = {
@@ -27,6 +28,8 @@ export type UpdateAccountInput = {
   // ausente = no tocar.
   institution?: string;
   linkedAccountId?: string;
+  /** S42: link al home banking. "" borra (mismo criterio que institution). */
+  externalUrl?: string;
 } & LoanInput;
 
 function useInvalidateAccounts() {

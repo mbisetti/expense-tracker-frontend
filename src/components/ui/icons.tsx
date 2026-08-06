@@ -61,6 +61,18 @@ export function ArrowRightIcon(props: IconProps) {
 }
 
 // Calendario — botón del picker nativo dentro del DateField (Sprint 23 D1).
+// S42: acompaña a los links que salen de la app (el home banking de una cuenta). La flecha que
+// se escapa del recuadro es la convención universal de "esto abre otra pestaña".
+export function ExternalLinkIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path d="M15 3h6v6" />
+      <path d="M10 14 21 3" />
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+    </svg>
+  );
+}
+
 export function CalendarIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>
