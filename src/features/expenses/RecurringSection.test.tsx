@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthContext } from '../auth/context';
 import { ToastProvider } from '../../components/ui/ToastProvider';
@@ -57,7 +57,7 @@ function renderSection(data: CurrencyExpenses) {
     <QueryClientProvider client={queryClient}>
       <AuthContext.Provider value={{ accessToken: 't', status: 'authenticated', setAccessToken: () => {} }}>
         <ToastProvider>
-          <RecurringSection data={data} />
+          <RecurringSection data={data} year={2026} month={8} />
         </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
@@ -99,13 +99,14 @@ describe('RecurringSection', () => {
 
   // ── Sprint 24.4: débito automático ──────────────────────────────────────────
 
-  it('item con débito automático: sufijo Auto y badge Sin saldo si falló', async () => {
+  it('item con débito automático: va bajo su grupo y badge Sin saldo si falló', async () => {
     const autoItem: RecurringItem = {
       ...item1, id: 'ra', name: 'Spotify', autoDebit: true, debitAccountId: 'acc1', failedCount: 1,
     };
     renderSection(makeData([autoItem]));
     expect(await screen.findByText('Spotify')).toBeInTheDocument();
-    expect(screen.getByText(/· Auto/)).toBeInTheDocument();
+    // el "· Auto" en gris se reemplazó por el encabezado del grupo (los dos tipos ya no se mezclan)
+    expect(screen.getByText('Débito automático')).toBeInTheDocument();
     expect(screen.getByText('Sin saldo')).toBeInTheDocument();
   });
 
@@ -115,5 +116,70 @@ describe('RecurringSection', () => {
     };
     renderSection(makeData([orphan]));
     expect(await screen.findByText('Configurá la cuenta de débito')).toBeInTheDocument();
+  });
+
+  // ── Automáticos vs manuales: grupos, filtro y "Pagué" ───────────────────────
+
+  const autoItem: RecurringItem = {
+    ...item1, id: 'ra', name: 'Spotify', autoDebit: true, debitAccountId: 'acc1',
+  };
+
+  it('parte la lista en dos grupos cuando hay automáticos y manuales', async () => {
+    renderSection(makeData([autoItem, item1]));
+    expect(await screen.findByRole('heading', { name: 'Débito automático' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Los pagás vos' })).toBeInTheDocument();
+  });
+
+  it('el filtro sólo aparece con los dos tipos, y deja ver uno solo', async () => {
+    renderSection(makeData([item1]));
+    await screen.findByText('Alquiler');
+    expect(screen.queryByRole('tablist', { name: 'Filtrar recurrentes' })).not.toBeInTheDocument();
+
+    cleanup();
+    renderSection(makeData([autoItem, item1]));
+    expect(await screen.findByRole('tab', { name: 'Automáticos' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Automáticos' }));
+    expect(screen.getByText('Spotify')).toBeInTheDocument();
+    expect(screen.queryByText('Alquiler')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Manuales' }));
+    expect(screen.getByText('Alquiler')).toBeInTheDocument();
+    expect(screen.queryByText('Spotify')).not.toBeInTheDocument();
+  });
+
+  it('un manual pendiente ofrece "Pagué" y abre el alta del pago; un automático no', async () => {
+    const activeRec: RecurringExpense = { ...inactiveRec, id: 'r1', name: 'Alquiler', amount: 50000, active: true };
+    const autoRec: RecurringExpense = { ...activeRec, id: 'ra', name: 'Spotify', autoDebit: true };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/recurring-expenses')) return jsonResponse(200, [activeRec, autoRec]);
+        return jsonResponse(200, []);
+      }),
+    );
+
+    renderSection(makeData([autoItem, item1]));
+    // una sola fila ofrece el botón: la manual
+    const buttons = await screen.findAllByRole('button', { name: 'Pagué' });
+    expect(buttons).toHaveLength(1);
+
+    fireEvent.click(buttons[0]);
+    expect(await screen.findByText('Marcar pagado: Alquiler')).toBeInTheDocument();
+  });
+
+  it('no ofrece "Pagué" en un manual ya pagado', async () => {
+    const activeRec: RecurringExpense = { ...inactiveRec, id: 'r1', name: 'Alquiler', active: true };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/recurring-expenses')) return jsonResponse(200, [activeRec]);
+        return jsonResponse(200, []);
+      }),
+    );
+
+    renderSection(makeData([{ ...item1, state: 'PAID', paidCount: 1 }]));
+    await screen.findByText('Alquiler');
+    expect(screen.queryByRole('button', { name: 'Pagué' })).not.toBeInTheDocument();
   });
 });

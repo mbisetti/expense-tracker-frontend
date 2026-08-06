@@ -72,6 +72,24 @@ export function autoDebitTargetLabel(accountName?: string, methodName?: string):
   return methodName ? `${accountName} · ${methodName}` : accountName;
 }
 
+// Fecha por defecto al marcar pagado un recurrente manual. El pago pertenece al MES QUE ESTÁS
+// MIRANDO, no a hoy: marcar el alquiler de julio parado en el período de julio no puede crear
+// una tx de agosto, porque julio quedaría pendiente para siempre. Cae en el día de vencimiento
+// de ese mes (clampeado al último día real, igual que el server hace con billingDay) y, si esa
+// fecha todavía no llegó, en hoy — no se registra un pago con fecha futura.
+export function defaultPaidDate(
+  year: number,
+  month: number,
+  billingDay: number | null,
+  todayIso: string,
+): string {
+  // Día 0 del mes siguiente = último día de este. Cubre febrero y los meses de 30.
+  const lastDay = new Date(year, month, 0).getDate();
+  const day = Math.min(billingDay ?? lastDay, lastDay);
+  const due = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  return due > todayIso ? todayIso : due;
+}
+
 export type FinancingCost = { totalInInstallments: number; diff: number; pct: number };
 
 // Costo del financiamiento DERIVADO (D5): total en cuotas vs contado. null si no hay cuotas o

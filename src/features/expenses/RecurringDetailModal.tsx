@@ -24,9 +24,11 @@ type RecurringDetailModalProps = {
   item?: RecurringItem;
   onClose: () => void;
   onEdit: (recurring: RecurringExpense) => void;
+  /** Sólo en manuales con saldo del mes: abre el alta del pago (cierra este modal antes). */
+  onPay?: () => void;
 };
 
-export function RecurringDetailModal({ recurring, item, onClose, onEdit }: RecurringDetailModalProps) {
+export function RecurringDetailModal({ recurring, item, onClose, onEdit, onPay }: RecurringDetailModalProps) {
   const { pref } = useDateFormat();
   const toast = useToast();
   const { data: categories } = useCategories();
@@ -188,7 +190,12 @@ export function RecurringDetailModal({ recurring, item, onClose, onEdit }: Recur
         </section>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" onClick={() => onEdit(recurring)} disabled={busy}>
+          {onPay && (
+            <Button type="button" onClick={onPay} disabled={busy}>
+              Marcar pagado
+            </Button>
+          )}
+          <Button type="button" variant={onPay ? 'secondary' : 'primary'} onClick={() => onEdit(recurring)} disabled={busy}>
             Editar
           </Button>
           <Button type="button" variant="secondary" onClick={toggleActive} loading={updateMutation.isPending} disabled={deleteMutation.isPending}>

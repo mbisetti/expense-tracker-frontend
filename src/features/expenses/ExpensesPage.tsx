@@ -296,7 +296,7 @@ export function ExpensesPage() {
             onToggle={() => sections.toggle('recurrentes')}
             summary={recurringSummary}
           >
-            <RecurringSection data={current} />
+            <RecurringSection data={current} year={period.year} month={period.month} />
           </Section>
 
           {/* V36 (D5): acumulado, indiferente al mes seleccionado — la deuda no es mensual.
