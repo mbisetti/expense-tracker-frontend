@@ -78,6 +78,13 @@ export function TransferForm({
   const [toAmountTouched, setToAmountTouched] = useState(isEdit);
   const [date, setDate] = useState(transfer?.date ?? todayIso());
   const [description, setDescription] = useState(transfer?.description ?? '');
+  // S41: comisión del destino. Se puede cargar como monto o como % de lo que entra, pero lo que
+  // viaja al backend es SIEMPRE el monto: el banco cobra un número, no una fórmula, y guardar el
+  // porcentaje sería guardar la cuenta en vez del hecho.
+  const [feeMode, setFeeMode] = useState<'amount' | 'percent'>('amount');
+  const [feeInput, setFeeInput] = useState(
+    transfer?.fee != null ? numberToAmountDisplay(transfer.fee) : '',
+  );
 
   const fromAccount = accounts?.find((a) => a.id === fromAccountId);
   const toAccount = accounts?.find((a) => a.id === toAccountId);
@@ -115,6 +122,15 @@ export function TransferForm({
   // Sprint 22: el destino puede ser CUALQUIER cuenta, incluida la misma que el origen.
   const toOptions = accounts ?? [];
 
+  // S41: lo que realmente entra al destino, contra lo que se calcula el % y se valida la comisión.
+  const creditedAmount = crossCurrency ? parseAmountInput(toAmount) : parseAmountInput(fromAmount);
+  const feeRaw = parseAmountInput(feeInput);
+  const feeAmount =
+    feeRaw > 0 && feeMode === 'percent' ? round2((creditedAmount * feeRaw) / 100) : feeRaw;
+  // Espejo del guard del backend (FEE_EXCEEDS_TRANSFER): una comisión que se come todo lo que
+  // entró es siempre un error de tipeo. Se avisa acá para no gastar un round-trip.
+  const feeTooLarge = feeAmount > 0 && creditedAmount > 0 && feeAmount >= creditedAmount;
+
   const handleFromChange = (id: string) => {
     setFromAccountId(id);
     setToAmountTouched(false);
@@ -129,7 +145,7 @@ export function TransferForm({
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (sameAccountSameCurrency) return; // guard cliente (el botón ya está deshabilitado)
+    if (sameAccountSameCurrency || feeTooLarge) return; // guards cliente (el botón ya está deshabilitado)
     const from = parseAmountInput(fromAmount);
     const to = crossCurrency ? parseAmountInput(toAmount) : from;
     const input = {
@@ -141,6 +157,7 @@ export function TransferForm({
       toCurrency: resolvedToCcy || undefined,
       date,
       description: description || undefined,
+      fee: feeAmount > 0 ? feeAmount : undefined,
     };
     const onSuccess = (data: { fromAccountBalance: number; toAccountBalance: number }) => {
       const verb = isEdit ? 'Transferencia actualizada' : 'Transferencia realizada';
@@ -154,6 +171,7 @@ export function TransferForm({
         setToAmount('');
         setToAmountTouched(false);
         setDescription('');
+        setFeeInput('');
         onDone?.();
       }
     };
@@ -251,9 +269,15 @@ export function TransferForm({
 
           {/* Fila 3 (D6): monto a debitar → monto a acreditar ("de esto pasa a esto"). La flecha
               aparece SOLO cuando las monedas difieren; en angosto las mitades se apilan y la
-              flecha rota a vertical. Same-currency → un solo MoneyInput, sin flecha. */}
+              flecha rota a vertical. Same-currency → un solo MoneyInput, sin flecha.
+
+              Alineación por ARRIBA, no por abajo: sólo el campo de la derecha lleva helper (la
+              cotización), así que con `items-end` los bordes de abajo coincidían y el input de
+              acreditar te quedaba un renglón más alto que el de debitar (reporte de Marko).
+              Con `items-start` los dos labels y los dos inputs quedan a la misma altura y el
+              helper cuelga abajo sin correr nada, aunque ocupe dos líneas. */}
           {crossCurrency ? (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
               <div className="flex-1">
                 <MoneyInput
                   label={`Monto a debitar (${resolvedFromCcy})`}
@@ -264,7 +288,9 @@ export function TransferForm({
                   disabled={mutation.isPending}
                 />
               </div>
-              <div className="flex justify-center py-1 text-muted sm:pb-3" aria-hidden="true">
+              {/* mt-10 = label (21px) + gap-1.5 (6px) + medio input (22px) − medio ícono (10px):
+                  la flecha cae en el centro de los inputs, no arriba de todo. */}
+              <div className="flex justify-center py-1 text-muted sm:mt-10 sm:py-0" aria-hidden="true">
                 <ArrowRightIcon className="h-5 w-5 rotate-90 sm:rotate-0" />
               </div>
               <div className="flex-1">
@@ -299,6 +325,59 @@ export function TransferForm({
             />
           )}
 
+          {/* S41: comisión del destino. Opcional y siempre visible (un campo vacío no molesta y
+              un bloque escondido detrás de un switch hace que nadie se entere de que existe).
+              El % es sólo comodidad de tecleo: lo que se guarda es el monto resultante. */}
+          <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+            <MoneyInput
+              label={
+                feeMode === 'percent'
+                  ? 'Comisión del destino (%)'
+                  : `Comisión del destino${resolvedToCcy ? ` (${resolvedToCcy})` : ''}`
+              }
+              id="transfer-fee"
+              value={feeInput}
+              onValueChange={setFeeInput}
+              disabled={mutation.isPending}
+              error={feeTooLarge ? 'No puede ser mayor a lo que entra al destino.' : undefined}
+              helper={
+                feeAmount > 0 && !feeTooLarge
+                  ? `Se anota como gasto de ${formatMoney(feeAmount, resolvedToCcy)} en ${toAccount?.name ?? 'la cuenta destino'}, categoría Comisiones.`
+                  : 'Opcional. Lo que te cobran por recibir la plata.'
+              }
+            />
+            {/* El toggle se alinea con el INPUT, no con el bloque entero: el label de arriba y
+                el helper de abajo no cuentan. En vez de empujarlo con un margen a ojo, la
+                columna repite la estructura del campo (spacer del alto del label + el mismo
+                gap-1.5), así los botones arrancan exactamente donde arranca el input y siguen
+                alineados si el label cambia. El spacer sólo existe de sm para arriba: abajo de
+                eso el grid es de una columna y el toggle va apilado, sin nada que alinear. */}
+            <div className="flex flex-col gap-1.5">
+              <span aria-hidden="true" className="hidden text-sm font-medium sm:block">
+                &nbsp;
+              </span>
+              <div role="tablist" aria-label="Cómo se carga la comisión" className="flex gap-2">
+                {(['amount', 'percent'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="tab"
+                    aria-selected={feeMode === mode}
+                    onClick={() => setFeeMode(mode)}
+                    disabled={mutation.isPending}
+                    className={`h-11 w-11 rounded-md border text-sm ${
+                      feeMode === mode
+                        ? 'border-brand bg-brand-bg text-brand'
+                        : 'border-line bg-transparent text-body'
+                    }`}
+                  >
+                    {mode === 'amount' ? '$' : '%'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <DateField
             label="Fecha"
             id="transfer-date"
@@ -322,7 +401,7 @@ export function TransferForm({
             <Button
               type="submit"
               loading={mutation.isPending}
-              disabled={sameAccountSameCurrency}
+              disabled={sameAccountSameCurrency || feeTooLarge}
               className="self-start"
             >
               {mutation.isPending

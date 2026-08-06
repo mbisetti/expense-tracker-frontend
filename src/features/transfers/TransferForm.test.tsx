@@ -157,3 +157,60 @@ describe('TransferForm prellenado desde la card de cuenta (S40 D4)', () => {
     await waitFor(() => expect(selectValue('Cuenta origen', { exact: false })).toBe('a'));
   });
 });
+
+// ── S41: comisión del destino ────────────────────────────────────────────────
+describe('TransferForm — comisión del destino', () => {
+  it('manda fee en el POST y no toca los montos de las patas', async () => {
+    renderForm();
+    await selectOption('Cuenta origen', 'a', { exact: false });
+    await selectOption('Cuenta destino', 'b', { exact: false });
+
+    fireEvent.change(screen.getByLabelText(/^Monto/), { target: { value: '10000' } });
+    fireEvent.change(screen.getByLabelText(/^Comisión del destino/), { target: { value: '200' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Transferir' }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    const post = calls.find((c) => c.method === 'POST')!;
+    // la comisión viaja aparte: las dos patas siguen en 10.000 (el invariante del backend)
+    expect(post.body).toMatchObject({ fromAmount: 10000, toAmount: 10000, fee: 200 });
+  });
+
+  it('en modo % manda el MONTO calculado sobre lo que entra, no el porcentaje', async () => {
+    renderForm();
+    await selectOption('Cuenta origen', 'a', { exact: false });
+    await selectOption('Cuenta destino', 'b', { exact: false });
+
+    fireEvent.change(screen.getByLabelText(/^Monto/), { target: { value: '10000' } });
+    fireEvent.click(screen.getByRole('tab', { name: '%' }));
+    fireEvent.change(screen.getByLabelText(/^Comisión del destino \(%\)/), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Transferir' }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    expect(calls.find((c) => c.method === 'POST')!.body).toMatchObject({ fee: 200 });
+  });
+
+  it('sin comisión no manda el campo', async () => {
+    renderForm();
+    await selectOption('Cuenta origen', 'a', { exact: false });
+    await selectOption('Cuenta destino', 'b', { exact: false });
+
+    fireEvent.change(screen.getByLabelText(/^Monto/), { target: { value: '10000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Transferir' }));
+
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    expect(calls.find((c) => c.method === 'POST')!.body).not.toHaveProperty('fee');
+  });
+
+  it('una comisión que se come todo lo que entra frena el submit', async () => {
+    renderForm();
+    await selectOption('Cuenta origen', 'a', { exact: false });
+    await selectOption('Cuenta destino', 'b', { exact: false });
+
+    fireEvent.change(screen.getByLabelText(/^Monto/), { target: { value: '10000' } });
+    fireEvent.change(screen.getByLabelText(/^Comisión del destino/), { target: { value: '10000' } });
+
+    expect(await screen.findByText(/No puede ser mayor a lo que entra/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Transferir' })).toBeDisabled();
+    expect(calls.some((c) => c.method === 'POST')).toBe(false);
+  });
+});

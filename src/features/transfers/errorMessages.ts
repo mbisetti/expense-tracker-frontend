@@ -13,6 +13,8 @@ export function transferErrorMessage(error: unknown): string {
       return 'Las tarjetas de crédito solo aceptan su propia moneda.';
     case 'INSUFFICIENT_BALANCE':
       return 'La cuenta de origen no tiene saldo suficiente.';
+    case 'FEE_EXCEEDS_TRANSFER':
+      return 'La comisión no puede ser mayor a lo que entra al destino.';
     case 'ACCOUNT_NOT_FOUND':
       return 'Alguna de las cuentas no existe.';
     case 'TRANSFER_NOT_FOUND':
