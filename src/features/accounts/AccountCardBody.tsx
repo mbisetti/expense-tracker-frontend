@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Amount } from '../../components/ui/Amount';
 import { Badge } from '../../components/ui/Badge';
 import { Tooltip } from '../../components/ui/Tooltip';
@@ -157,9 +158,22 @@ export function AccountCardBody({
       {account.loan && <LoanProgressCard loan={account.loan} currency={account.currency} />}
 
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted">
-          Últimos movimientos
-        </span>
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-xs font-medium uppercase tracking-wide text-muted">
+            Últimos movimientos
+          </span>
+          {/* La card muestra 3 y hasta acá no había forma de ver el resto sin ir a Transacciones
+              y re-filtrar a mano por la cuenta. El filtro por `?accountId=` ya existía en la
+              página: esto sólo lo enchufa. */}
+          {recent.length > 0 && (
+            <Link
+              to={`/transactions?accountId=${account.id}`}
+              className="shrink-0 text-sm text-brand underline-offset-2 hover:underline"
+            >
+              Ver todos
+            </Link>
+          )}
+        </div>
         {isPending ? (
           <Skeleton variant="list" rows={3} />
         ) : isError ? (

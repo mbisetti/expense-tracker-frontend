@@ -10,6 +10,7 @@ import { useTransactions } from '../transactions/useTransactions';
 import { BudgetSection } from '../budgets/BudgetSection';
 import { SavingsGoalSection } from '../savings/SavingsGoalSection';
 import { ExpectedIncomeCard } from '../income/ExpectedIncomeCard';
+import { CommitmentsCard } from './CommitmentsCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 
 const MonthlyChart = lazy(() =>
@@ -83,6 +84,9 @@ export function DashboardPage() {
       )}
 
       <ExpectedIncomeCard />
+      {/* Justo debajo del esperado, que es contra lo que se mide: primero cuánto entra, después
+          cuánto de eso ya tiene dueño. */}
+      <CommitmentsCard />
       <BudgetSection />
       <SavingsGoalSection />
 

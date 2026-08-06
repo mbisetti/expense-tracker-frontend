@@ -57,6 +57,37 @@ export function formatAmountDisplay(raw: string): string {
   return hasDecimal ? `${grouped},${decDigits}` : grouped;
 }
 
+/**
+ * Dónde tiene que quedar el cursor después de reformatear, contando por **dígitos** y no por
+ * caracteres.
+ *
+ * El MoneyInput es un input controlado que se reformatea en cada tecla, así que el valor del DOM
+ * cambia y el navegador manda el cursor al final. Contar caracteres no alcanza para restaurarlo:
+ * los separadores de miles los pone el formateador y se corren solos (borrar un dígito de
+ * "490.000" saca un punto de lugar). Lo que sí es estable es cuántos caracteres *significativos*
+ * —dígitos y la coma decimal— quedaron a la izquierda del cursor.
+ *
+ * @param display   el texto YA formateado
+ * @param significant cuántos dígitos/comas había antes del cursor en lo que tipeó el usuario
+ * @returns el índice donde va el cursor dentro de `display`
+ */
+export function caretAfterSignificant(display: string, significant: number): number {
+  if (significant <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < display.length; i++) {
+    if (/[\d,]/.test(display[i])) {
+      seen += 1;
+      if (seen === significant) return i + 1;
+    }
+  }
+  return display.length;
+}
+
+/** Cuántos caracteres significativos (dígitos y coma) hay en un fragmento tipeado. */
+export function countSignificant(raw: string): number {
+  return raw.replace(/[^\d,]/g, '').length;
+}
+
 // Parsea el display de un MoneyInput a número (para submit / previews / diffs).
 export function parseAmountInput(display: string): number {
   if (!display) return 0;

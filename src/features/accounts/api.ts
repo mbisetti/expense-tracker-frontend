@@ -56,9 +56,14 @@ export type LoanProgress = {
   /** null si el préstamo está completo. */
   nextDueDate: string | null;
   completed: boolean;
-  /** total − principal. null si no cargaste el principal. */
+  /** total − principal. null si no cargaste el principal. NO es una tasa. */
   cost: number | null;
   costPct: number | null;
+  // Tasa efectiva derivada del capital y del flujo de cuotas (TIR). null sin capital cargado.
+  // Responde otra pregunta que `costPct`: no cuánto de más devolvés, sino a qué tasa te prestaron.
+  monthlyRatePct: number | null;
+  /** Anual EFECTIVA (capitaliza mes a mes). El contrato suele publicar la TNA, que da menor. */
+  annualRatePct: number | null;
 };
 
 /** Los 4 campos del plan son atómicos: o los cuatro o ninguno (el server responde 400). */

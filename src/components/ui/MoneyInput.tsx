@@ -1,6 +1,6 @@
-import type { ChangeEvent } from 'react';
+import { useLayoutEffect, useRef, type ChangeEvent } from 'react';
 import { Input } from './Input';
-import { formatAmountDisplay } from '../../lib/money';
+import { caretAfterSignificant, countSignificant, formatAmountDisplay } from '../../lib/money';
 
 type MoneyInputProps = {
   label: string;
@@ -20,10 +20,49 @@ type MoneyInputProps = {
 // separador de miles en vivo y SIN las flechitas de spinner (type=text + inputMode=decimal,
 // no type=number). Bloquea letras/símbolos vía formatAmountDisplay. Resuelve los reclamos de
 // "flechitas", "que autocomplete puntos" y "me deja poner letras y simbolos" de una.
+//
+// **El cursor se restaura a mano.** Es un input controlado que se reformatea en cada tecla: el
+// valor del DOM cambia y el navegador manda el cursor al final. Editar en el MEDIO de un número
+// era imposible — parado sobre el primer cero de "490.000", el primer backspace borraba bien
+// pero saltaba al final, así que el segundo se comía el último dígito y quedaba "4.900" en vez
+// de lo que uno estaba tratando de escribir.
+//
+// La restauración cuenta por DÍGITOS y no por caracteres (ver caretAfterSignificant): los
+// separadores de miles se corren solos al cambiar la cantidad de dígitos, así que la posición en
+// caracteres no significa lo mismo antes y después de formatear.
 export function MoneyInput({ value, onValueChange, ...rest }: MoneyInputProps) {
+  // El nodo sale del propio evento: Input no reenvía refs y no hace falta que lo haga.
+  const elementRef = useRef<HTMLInputElement | null>(null);
+  const caretRef = useRef<number | null>(null);
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onValueChange(formatAmountDisplay(e.target.value));
+    const element = e.currentTarget;
+    const raw = element.value;
+    const caret = element.selectionStart ?? raw.length;
+
+    const formatted = formatAmountDisplay(raw);
+
+    elementRef.current = element;
+    caretRef.current = caretAfterSignificant(formatted, countSignificant(raw.slice(0, caret)));
+
+    onValueChange(formatted);
   };
+
+  // useLayoutEffect y no useEffect: el cursor se reposiciona ANTES de que el browser pinte, así
+  // no se ve el salto al final. Corre sólo cuando hubo una edición (caretRef seteado), no en
+  // cada render del padre.
+  useLayoutEffect(() => {
+    const element = elementRef.current;
+    const caret = caretRef.current;
+    if (element && caret !== null) {
+      caretRef.current = null;
+      // El input puede haber perdido el foco entre el cambio y el efecto (blur inmediato):
+      // reposicionar entonces le robaría el cursor a otro campo.
+      if (document.activeElement === element) {
+        element.setSelectionRange(caret, caret);
+      }
+    }
+  });
 
   return (
     <Input
