@@ -86,4 +86,67 @@ describe('ReorderAccountsModal', () => {
     expect(within(reordered[0]).getByText('Bravo')).toBeInTheDocument();
     expect(within(reordered[2]).getByText('Alpha')).toBeInTheDocument();
   });
+
+  // El bug que reportó Marko: el drag se trababa apenas el cursor se salía del handle de 20px,
+  // porque los listeners colgaban del botón. Ahora cuelgan de window → el gesto sobrevive.
+  it('sigue el drag aunque el puntero se vaya del handle', async () => {
+    let putBody: { accountIds: string[] } | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, options?: RequestInit) => {
+        if (options?.method === 'PUT') putBody = JSON.parse(options.body as string);
+        return ok({});
+      }),
+    );
+    renderModal();
+
+    const items = screen.getAllByRole('listitem');
+    items.forEach((el, i) => {
+      el.getBoundingClientRect = () =>
+        ({ top: i * 40, height: 40, bottom: i * 40 + 40, left: 0, right: 0, width: 0, x: 0, y: i * 40, toJSON: () => {} }) as DOMRect;
+    });
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'Mover Alpha' }), { pointerId: 1 });
+    // los eventos siguientes NO pasan por el handle: se disparan lejos, sobre el body
+    fireEvent.pointerMove(document.body, { pointerId: 1, clientY: 90 });
+    fireEvent.pointerUp(document.body, { pointerId: 1 });
+
+    await waitFor(() => expect(putBody).toBeDefined());
+    expect(putBody?.accountIds).toEqual(['b', 'c', 'a']);
+  });
+
+  it('mueve la cuenta con las flechas del teclado, sin drag', async () => {
+    let putBody: { accountIds: string[] } | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, options?: RequestInit) => {
+        if (options?.method === 'PUT') putBody = JSON.parse(options.body as string);
+        return ok({});
+      }),
+    );
+    renderModal();
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Mover Alpha' }), { key: 'ArrowDown' });
+
+    await waitFor(() => expect(putBody).toBeDefined());
+    expect(putBody?.accountIds).toEqual(['b', 'a', 'c']);
+    const reordered = screen.getAllByRole('listitem');
+    expect(within(reordered[0]).getByText('Bravo')).toBeInTheDocument();
+  });
+
+  it('no manda nada si la flecha se va del borde de la lista', () => {
+    let putCount = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, options?: RequestInit) => {
+        if (options?.method === 'PUT') putCount += 1;
+        return ok({});
+      }),
+    );
+    renderModal();
+
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Mover Alpha' }), { key: 'ArrowUp' });
+
+    expect(putCount).toBe(0);
+  });
 });
