@@ -1,6 +1,6 @@
 import { isInvestmentAccount, type Account } from './api';
 
-export type QuickAction = 'add' | 'withdraw' | 'pay' | 'adjust';
+export type QuickAction = 'add' | 'withdraw' | 'pay' | 'adjust' | 'trade';
 
 /**
  * S40 (D4): qué acciones ofrece la card de cada tipo de cuenta.
@@ -16,6 +16,10 @@ export type QuickAction = 'add' | 'withdraw' | 'pay' | 'adjust';
  */
 export function actionsFor(account: Account): QuickAction[] {
   if (account.systemRole === 'FRIEND_DEBTS') return [];
+  // S43: `trade` sólo en CRYPTO, que es donde viven las tenencias en v1. El día que INVESTMENT
+  // las tenga (hace falta un feed de precios de acciones), esta línea y el gate del server son
+  // lo único que se toca.
+  if (account.type === 'CRYPTO') return ['add', 'withdraw', 'trade', 'adjust'];
   if (isInvestmentAccount(account.type)) return ['add', 'withdraw', 'adjust'];
   if (account.type === 'DEBT') return ['pay', 'adjust'];
   return [];
@@ -26,15 +30,22 @@ export function adjustLabel(account: Account): string {
   return account.type === 'DEBT' ? 'Ajustar deuda' : 'Actualizar valor';
 }
 
-export const QUICK_ACTION_LABELS: Record<Exclude<QuickAction, 'adjust'>, string> = {
+/** Las acciones con label fijo. `adjust` y `trade` tienen diálogo propio y label propio. */
+export type LabelledQuickAction = Exclude<QuickAction, 'adjust' | 'trade'>;
+
+export const QUICK_ACTION_LABELS: Record<LabelledQuickAction, string> = {
   add: 'Agregar plata',
   withdraw: 'Retirar',
   pay: 'Registrar pago',
 };
 
+// S43: la acción que abre el diálogo de compra/venta. El copy es el del usuario, no el del
+// exchange: nadie piensa "ejecutar una orden", piensa "compré".
+export const TRADE_LABEL = 'Compré / Vendí';
+
 // El título del modal dice QUÉ estás haciendo, no "Nueva transferencia": desde la card de una
 // inversión, "Agregar plata a Balanz" es la misma operación contada como la piensa el usuario.
-export const TRANSFER_TITLES: Record<Exclude<QuickAction, 'adjust'>, (name: string) => string> = {
+export const TRANSFER_TITLES: Record<LabelledQuickAction, (name: string) => string> = {
   add: (name) => `Agregar plata a ${name}`,
   withdraw: (name) => `Retirar de ${name}`,
   pay: (name) => `Registrar pago de ${name}`,

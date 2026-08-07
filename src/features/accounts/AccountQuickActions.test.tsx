@@ -31,8 +31,28 @@ describe('AccountQuickActions (S40 D4)', () => {
     expect(screen.getByRole('button', { name: 'Actualizar valor' })).toBeInTheDocument();
   });
 
-  it('D10: CRYPTO es idéntica a INVESTMENT — un solo camino de código', () => {
-    expect(actionsFor(account('CRYPTO'))).toEqual(actionsFor(account('INVESTMENT')));
+  // S43 rompe a propósito el "CRYPTO es idéntica a INVESTMENT" que fijaba S40 (D10). Ese
+  // invariante valía cuando ninguna de las dos tenía nada propio; ahora CRYPTO tiene tenencias y
+  // por lo tanto una acción más. Lo que SIGUE siendo cierto —y es lo que importa de D10— es que
+  // las dos comparten el mismo camino de inversión: aportar, retirar y actualizar el valor.
+  it('S43: CRYPTO suma [Compré / Vendí] sobre las acciones de una inversión', () => {
+    expect(actionsFor(account('CRYPTO'))).toEqual(['add', 'withdraw', 'trade', 'adjust']);
+    // Nada se perdió: todo lo de INVESTMENT sigue estando.
+    for (const action of actionsFor(account('INVESTMENT'))) {
+      expect(actionsFor(account('CRYPTO'))).toContain(action);
+    }
+  });
+
+  it('S43: INVESTMENT NO ofrece comprar/vender — las tenencias son sólo de cripto en v1', () => {
+    // El modelo del backend es genérico; lo que falta para aflojar el gate es un feed de precios
+    // de acciones y CEDEARs. Decisión de Marko: "solo cripto pero dejarlo a mano".
+    expect(actionsFor(account('INVESTMENT'))).not.toContain('trade');
+  });
+
+  it('S43: la cripto muestra el botón con el copy del usuario, no el del exchange', () => {
+    render(<AccountQuickActions account={account('CRYPTO')} onAction={() => {}} />);
+
+    expect(screen.getByRole('button', { name: 'Compré / Vendí' })).toBeInTheDocument();
   });
 
   it('una deuda ofrece registrar pago y ajustar deuda (con su propio copy)', () => {

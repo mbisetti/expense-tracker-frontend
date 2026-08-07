@@ -1,5 +1,12 @@
 import { Button } from '../../components/ui/Button';
-import { actionsFor, adjustLabel, QUICK_ACTION_LABELS, type QuickAction } from './quickActions';
+import {
+  actionsFor,
+  adjustLabel,
+  QUICK_ACTION_LABELS,
+  TRADE_LABEL,
+  type LabelledQuickAction,
+  type QuickAction,
+} from './quickActions';
 import type { Account } from './api';
 
 type AccountQuickActionsProps = {
@@ -32,7 +39,9 @@ export function AccountQuickActions({ account, onAction }: AccountQuickActionsPr
         >
           {action === 'adjust'
             ? adjustLabel(account)
-            : QUICK_ACTION_LABELS[action as Exclude<QuickAction, 'adjust'>]}
+            : action === 'trade'
+              ? TRADE_LABEL
+              : QUICK_ACTION_LABELS[action as LabelledQuickAction]}
         </Button>
       ))}
     </div>

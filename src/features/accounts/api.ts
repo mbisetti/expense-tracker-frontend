@@ -129,6 +129,79 @@ export type AdjustValueInput = {
   currentValue: number;
 };
 
+// ── S43: tenencias cripto ───────────────────────────────────────────────────────────────────
+//
+// D1: la tenencia es METADATA, no una moneda del ledger. La fila es la verdad de "qué tengo";
+// la transacción sigue siendo la verdad de la plata. Por eso comprar no crea ningún movimiento
+// y el balance de la cuenta no se toca (D2).
+
+export type Holding = {
+  id: string;
+  symbol: string;
+  quantity: number;
+  invested: number;
+  /** null sin cotización: feed caído o símbolo fuera del mapa curado del server. */
+  price: number | null;
+  /** cantidad × precio, en la moneda principal de la cuenta. null sin cotización. */
+  value: number | null;
+  /** (valor − invertido) / invertido × 100. null si no se puso nada (un airdrop). */
+  changePct: number | null;
+};
+
+export type Holdings = {
+  accountId: string;
+  /** Moneda PRINCIPAL de la cuenta: todo lo de acá está en ella. */
+  currency: string;
+  /** Hubo al menos una cotización. false = no se muestra ningún "≈". */
+  priced: boolean;
+  totalValue: number | null;
+  totalInvested: number;
+  /**
+   * D7: prefill para "Actualizar valor". Es una ESTIMACIÓN etiquetada, nunca un asiento: llena
+   * el input del diálogo y el usuario confirma. null si falta el precio de alguna fila.
+   */
+  suggestedValue: number | null;
+  /** YA ORDENADAS por el server (D4): por valor de mercado desc. El front NO re-ordena. */
+  holdings: Holding[];
+};
+
+export type CreateHoldingInput = {
+  symbol: string;
+  quantity: number;
+  invested: number;
+};
+
+export type UpdateHoldingInput = {
+  quantity?: number;
+  invested?: number;
+};
+
+/**
+ * D5/D6: "compré" / "vendí". `amount` es lo que salió (o entró) del efectivo SIN la comisión.
+ * La comisión viaja aparte porque las dos formas se procesan distinto: en plata es un gasto real
+ * del ledger, en cripto se descuenta de la tenencia.
+ */
+export type TradeInput = {
+  side: 'BUY' | 'SELL';
+  symbol: string;
+  quantity: number;
+  amount: number;
+  fee?: number;
+  feeSymbol?: string;
+  feeQuantity?: number;
+  date?: string;
+};
+
+export type TradeResult = {
+  id: string | null;
+  symbol: string;
+  quantity: number;
+  invested: number;
+  /** La venta se llevó toda la tenencia y la fila se borró. */
+  removed: boolean;
+  feeTransactionId: string | null;
+};
+
 /** D10: CRYPTO es INVESTMENT en todo lo nuevo — un solo predicado, un solo camino. */
 export function isInvestmentAccount(type: AccountType): boolean {
   return type === 'INVESTMENT' || type === 'CRYPTO';

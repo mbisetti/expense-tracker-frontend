@@ -42,6 +42,23 @@ export function accountErrorMessage(error: unknown): string {
       return 'El link tiene que ser una dirección web (empezar con http:// o https://).';
     case 'INVALID_ADJUSTMENT_TARGET':
       return 'El valor de hoy no puede ser negativo.';
+    // S43: tenencias cripto.
+    case 'NOT_A_CRYPTO_ACCOUNT':
+      return 'Las tenencias sólo aplican a cuentas de cripto.';
+    case 'DUPLICATE_HOLDING':
+      return 'Ya tenés esa moneda cargada. Editá la que ya está en vez de agregarla de nuevo.';
+    case 'HOLDING_NOT_FOUND':
+      return 'Esa tenencia no existe. Puede que la hayas borrado en otra pestaña.';
+    case 'INSUFFICIENT_HOLDING':
+      // El server manda el símbolo aparte para que el copy pueda decir CUÁL falta sin parsear el
+      // mensaje. Es la diferencia entre "no alcanza" y "cargá primero tu tenencia de BNB".
+      return typeof error.body?.symbol === 'string'
+        ? `No te alcanza el ${error.body.symbol}. Si la comisión te la cobraron en esa moneda, cargá primero tu tenencia.`
+        : 'No te alcanza esa tenencia para la operación.';
+    case 'INCOMPLETE_HOLDING_FEE':
+      return 'Para una comisión en cripto completá la moneda y la cantidad juntas.';
+    case 'ACCOUNT_HAS_HOLDINGS':
+      return 'No se puede cambiar la moneda: la cuenta tiene tenencias cargadas, y lo que pusiste en cada una está en la moneda actual. Borralas primero.';
     default:
       return 'Algo salió mal. Intentá de nuevo.';
   }

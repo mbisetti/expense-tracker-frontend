@@ -92,3 +92,51 @@ describe('AdjustValueDialog (S40 D2)', () => {
     ).toBeInTheDocument();
   });
 });
+
+// ── S43 (D7): la sugerencia de mercado ──────────────────────────────────────────────────────
+
+describe('AdjustValueDialog — sugerencia de mercado (S43 D7)', () => {
+  function renderWithSuggestion(suggestedValue: number | null) {
+    vi.stubGlobal('fetch', vi.fn(() => jsonResponse(200, { defaultCurrency: 'ARS' })));
+    const onConfirm = vi.fn();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AuthContext.Provider
+          value={{ accessToken: 't', status: 'authenticated', setAccessToken: () => {} }}
+        >
+          <AdjustValueDialog
+            account={account('CRYPTO', 100000)}
+            suggestedValue={suggestedValue}
+            onConfirm={onConfirm}
+            onCancel={() => {}}
+          />
+        </AuthContext.Provider>
+      </QueryClientProvider>,
+    );
+    return onConfirm;
+  }
+
+  it('ofrece el valor de mercado y lo pone en el input de un tap', () => {
+    const onConfirm = renderWithSuggestion(114000);
+
+    expect(screen.getByText(/Según mercado hoy/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Usar este valor' }));
+
+    // Un tap LLENA el input; no confirma nada. El usuario sigue viendo y apretando Guardar.
+    expect(screen.getByLabelText(/¿Cuánto vale hoy\?/)).toHaveValue('114.000');
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(onConfirm).toHaveBeenCalledWith({ currency: 'ARS', currentValue: 114000 });
+  });
+
+  it('sin sugerencia el diálogo queda EXACTAMENTE como lo dejó S40', () => {
+    renderWithSuggestion(null);
+
+    expect(screen.queryByText(/Según mercado hoy/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Usar este valor' })).not.toBeInTheDocument();
+    // Y lo de siempre sigue estando.
+    expect(screen.getByLabelText(/¿Cuánto vale hoy\?/)).toBeInTheDocument();
+  });
+});

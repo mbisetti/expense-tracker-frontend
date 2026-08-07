@@ -14,6 +14,12 @@ type MoneyInputProps = {
   helper?: string;
   placeholder?: string;
   className?: string;
+  /**
+   * S43 (D8): cuántos decimales admite. Default 2 (plata) — ningún form existente cambia.
+   * La cantidad de una cripto usa 8: "0,0074 BTC" con dos decimales queda en "0,01" y el usuario
+   * guarda un número que no es el suyo.
+   */
+  maxDecimals?: number;
 };
 
 // Campo de monto del design system: reusa Input pero fuerza entrada numérica es-AR con
@@ -30,7 +36,7 @@ type MoneyInputProps = {
 // La restauración cuenta por DÍGITOS y no por caracteres (ver caretAfterSignificant): los
 // separadores de miles se corren solos al cambiar la cantidad de dígitos, así que la posición en
 // caracteres no significa lo mismo antes y después de formatear.
-export function MoneyInput({ value, onValueChange, ...rest }: MoneyInputProps) {
+export function MoneyInput({ value, onValueChange, maxDecimals, ...rest }: MoneyInputProps) {
   // El nodo sale del propio evento: Input no reenvía refs y no hace falta que lo haga.
   const elementRef = useRef<HTMLInputElement | null>(null);
   const caretRef = useRef<number | null>(null);
@@ -40,7 +46,7 @@ export function MoneyInput({ value, onValueChange, ...rest }: MoneyInputProps) {
     const raw = element.value;
     const caret = element.selectionStart ?? raw.length;
 
-    const formatted = formatAmountDisplay(raw);
+    const formatted = formatAmountDisplay(raw, maxDecimals);
 
     elementRef.current = element;
     caretRef.current = caretAfterSignificant(formatted, countSignificant(raw.slice(0, caret)));
