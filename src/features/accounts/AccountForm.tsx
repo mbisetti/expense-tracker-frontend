@@ -467,7 +467,11 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
         </div>
       )}
 
-      <div className="flex items-center gap-3">
+      {/* La botonera es UN grupo centrado, no dos extremos. Borrar tenía `ml-auto`, que lo
+          empujaba contra el borde derecho y hacía leer la fila como dos bloques enfrentados
+          cuando en realidad son tres acciones del mismo formulario. Mismo tratamiento en
+          HoldingForm para que las cards de edición se vean iguales. */}
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <Button type="submit" loading={isPending} disabled={loanPartial}>
           Guardar
         </Button>
@@ -485,7 +489,7 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
             variant="ghost"
             onClick={onDelete}
             disabled={isPending}
-            className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+            className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
           >
             Borrar
           </Button>
