@@ -97,3 +97,56 @@ describe('MoneyInput — editar en el medio del número', () => {
     expect(input.value).toBe('1.500,50');
   });
 });
+
+// ── S43 (D8): decimales configurables ───────────────────────────────────────────────────────
+
+function CryptoHarness({ initial }: { initial: string }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <MoneyInput label="Cantidad" id="q" value={value} onValueChange={setValue} maxDecimals={8} />
+  );
+}
+
+describe('MoneyInput — maxDecimals (S43 D8)', () => {
+  it('con maxDecimals=8 entra una cantidad de cripto entera', () => {
+    render(<CryptoHarness initial="" />);
+    const input = screen.getByLabelText('Cantidad') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: '0,00740000' } });
+
+    // Con el default de 2 esto quedaba en "0,00" y el usuario guardaba un número que no es suyo.
+    expect(input.value).toBe('0,00740000');
+  });
+
+  it('el noveno decimal SÍ se recorta: la columna es NUMERIC(20,8)', () => {
+    render(<CryptoHarness initial="" />);
+    const input = screen.getByLabelText('Cantidad') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: '0,123456789' } });
+
+    expect(input.value).toBe('0,12345678');
+  });
+
+  it('el cursor se sigue restaurando con más de 2 decimales', () => {
+    render(<CryptoHarness initial="0,00740000" />);
+    const input = screen.getByLabelText('Cantidad') as HTMLInputElement;
+    input.focus();
+
+    // Backspace parado en la posición 4 borra el segundo '0' de "0,00740000".
+    backspaceAt(input, 4);
+
+    expect(input.value).toBe('0,0740000');
+    // Tres caracteres significativos a la izquierda ("0", ",", "0") → el cursor queda en 3, no
+    // al final. Es el mismo invariante que arriba, pero con 7 decimales en juego.
+    expect(input.selectionStart).toBe(3);
+  });
+
+  it('SIN la prop nada cambia: el default sigue siendo 2 decimales', () => {
+    render(<Harness initial="" />);
+    const input = field();
+
+    fireEvent.change(input, { target: { value: '1500,999' } });
+
+    expect(input.value).toBe('1.500,99');
+  });
+});

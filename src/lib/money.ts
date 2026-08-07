@@ -43,16 +43,26 @@ export function currencyNoun(currency: string): string {
 
 const groupInt = new Intl.NumberFormat('es-AR');
 
+/**
+ * S43 (D8): cuántos decimales admite un monto. 2 para plata (es lo que guarda la base:
+ * `NUMERIC(15,2)`), 8 para una cantidad de cripto — 0.0074 BTC no entra en dos.
+ *
+ * Default 2 a propósito: ningún form existente cambia de comportamiento por esta prop.
+ */
+export const DEFAULT_MAX_DECIMALS = 2;
+
 // Normaliza lo que tipea el usuario a un display es-AR con separador de miles en vivo.
 // La coma es el separador decimal; los puntos se tratan como miles (se re-insertan solos),
 // así "150.000" queda intacto. Descarta todo lo que no sea dígito o coma → bloquea letras y
 // símbolos (el reclamo de "me deja poner letras y simbolos en el monto").
-export function formatAmountDisplay(raw: string): string {
+export function formatAmountDisplay(raw: string, maxDecimals = DEFAULT_MAX_DECIMALS): string {
   const cleaned = raw.replace(/[^\d,]/g, '');
   const firstComma = cleaned.indexOf(',');
   const hasDecimal = firstComma !== -1;
   const intDigits = (hasDecimal ? cleaned.slice(0, firstComma) : cleaned).replace(/^0+(?=\d)/, '');
-  const decDigits = hasDecimal ? cleaned.slice(firstComma + 1).replace(/,/g, '').slice(0, 2) : '';
+  const decDigits = hasDecimal
+    ? cleaned.slice(firstComma + 1).replace(/,/g, '').slice(0, maxDecimals)
+    : '';
   const grouped = intDigits === '' ? (hasDecimal ? '0' : '') : groupInt.format(Number(intDigits));
   return hasDecimal ? `${grouped},${decDigits}` : grouped;
 }
@@ -97,9 +107,23 @@ export function parseAmountInput(display: string): number {
 }
 
 // Número → display es-AR (para precargar un MoneyInput en edición). 0 / no-finito → vacío.
-export function numberToAmountDisplay(n: number): string {
+// S43: `maxDecimals` acompaña al del MoneyInput — precargar 0.0074 con el default de 2 lo
+// mostraría como "0,01" y el usuario guardaría eso sin enterarse.
+export function numberToAmountDisplay(n: number, maxDecimals = DEFAULT_MAX_DECIMALS): string {
   if (!Number.isFinite(n) || n === 0) return '';
-  return new Intl.NumberFormat('es-AR', { maximumFractionDigits: 2 }).format(n);
+  return new Intl.NumberFormat('es-AR', { maximumFractionDigits: maxDecimals }).format(n);
+}
+
+/**
+ * S43: una cantidad de cripto, sin ceros de relleno. "0.0074", no "0,00740000".
+ *
+ * Va aparte de `formatMoney` porque NO es plata: no lleva símbolo de moneda ni dos decimales
+ * fijos. Y va aparte de `numberToAmountDisplay` porque ese devuelve vacío en 0 (sirve para
+ * precargar un input, no para mostrar un número).
+ */
+export function formatQuantity(n: number, maxDecimals = 8): string {
+  if (!Number.isFinite(n)) return '0';
+  return new Intl.NumberFormat('es-AR', { maximumFractionDigits: maxDecimals }).format(n);
 }
 
 // FASE 3: se borraron amountSign y amountToneClass (hallazgo F3). Cero usos en todo el repo,

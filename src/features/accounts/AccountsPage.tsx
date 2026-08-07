@@ -12,9 +12,12 @@ import { AccountCardBody } from './AccountCardBody';
 import { ReorderAccountsModal } from './ReorderAccountsModal';
 import { AdjustValueDialog } from './AdjustValueDialog';
 import { PerformanceDetailModal } from './PerformanceDetailModal';
+import { HoldingForm } from './HoldingForm';
+import { TradeDialog } from './TradeDialog';
 import { useAdjustAccountValue } from './useAccountPerformance';
+import { useHoldings } from './useHoldings';
 import { TransferForm } from '../transfers/TransferForm';
-import { TRANSFER_TITLES, type QuickAction } from './quickActions';
+import { TRANSFER_TITLES, type LabelledQuickAction, type QuickAction } from './quickActions';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { Modal } from '../../components/ui/Modal';
@@ -24,7 +27,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../components/ui/toastContext';
 import type { PaymentMethod } from '../paymentMethods/api';
-import type { Account } from './api';
+import type { Account, Holding } from './api';
 
 type AccountGroup = { key: string; institution: string | null; accounts: Account[] };
 
@@ -63,15 +66,30 @@ export function AccountsPage() {
   // (precedente exacto: CardForm) — no se reinventa ningún form, así cross-currency, cotización
   // sugerida y guards vienen gratis. Sólo el ajuste tiene diálogo propio: no es una
   // transferencia, es decir cuánto vale algo.
-  const [transferFor, setTransferFor] = useState<{ account: Account; action: QuickAction } | null>(
-    null,
-  );
+  // El tipo dice la verdad: sólo add/withdraw/pay llegan acá. `adjust` y `trade` tienen diálogo
+  // propio, y tiparlo así hace que TRANSFER_TITLES no necesite un guard defensivo abajo.
+  const [transferFor, setTransferFor] = useState<{
+    account: Account;
+    action: LabelledQuickAction;
+  } | null>(null);
   const [adjustingFor, setAdjustingFor] = useState<Account | null>(null);
   const [performanceFor, setPerformanceFor] = useState<Account | null>(null);
+  // S43: alta/edición de tenencias (holding null = alta) y el diálogo de compra/venta.
+  const [holdingFor, setHoldingFor] = useState<{ account: Account; holding?: Holding } | null>(null);
+  const [tradingFor, setTradingFor] = useState<Account | null>(null);
   const adjustValue = useAdjustAccountValue();
+
+  // S43 (D7): la sugerencia de mercado para el diálogo de ajuste. Se pide sólo cuando hay una
+  // cuenta CRYPTO con el diálogo abierto — el hook ya cachea el mismo query que usa la card, así
+  // que abrir el ajuste no dispara un fetch nuevo.
+  const { data: adjustHoldings } = useHoldings(
+    adjustingFor?.id,
+    adjustingFor?.type === 'CRYPTO',
+  );
 
   const runQuickAction = (account: Account, action: QuickAction) => {
     if (action === 'adjust') setAdjustingFor(account);
+    else if (action === 'trade') setTradingFor(account);
     else setTransferFor({ account, action });
   };
 
@@ -199,6 +217,7 @@ export function AccountsPage() {
                           onAddCard={() => setCardFormFor(account)}
                           onQuickAction={(action) => runQuickAction(account, action)}
                           onOpenPerformance={() => setPerformanceFor(account)}
+                          onEditHolding={(holding) => setHoldingFor({ account, holding })}
                         />
                       </div>
                     ))}
@@ -258,11 +277,7 @@ export function AccountsPage() {
       <Modal
         open={transferFor !== null}
         onClose={() => setTransferFor(null)}
-        title={
-          transferFor && transferFor.action !== 'adjust'
-            ? TRANSFER_TITLES[transferFor.action](transferFor.account.name)
-            : ''
-        }
+        title={transferFor ? TRANSFER_TITLES[transferFor.action](transferFor.account.name) : ''}
         className="min-h-[26rem]"
       >
         {transferFor && (
@@ -283,6 +298,7 @@ export function AccountsPage() {
         <AdjustValueDialog
           account={adjustingFor}
           loading={adjustValue.isPending}
+          suggestedValue={adjustHoldings?.suggestedValue}
           onCancel={() => setAdjustingFor(null)}
           onConfirm={(input) =>
             adjustValue.mutate(
@@ -306,6 +322,22 @@ export function AccountsPage() {
           account={performanceFor}
           onClose={() => setPerformanceFor(null)}
         />
+      )}
+
+      {/* S43: `key` con el id de la tenencia (o 'new') para que el form se remonte con los
+          valores de la fila que se abrió, mismo patrón que AccountForm. */}
+      {holdingFor && (
+        <HoldingForm
+          key={holdingFor.holding?.id ?? 'new'}
+          accountId={holdingFor.account.id}
+          currency={holdingFor.account.currency}
+          holding={holdingFor.holding}
+          onClose={() => setHoldingFor(null)}
+        />
+      )}
+
+      {tradingFor && (
+        <TradeDialog account={tradingFor} onClose={() => setTradingFor(null)} />
       )}
 
       <Modal

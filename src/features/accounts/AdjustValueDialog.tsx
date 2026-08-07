@@ -11,6 +11,14 @@ import type { Account, AdjustValueInput } from './api';
 type AdjustValueDialogProps = {
   account: Account;
   loading?: boolean;
+  /**
+   * S43 (D7): valor de mercado estimado de la cuenta, en su moneda PRINCIPAL. Sin la prop el
+   * diálogo queda exactamente como lo dejó S40.
+   *
+   * Es una SUGERENCIA: llena el input de un tap y el usuario ve y confirma como siempre. Nunca
+   * se escribe sola, y por eso es un prefill y no un valor por default.
+   */
+  suggestedValue?: number | null;
   onConfirm: (input: AdjustValueInput) => void;
   onCancel: () => void;
 };
@@ -27,6 +35,7 @@ type AdjustValueDialogProps = {
 export function AdjustValueDialog({
   account,
   loading,
+  suggestedValue,
   onConfirm,
   onCancel,
 }: AdjustValueDialogProps) {
@@ -108,6 +117,29 @@ export function AdjustValueDialog({
           required
           disabled={loading}
         />
+
+        {/* S43 (D7): el atajo de un tap. Sólo para la moneda principal, que es en la que el
+            server calculó la estimación. Es una SUGERENCIA etiquetada: se ensucia con ajustes
+            previos y con ventas con ganancia, así que se ofrece y no se impone. */}
+        {suggestedValue != null && currency === account.currency && (
+          <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+            <span className="text-muted">
+              Según mercado hoy: ≈{' '}
+              <span className="tabular-nums text-ink">
+                {formatMoney(suggestedValue, account.currency)}
+              </span>
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setValue(numberToAmountDisplay(suggestedValue))}
+              disabled={loading}
+            >
+              Usar este valor
+            </Button>
+          </div>
+        )}
 
         {/* Preview del delta: el usuario ve EXACTAMENTE qué movimiento se va a crear antes de
             confirmarlo. Es plata; se ve antes de anotar. */}

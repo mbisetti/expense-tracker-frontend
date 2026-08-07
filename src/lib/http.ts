@@ -3,12 +3,22 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
+  /**
+   * El cuerpo crudo del error. Algunos códigos traen un campo extra que el copy necesita y que
+   * NO se puede sacar del mensaje sin parsear texto: el `symbol` de `INSUFFICIENT_HOLDING` (S43),
+   * el `reason` de `INVALID_STATEMENT_PAYMENT` (S27), los `details` de `VALIDATION_ERROR`.
+   *
+   * Se guarda entero y sin tipar a propósito: tiparlo obligaría a mantener acá un espejo de todos
+   * los handlers del backend, y quien lo lee ya sabe qué campo espera de qué código.
+   */
+  readonly body: Record<string, unknown>;
 
-  constructor(status: number, code: string, message: string) {
+  constructor(status: number, code: string, message: string, body: Record<string, unknown> = {}) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.code = code;
+    this.body = body;
   }
 }
 
@@ -27,7 +37,8 @@ export async function http<T>(path: string, options?: RequestInit): Promise<T> {
     throw new ApiError(
       response.status,
       body.error ?? 'UNKNOWN_ERROR',
-      body.message ?? response.statusText
+      body.message ?? response.statusText,
+      body
     );
   }
 
@@ -55,7 +66,8 @@ export async function httpUpload<T>(path: string, body: FormData, options?: Requ
     throw new ApiError(
       response.status,
       errorBody.error ?? 'UNKNOWN_ERROR',
-      errorBody.message ?? response.statusText
+      errorBody.message ?? response.statusText,
+      errorBody
     );
   }
 
@@ -84,7 +96,8 @@ export async function httpBlob(path: string, options?: RequestInit): Promise<Blo
     throw new ApiError(
       response.status,
       body.error ?? 'UNKNOWN_ERROR',
-      body.message ?? response.statusText
+      body.message ?? response.statusText,
+      body
     );
   }
 

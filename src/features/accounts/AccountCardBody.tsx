@@ -17,9 +17,10 @@ import { FriendDebtsBreakdown } from './FriendDebtsBreakdown';
 import { AccountQuickActions } from './AccountQuickActions';
 import type { QuickAction } from './quickActions';
 import { PerformanceSummary } from './PerformanceSummary';
+import { HoldingsList } from './HoldingsList';
 import { LoanProgressCard } from './LoanProgressCard';
 import { TYPE_LABELS } from './typeLabels';
-import { isInvestmentAccount, type Account } from './api';
+import { isInvestmentAccount, type Account, type Holding } from './api';
 
 // Ventana del gráfico de saldo: ~3 meses. El backend clampea size a 100 (suficiente para una
 // cuenta personal); las 3 tx más recientes se muestran en la lista de movimientos.
@@ -72,6 +73,8 @@ type AccountCardBodyProps = {
   onQuickAction?: (action: QuickAction) => void;
   /** S40 (D3): abre el detalle de rendimiento (sólo INVESTMENT/CRYPTO). */
   onOpenPerformance?: () => void;
+  /** S43: alta/edición de una tenencia (sólo CRYPTO). `undefined` = alta. */
+  onEditHolding?: (holding?: Holding) => void;
 };
 
 // Sprint 22.2: cuerpo reutilizable de la card de cuenta (header + saldo + chips, sparkline,
@@ -85,6 +88,7 @@ export function AccountCardBody({
   onAddCard,
   onQuickAction,
   onOpenPerformance,
+  onEditHolding,
 }: AccountCardBodyProps) {
   const { data, isPending, isError } = useTransactions({
     accountId: account.id,
@@ -179,6 +183,17 @@ export function AccountCardBody({
 
       {isInvestmentAccount(account.type) && onOpenPerformance && (
         <PerformanceSummary account={account} onOpenDetail={onOpenPerformance} />
+      )}
+
+      {/* S43: qué hay adentro de la cuenta cripto. Va entre el rendimiento y "Últimos
+          movimientos": el rendimiento dice cuánto ganó la cuenta, esto dice en qué está puesta.
+          Sólo CRYPTO — el GET cotiza contra un proveedor externo y no se dispara para nadie más. */}
+      {account.type === 'CRYPTO' && onEditHolding && (
+        <HoldingsList
+          accountId={account.id}
+          onEditHolding={(holding) => onEditHolding(holding)}
+          onAddHolding={() => onEditHolding()}
+        />
       )}
 
       {/* S40 (D5): el plan de pagos, derivado contra la plata que efectivamente pagaste. */}
