@@ -27,8 +27,11 @@ export function AccountQuickActions({ account, onAction }: AccountQuickActionsPr
   const actions = actionsFor(account);
   if (actions.length === 0) return null;
 
+  // Grupo centrado con gap parejo, mismo criterio que las botoneras de los formularios. Con
+  // `gap-2` y alineado a la izquierda, las cuatro acciones de una cripto se amontonaban contra
+  // el borde y en pantalla angosta la que se caía de línea quedaba sola y descolgada.
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap items-center justify-center gap-3">
       {actions.map((action) => (
         <Button
           key={action}

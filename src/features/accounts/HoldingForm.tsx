@@ -80,7 +80,14 @@ export function HoldingForm({ accountId, currency, holding, onClose }: HoldingFo
       disableClose={pending}
       title={editing ? `Editar ${holding.symbol}` : 'Agregar tenencia'}
       footer={
-        <div className="flex flex-wrap gap-3">
+        // Mismo tratamiento que AccountForm: grupo centrado, gap uniforme y Borrar como ghost
+        // con los tonos de `expense` (no un botón rojo sólido, que pesaba más que Guardar y
+        // hacía ver la fila despareja). Las tres cards de edición se ven iguales.
+        //
+        // `w-full` no es decorativo: el footer del Modal es `flex justify-end`, así que sin
+        // ocupar el ancho este div sería un item que se encoge y el `justify-center` no tendría
+        // sobre qué centrar (el grupo quedaría pegado a la derecha igual que antes).
+        <div className="flex w-full flex-wrap items-center justify-center gap-3">
           <Button type="button" onClick={submit} loading={pending} disabled={!canSubmit}>
             Guardar
           </Button>
@@ -90,7 +97,8 @@ export function HoldingForm({ accountId, currency, holding, onClose }: HoldingFo
           {editing && (
             <Button
               type="button"
-              variant="danger"
+              variant="ghost"
+              className="border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
               onClick={() =>
                 remove.mutate(holding.id, {
                   onSuccess: () => {

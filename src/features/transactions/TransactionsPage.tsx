@@ -494,8 +494,11 @@ export function TransactionsPage() {
           Exportar hay el triple (gap-x-6 = 24px). Los dos valores salen de la escala de 4px
           (§3); la relación 3:1 es lo que se lee como "esto es un grupo y aquello es otra cosa".
           `items-center` + el wrap por grupo evita que en pantalla chica queden tres botones
-          sueltos en escalera contra el margen. */}
-      <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-2">
+          sueltos en escalera contra el margen.
+          El grupo entero va CENTRADO (antes `justify-end`): amontonado contra el borde derecho
+          leía como una barra de sistema y no como las acciones de esta pantalla. La proximidad
+          de arriba (2 vs 6) se mantiene intacta — es la que dice qué botones son familia. */}
+      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <ImportStatementButtons />
         </div>
