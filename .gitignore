@@ -29,6 +29,9 @@ graphify-out/
 # Java / Spring Boot
 *.class
 *.jar
+# El jar del wrapper de Gradle SÍ va al repo: sin él, ./gradlew no corre en CI ni en un
+# checkout fresco (S44; el *.jar de arriba se lo estaba comiendo).
+!android/gradle/wrapper/gradle-wrapper.jar
 *.war
 target/
 .mvn/
