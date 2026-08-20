@@ -28,7 +28,7 @@ export function OfflineBanner() {
       className="flex items-center justify-center gap-2 bg-warning/10 px-4 py-1.5 text-sm text-warning"
     >
       <WifiOffIcon className="h-4 w-4 shrink-0" />
-      <span>Sin conexión — los datos no se actualizan hasta que vuelva.</span>
+      <span>Sin conexión: los datos no se actualizan hasta que vuelva.</span>
     </div>
   );
 }

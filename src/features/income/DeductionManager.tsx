@@ -59,7 +59,7 @@ export function DeductionManager({ sourceId }: { sourceId: string }) {
           {deductions.map((d) => (
             <li key={d.id} className="flex items-center justify-between gap-2 text-sm">
               <span className={d.active ? 'text-ink' : 'text-body opacity-60'}>
-                {d.name} — {d.type === 'PERCENTAGE' ? `${d.value}%` : d.value}
+                {d.name} · {d.type === 'PERCENTAGE' ? `${d.value}%` : d.value}
                 {!d.active && ' (inactiva)'}
               </span>
               <span className="flex gap-2">

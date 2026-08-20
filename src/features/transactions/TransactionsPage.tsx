@@ -551,7 +551,7 @@ export function TransactionsPage() {
         >
           <option value="">Todas</option>
           {/* Sprint 24.2 (D6): filtra las transacciones sin categoría (uncategorized server-side). */}
-          <option value={CATEGORY_NONE}>— Sin categoría —</option>
+          <option value={CATEGORY_NONE}>Sin categoría</option>
           {filterCategories?.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}

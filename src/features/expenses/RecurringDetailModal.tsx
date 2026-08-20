@@ -135,7 +135,7 @@ export function RecurringDetailModal({ recurring, item, onClose, onEdit, onPay }
         {failedCount > 0 && (
           <div className="flex flex-col gap-2 rounded-md bg-warning/10 p-3 text-sm">
             <p className="text-body">
-              No se pudo debitar (saldo insuficiente){failedCount > 1 ? ` — ${failedCount} pendientes` : ''}.
+              No se pudo debitar (saldo insuficiente){failedCount > 1 ? ` · ${failedCount} pendientes` : ''}.
             </p>
             <Button
               type="button"

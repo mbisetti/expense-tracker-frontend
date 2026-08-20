@@ -12,7 +12,7 @@ export function ConsolidatedBanner({ consolidated }: { consolidated: Consolidate
         ≈ {formatMoney(consolidated.amount, consolidated.currency)}
       </p>
       <p className="text-sm text-body">
-        Estimación con la cotización actual — el balance por moneda de abajo es el real.
+        Estimación con la cotización actual. El balance por moneda de abajo es el real.
         {consolidated.partial && ' Faltó la cotización de alguna moneda: el total es parcial.'}
       </p>
     </Card>

@@ -113,7 +113,7 @@ describe('AccountForm', () => {
     expect(screen.getByLabelText('Tipo')).toBeDisabled();
   });
 
-  it('tarjeta vinculada: "— ninguna —" manda linkedAccountId "" (desvincula, D8)', async () => {
+  it('tarjeta vinculada: "Ninguna" manda linkedAccountId "" (desvincula, D8)', async () => {
     let patchBody: Record<string, unknown> | undefined;
     vi.stubGlobal(
       'fetch',
@@ -128,7 +128,7 @@ describe('AccountForm', () => {
 
     renderForm(linkedCard, [bank, linkedCard]);
 
-    // el selector "Vinculada a" arranca en la madre; pasarlo a "— ninguna —" desvincula
+    // el selector "Vinculada a" arranca en la madre; pasarlo a "Ninguna" desvincula
     await selectOption('Vinculada a', '');
     fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
 
