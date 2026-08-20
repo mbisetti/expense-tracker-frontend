@@ -162,7 +162,7 @@ export function TransferForm({
     const onSuccess = (data: { fromAccountBalance: number; toAccountBalance: number }) => {
       const verb = isEdit ? 'Transferencia actualizada' : 'Transferencia realizada';
       toast.success(
-        `${verb}. Nuevo saldo — ${fromAccount!.name} (${resolvedFromCcy}): ${formatMoney(data.fromAccountBalance, resolvedFromCcy)} · ${toAccount!.name} (${resolvedToCcy}): ${formatMoney(data.toAccountBalance, resolvedToCcy)}`,
+        `${verb}. Nuevo saldo: ${fromAccount!.name} (${resolvedFromCcy}) ${formatMoney(data.fromAccountBalance, resolvedFromCcy)} · ${toAccount!.name} (${resolvedToCcy}) ${formatMoney(data.toAccountBalance, resolvedToCcy)}`,
       );
       if (isEdit) {
         onDone?.();
@@ -243,7 +243,7 @@ export function TransferForm({
               {toOptions.map((account) => (
                 <option key={account.id} value={account.id}>
                   {account.name} ({account.currency})
-                  {account.id === fromAccountId ? ' — misma cuenta' : ''}
+                  {account.id === fromAccountId ? ' · misma cuenta' : ''}
                 </option>
               ))}
             </Select>
@@ -306,7 +306,7 @@ export function TransferForm({
                   disabled={mutation.isPending}
                   helper={
                     rate?.unavailable
-                      ? 'Cotización no disponible — ingresá el monto de destino a mano.'
+                      ? 'Cotización no disponible: ingresá el monto de destino a mano.'
                       : rate?.rate
                         ? `Cotización sugerida: 1 ${resolvedFromCcy} ≈ ${rate.rate} ${resolvedToCcy} (editable).`
                         : 'Buscando cotización...'

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { pushBackInterceptor } from '../../lib/nativeBack';
 import { BellIcon } from '../../components/ui/icons';
 import { targetPath, timeAgo, type NotificationBlock, type NotificationItem } from './api';
 import {
@@ -39,6 +40,17 @@ export function NotificationBell() {
       document.removeEventListener('mousedown', onPointerDown);
       document.removeEventListener('keydown', onKeyDown);
     };
+  }, [open]);
+
+  // S44 — botón físico "atrás" de Android: con el panel abierto lo cierra, en vez de navegar
+  // o salir de la app. Mismo criterio y misma pila que Modal; en la web nadie corre la pila,
+  // así que no cambia nada.
+  useEffect(() => {
+    if (!open) return;
+    return pushBackInterceptor(() => {
+      setOpen(false);
+      return true;
+    });
   }, [open]);
 
   // D3: abrir = marcar leída. El movimiento del bot abre el editor de la transacción.

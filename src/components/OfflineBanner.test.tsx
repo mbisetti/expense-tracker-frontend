@@ -24,7 +24,7 @@ describe('OfflineBanner', () => {
 
     setOnline(false);
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Sin conexión — los datos no se actualizan hasta que vuelva.',
+      'Sin conexión: los datos no se actualizan hasta que vuelva.',
     );
 
     setOnline(true);

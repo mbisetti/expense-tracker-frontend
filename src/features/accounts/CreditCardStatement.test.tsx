@@ -111,9 +111,9 @@ async function expand() {
 }
 
 // Sprint 27: los botones del widget nombran su renglón, así que con dos monedas hay dos ticks.
-const TICK_ARS = 'Pagado — compras en pesos';
-const CROSS_ARS = 'No pagado — compras en pesos';
-const TICK_USD = 'Pagado — compras en dólares';
+const TICK_ARS = 'Pagado · compras en pesos';
+const CROSS_ARS = 'No pagado · compras en pesos';
+const TICK_USD = 'Pagado · compras en dólares';
 
 describe('CreditCardStatement', () => {
   it('colapsado por defecto: no muestra el detalle (ni consumos ni saldo al cierre)', async () => {

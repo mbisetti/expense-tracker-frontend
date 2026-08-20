@@ -18,7 +18,7 @@ export function importErrorMessage(error: unknown): string {
     case 'MISSING_FILE':
       return 'No llegó ningún archivo. Intentá de nuevo.';
     case 'IMPORT_HAS_ERRORS':
-      return 'El archivo tiene filas con errores — no se importó nada. Revisá el detalle.';
+      return 'El archivo tiene filas con errores: no se importó nada. Revisá el detalle.';
     case 'BATCH_ALREADY_UNDONE':
       return 'Ese import ya estaba deshecho.';
     case 'IMPORT_BATCH_NOT_FOUND':

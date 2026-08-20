@@ -163,4 +163,24 @@ describe('ImportSection', () => {
     await screen.findByText('Deshecho');
     expect(screen.queryByRole('button', { name: 'Deshacer' })).toBeNull();
   });
+
+  // Si la plantilla no baja, el usuario tiene que enterarse: sin el catch del hook, el error
+  // moría como rejection sin manejar (el onClick hace `void download()`) y el botón volvía a
+  // la normalidad como si nada.
+  it('si la descarga de la plantilla falla, lo dice con un toast', async () => {
+    stubFetch((url) => {
+      if (url.includes('/import/batches')) return jsonResponse(200, []);
+      if (url.includes('/import/transactions/template')) {
+        return jsonResponse(500, { message: 'boom' });
+      }
+      return jsonResponse(200, OK_REPORT);
+    });
+    wrap(<ImportSection />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Descargar plantilla' }));
+
+    expect(
+      await screen.findByText('No pudimos descargar la plantilla. Intentá de nuevo.'),
+    ).toBeInTheDocument();
+  });
 });

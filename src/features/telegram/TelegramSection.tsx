@@ -79,7 +79,7 @@ export function TelegramSection() {
                     en Telegram
                   </li>
                   <li>Mandale este código (vence en 10 minutos)</li>
-                  <li>Listo — probá con «gasté 10k en repuesto bici»</li>
+                  <li>Listo: probá con «gasté 10k en repuesto bici»</li>
                 </ol>
               </div>
             ) : (

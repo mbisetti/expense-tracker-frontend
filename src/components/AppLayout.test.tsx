@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthContext } from '../features/auth/context';
+import { runBackInterceptors } from '../lib/nativeBack';
 import { AppLayout } from './AppLayout';
 import { ok } from '../test/mockResponse';
 
@@ -113,6 +114,25 @@ describe('AppLayout — nav', () => {
 
     fireEvent.click(within(menu).getByRole('menuitem', { name: 'Cerrar sesión' }));
     expect(screen.queryByRole('menu', { name: 'Cuenta' })).not.toBeInTheDocument();
+  });
+
+  // S44 — botón físico "atrás" de Android: el menú de la persona se registra en la pila de
+  // `nativeBack` mientras está abierto (el drawer ya está cubierto por ser un Modal). Acá se
+  // corre la pila a mano, que es lo mismo que hace el listener nativo de `nativeBootstrap`.
+  it('el back de Android cierra el menú de la persona y no sale de la app', () => {
+    renderLayout();
+    fireEvent.click(screen.getByRole('button', { name: 'Cuenta' }));
+    expect(screen.getByRole('menu', { name: 'Cuenta' })).toBeInTheDocument();
+
+    let consumido = false;
+    act(() => {
+      consumido = runBackInterceptors();
+    });
+
+    expect(consumido).toBe(true);
+    expect(screen.queryByRole('menu', { name: 'Cuenta' })).not.toBeInTheDocument();
+    // Cerrado no se mete en el camino del back.
+    expect(runBackInterceptors()).toBe(false);
   });
 
   it('el tema y Cerrar sesión ya no están sueltos en el header', () => {

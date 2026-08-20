@@ -19,7 +19,7 @@ export function UpdateToast() {
   if (!waiting || waiting === dismissed) return null;
 
   return createPortal(
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pb-[env(safe-area-inset-bottom)]">
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pb-[var(--safe-bottom)]">
       <div
         role="status"
         aria-live="polite"

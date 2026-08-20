@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { syncStatusBar } from './nativeChrome';
 
 export type Theme = 'light' | 'dark';
 
@@ -23,6 +24,9 @@ const THEME_COLOR: Record<Theme, string> = {
 
 function applyThemeColor(theme: Theme): void {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLOR[theme]);
+  // S44 — adentro de la app nativa la meta no la mira nadie: la status bar la pinta el SO y
+  // hay que pedírselo por el plugin. En la web `syncStatusBar` sale en la primera línea.
+  syncStatusBar(theme);
 }
 
 // Aplica el tema guardado (si hay) en el arranque, ANTES del render, para no flashear el

@@ -1,4 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
+import { isNative } from './platform';
 
 // Evento no estándar (Chromium): el browser avisa que la app es instalable. Se le hace
 // preventDefault y se guarda, así el prompt lo dispara la fila de Ajustes cuando el
@@ -54,6 +55,11 @@ function isIos(): boolean {
 }
 
 function currentStatus(): InstallStatus {
+  // S44 — adentro de la app de la store no hay nada que instalar: ya está instalada. Sin
+  // este corte la sección aparecería igual y encima con el peor copy posible, porque `isIos()`
+  // detecta el iPhone por user agent y el WebView de iOS tiene el UA de Safari: le estaríamos
+  // explicando cómo "agregar a la pantalla de inicio" a alguien que bajó la app del App Store.
+  if (isNative()) return 'hidden';
   if (outcome === 'installed' || isStandalone()) return 'hidden';
   if (deferred) return 'promptable';
   if (outcome === 'dismissed') return 'dismissed';

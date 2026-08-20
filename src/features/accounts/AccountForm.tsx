@@ -250,7 +250,7 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
       />
 
       {/* "Vinculada a" (D2): sólo en CREDIT. Permite plegar las tarjetas existentes bajo su
-          banco/billetera. "— ninguna —" (value "") desvincula (D8). */}
+          banco/billetera. "Ninguna" (value "") desvincula (D8). */}
       {type === 'CREDIT' && (
         <Select
           label="Vinculada a"
@@ -259,7 +259,7 @@ export function AccountForm({ account, accounts, manageCards, onClose, onDelete 
           onChange={(e) => setLinkedAccountId(e.target.value)}
           disabled={isPending}
         >
-          <option value="">— ninguna —</option>
+          <option value="">Ninguna</option>
           {parentOptions.map((a) => (
             <option key={a.id} value={a.id}>
               {a.name} ({a.currency})

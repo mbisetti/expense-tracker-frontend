@@ -275,7 +275,7 @@ export function StatementPaidToggle({ card, data, line, parentAccount }: Stateme
       <ConfirmDialog
         open={dialog === 'confirmMark'}
         title={`Marcar las compras en ${lineNoun} como pagadas`}
-        message="Esto solo marca esta parte del resumen — no mueve plata ni cambia tus saldos, y no toca las otras monedas. Usalo si ya lo pagaste por fuera de la app."
+        message="Esto solo marca esta parte del resumen: no mueve plata ni cambia tus saldos, y no toca las otras monedas. Usalo si ya lo pagaste por fuera de la app."
         confirmLabel="Marcar"
         cancelLabel="Cancelar"
         onConfirm={doMark}
@@ -352,7 +352,7 @@ export function StatementPaidToggle({ card, data, line, parentAccount }: Stateme
     <div className="flex items-center gap-2">
       <button
         type="button"
-        aria-label={`No pagado — compras en ${lineNoun}`}
+        aria-label={`No pagado · compras en ${lineNoun}`}
         aria-pressed={!line.paid}
         onClick={line.paid ? onUnmark : undefined}
         disabled={busy || !line.paid}
@@ -362,7 +362,7 @@ export function StatementPaidToggle({ card, data, line, parentAccount }: Stateme
       </button>
       <button
         type="button"
-        aria-label={`Pagado — compras en ${lineNoun}`}
+        aria-label={`Pagado · compras en ${lineNoun}`}
         aria-pressed={line.paid}
         onClick={line.paid ? undefined : onTick}
         disabled={busy || line.paid}

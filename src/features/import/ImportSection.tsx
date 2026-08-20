@@ -89,7 +89,7 @@ export function ImportSection() {
         <div className="flex flex-col">
           <h2 className="text-lg font-semibold text-ink">Importación</h2>
           <span className="text-sm text-muted">
-            Bajá la plantilla, completala con tus movimientos y subila — vas a revisar todo antes
+            Bajá la plantilla, completala con tus movimientos y subila. Vas a revisar todo antes
             de importar.
           </span>
         </div>

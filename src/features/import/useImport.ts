@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useHttp, useHttpBlob, useHttpUpload } from '../../lib/useHttp';
+import { useToast } from '../../components/ui/toastContext';
 import type { ApiError } from '../../lib/http';
 import { triggerDownload } from '../export/useExport';
 import { importQuery, type ConfirmOptions, type ImportBatch, type ImportReport } from './api';
@@ -20,17 +21,23 @@ function useInvalidateAfterImport() {
 // Descarga de la plantilla por usuario (mismo camino autenticado del export S26).
 export function useImportTemplate() {
   const httpBlob = useHttpBlob();
+  const toast = useToast();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const download = useCallback(async () => {
     setIsDownloading(true);
     try {
       const { blob, filename } = await httpBlob('/import/transactions/template');
-      triggerDownload(blob, filename ?? 'plantilla-movimientos.xlsx');
+      await triggerDownload(blob, filename ?? 'plantilla-movimientos.xlsx');
+    } catch {
+      // Sin este catch el error muere como rejection sin manejar (el onClick hace `void
+      // download()`) y el botón vuelve a la normalidad como si nada: el mismo criterio de
+      // toast que ya tiene el export. En nativo además cubre la hoja de compartir (S44).
+      toast.error('No pudimos descargar la plantilla. Intentá de nuevo.');
     } finally {
       setIsDownloading(false);
     }
-  }, [httpBlob]);
+  }, [httpBlob, toast]);
 
   return { download, isDownloading };
 }

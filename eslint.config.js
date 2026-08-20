@@ -6,7 +6,10 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // android/ e ios/ son los proyectos nativos generados por Capacitor (S44): lo que hay ahí
+  // es de Gradle/Xcode, y compilar el APK deja .js generados adentro de android/app/build
+  // (native-bridge.js) que hacen fallar `eslint .` sin ser código nuestro.
+  globalIgnores(['dist', 'android', 'ios']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
