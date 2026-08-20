@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { pushBackInterceptor } from '../lib/nativeBack';
 import { useLogout } from '../features/auth/useLogout';
 import { NotificationBell } from '../features/notifications/NotificationBell';
 import { Modal } from './ui/Modal';
@@ -71,11 +72,22 @@ export function AppLayout() {
     };
   }, [accountMenuOpen]);
 
+  // S44 — botón físico "atrás" de Android: con el menú de la persona abierto lo cierra, en
+  // vez de navegar o salir de la app. Misma pila que Modal (el drawer ya está cubierto por
+  // ser un Modal); en la web nadie corre la pila y no cambia nada.
+  useEffect(() => {
+    if (!accountMenuOpen) return;
+    return pushBackInterceptor(() => {
+      setAccountMenuOpen(false);
+      return true;
+    });
+  }, [accountMenuOpen]);
+
   return (
     <>
       {/* pt de safe-area: instalada como PWA con viewport-fit=cover (S35), el header
           sticky arranca DEBAJO de la status bar del iPhone con notch. */}
-      <header className="sticky top-0 z-40 border-b border-line bg-surface-elevated pt-[env(safe-area-inset-top)]">
+      <header className="sticky top-0 z-40 border-b border-line bg-surface-elevated pt-[var(--safe-top)]">
         <nav aria-label="Principal" className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2">
           {/* Hamburger: sólo mobile (<lg). Abre el drawer lateral deslizante. */}
           <button
@@ -173,7 +185,7 @@ export function AppLayout() {
         </nav>
       </Modal>
 
-      <main className="mx-auto w-full max-w-5xl px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-[calc(2rem+var(--safe-bottom))]">
         <Outlet />
       </main>
     </>

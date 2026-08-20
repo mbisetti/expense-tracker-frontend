@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { AuthContext } from '../auth/context';
+import { runBackInterceptors } from '../../lib/nativeBack';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { NotificationBell } from './NotificationBell';
 import { jsonResponse } from '../../test/mockResponse';
@@ -206,6 +207,26 @@ describe('NotificationBell', () => {
     await waitFor(() =>
       expect(requests.some((r) => r.url.includes('/notifications/read-all'))).toBe(true),
     );
+  });
+
+  // S44 — botón físico "atrás" de Android: el panel se registra en la pila de `nativeBack`
+  // mientras está abierto. Se corre la pila a mano, igual que el listener de `nativeBootstrap`.
+  it('el back de Android cierra el panel y no sale de la app', async () => {
+    stubFetch(() => jsonResponse(200, payload()));
+    wrap(<NotificationBell />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Notificaciones' }));
+    expect(screen.getByRole('dialog', { name: 'Notificaciones' })).toBeInTheDocument();
+
+    let consumido = false;
+    act(() => {
+      consumido = runBackInterceptors();
+    });
+
+    expect(consumido).toBe(true);
+    expect(screen.queryByRole('dialog', { name: 'Notificaciones' })).toBeNull();
+    // Cerrado no se mete en el camino del back.
+    expect(runBackInterceptors()).toBe(false);
   });
 
   it('Esc cierra el panel', async () => {

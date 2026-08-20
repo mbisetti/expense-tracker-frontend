@@ -20,5 +20,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  // Los scripts de `scripts/` son .mjs y NO entran acá: cubrirlos pediría checkJs + JSDoc en
+  // todo, y son herramientas de una corrida que se verifican ejecutándolas.
+  "include": ["vite.config.ts", "vitest.config.ts", "capacitor.config.ts"]
 }

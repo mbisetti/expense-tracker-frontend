@@ -10,6 +10,8 @@ import { AppRouter } from './router/AppRouter'
 import { applyStoredTheme } from './lib/useTheme'
 import { registerServiceWorker } from './lib/pwa'
 import { listenForInstallPrompt } from './lib/useInstallPrompt'
+import { isNative } from './lib/platform'
+import { bootstrapNative } from './lib/nativeBootstrap'
 import './index.css'
 
 // Antes del render: aplica el tema guardado (si hay) para no flashear el del sistema.
@@ -21,7 +23,13 @@ listenForInstallPrompt()
 
 // El service worker sólo existe en el build de producción (devOptions apagado): ni el dev
 // server ni vitest registran nada.
-if (import.meta.env.PROD) registerServiceWorker()
+//
+// S44 — y TAMPOCO adentro de la app nativa, aunque ahí `PROD` sea true. Capacitor ya sirve
+// el bundle desde el propio dispositivo, así que el SW no aporta nada offline; lo que sí
+// haría es meterse en el medio con su precache y arriesgar que después de actualizar la app
+// desde la store el usuario siga viendo el shell viejo. La actualización de la app nativa la
+// maneja la store, no Workbox.
+if (import.meta.env.PROD && !isNative()) registerServiceWorker()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -37,3 +45,8 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>
 )
+
+// Después del render: en la web es un no-op que no carga ningún plugin; en nativo esconde el
+// splash cuando ya hay algo pintado, cablea el botón de atrás de Android, el estado de la app
+// y la conexión real del sistema operativo.
+void bootstrapNative()

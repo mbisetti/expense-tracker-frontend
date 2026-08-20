@@ -1,0 +1,110 @@
+name: Apps nativas
+
+# S44 — Compuerta de los builds nativos (Capacitor). Va aparte de `ci.yml` a propósito: aquél
+# es la compuerta de la web, que es lo que entra a producción hoy por el FRONTEND_REF del
+# backend. Un proyecto nativo que no compila no rompe la web, pero se pudre en silencio si
+# nadie lo compila hasta el día que hay que publicar.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    name: Android · APK de debug
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # Capacitor 8 y el Android Gradle Plugin de compileSdk 36 necesitan JDK 21.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      # Bloqueante, y ANTES del sync a propósito: el appId vive en 10 lugares, pero los dos
+      # capacitor.config.json están gitignoreados porque los regenera `cap sync`. Los que
+      # pueden derivar de verdad son los versionados (build.gradle, strings.xml, el directorio
+      # del paquete de Java, el pbxproj), y son justo los que se chequean acá. Desincronizarlos
+      # no da error de compilación: da una app que instala mal o un deep link que no vuelve.
+      - name: Guard del appId
+        run: npm run app:check-id
+
+      # `cap sync` copia dist/ adentro del proyecto Android y reescribe la lista de plugins.
+      # Sin esto se compilaría el bundle que quedó commiteado, no el de este commit.
+      - name: Build web + sync
+        run: npm run native:sync
+
+      - name: Compilar APK
+        working-directory: android
+        run: ./gradlew --no-daemon assembleDebug
+
+      # Se sube para poder instalarlo en un teléfono y probar de verdad. Es DEBUG y sin firmar:
+      # no sirve para publicar, sirve para ver la app andando.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+  ios:
+    name: iOS · compila sin firmar
+    # A MANO a propósito (workflow_dispatch), no en cada push: el runner de macOS consume
+    # minutos a 10x en repos privados y este job no bloquea nada que se deployee hoy.
+    #
+    # Compila SIN FIRMAR (CODE_SIGNING_ALLOWED=NO), que es todo lo que se puede hacer sin una
+    # cuenta de Apple Developer (US$99/año, todavía no existe). Igual sirve, y mucho: valida
+    # que el proyecto de Xcode, el Package.swift y los 10 plugins compilen de verdad. Lo que NO
+    # puede es producir un .ipa instalable — para eso hacen falta certificados y perfiles.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Guard del appId
+        run: npm run app:check-id
+
+      - name: Build web + sync
+        run: npm run native:sync
+
+      # Capacitor 8 usa Swift Package Manager, no CocoaPods: no hay `pod install` que correr.
+      - name: Compilar el esquema App
+        working-directory: ios/App
+        run: |
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            build

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { useState } from 'react';
 import { Modal } from './Modal';
+import { runBackInterceptors } from '../../lib/nativeBack';
 
 // Harness con trigger real: para poder afirmar que el foco vuelve al elemento que abrió
 // el modal (no alcanza con `document.activeElement` sin un trigger enfocable de verdad).
@@ -129,5 +130,77 @@ describe('Modal', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(document.activeElement).toBe(trigger);
+  });
+});
+
+// S44 — botón físico "atrás" de Android. El modal se registra en la pila de `nativeBack`
+// mientras está abierto; acá se simula el back corriendo la pila a mano, que es exactamente
+// lo que hace el listener nativo de `nativeBootstrap`.
+describe('Modal · botón atrás de Android', () => {
+  it('con el modal abierto, el back lo cierra y NO sale de la app', () => {
+    const onClose = vi.fn();
+    render(
+      <Modal open onClose={onClose} title="Título del modal">
+        contenido
+      </Modal>,
+    );
+
+    // true = consumido: el bootstrap no toca el historial ni llama a exitApp().
+    expect(runBackInterceptors()).toBe(true);
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('cerrado no se mete en el camino del back', () => {
+    render(
+      <Modal open={false} onClose={vi.fn()} title="Título del modal">
+        contenido
+      </Modal>,
+    );
+
+    expect(runBackInterceptors()).toBe(false);
+  });
+
+  it('con disableClose consume el back pero no cierra: nadie sale de la app en medio de un POST de plata', () => {
+    const onClose = vi.fn();
+    render(
+      <Modal open disableClose onClose={onClose} title="Título del modal">
+        contenido
+      </Modal>,
+    );
+
+    expect(runBackInterceptors()).toBe(true);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('al desmontarse se da de baja de la pila', () => {
+    const { unmount } = render(
+      <Modal open onClose={vi.fn()} title="Título del modal">
+        contenido
+      </Modal>,
+    );
+
+    unmount();
+
+    expect(runBackInterceptors()).toBe(false);
+  });
+
+  it('el de más arriba gana: con dos modales abiertos, el back cierra el último', () => {
+    const cerrarFondo = vi.fn();
+    const cerrarArriba = vi.fn();
+    render(
+      <>
+        <Modal open onClose={cerrarFondo} title="El de abajo">
+          fondo
+        </Modal>
+        <Modal open onClose={cerrarArriba} title="El de arriba">
+          arriba
+        </Modal>
+      </>,
+    );
+
+    runBackInterceptors();
+
+    expect(cerrarArriba).toHaveBeenCalledOnce();
+    expect(cerrarFondo).not.toHaveBeenCalled();
   });
 });

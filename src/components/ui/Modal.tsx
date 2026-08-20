@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { XIcon } from './icons';
+import { pushBackInterceptor } from '../../lib/nativeBack';
 
 type ModalProps = {
   open: boolean;
@@ -73,6 +74,24 @@ export function Modal({
     return () => {
       previouslyFocused.current?.focus();
     };
+  }, [open]);
+
+  // S44 — botón físico "atrás" de Android: cierra el modal, no la app.
+  //
+  // Va acá y no en el bootstrap nativo porque la pila de `nativeBack` es LIFO y sólo el
+  // propio modal sabe cuándo está abierto: con un ConfirmDialog arriba de un Modal, el back
+  // tiene que cerrar la confirmación primero. Se registra SIEMPRE (también en la web), sin
+  // un `isNative()` adentro de un componente de UI: en el browser nadie lee la pila, así que
+  // no cambia nada y los tests siguen corriendo sin mockear plugins.
+  //
+  // Mismo criterio que Esc: con `disableClose` (request en curso) el back se consume igual
+  // pero no cierra — si no, el usuario sale de la app en medio de un POST de plata.
+  useEffect(() => {
+    if (!open) return;
+    return pushBackInterceptor(() => {
+      if (!disableCloseRef.current) onCloseRef.current();
+      return true;
+    });
   }, [open]);
 
   // Esc + focus trap (Tab/Shift+Tab). Deps=[open] únicamente — lee onClose/disableClose
@@ -151,7 +170,7 @@ export function Modal({
           isSide
             ? // El drawer arranca en inset-0: instalada como PWA con viewport-fit=cover
               // (S35), su tope quedaría debajo de la status bar del iPhone.
-              'relative z-10 flex h-full w-full max-w-xs flex-col gap-1 overflow-y-auto rounded-r-lg border-r border-line bg-surface-elevated p-6 pt-[calc(1.5rem+env(safe-area-inset-top))] pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-lg animate-drawer-in'
+              'relative z-10 flex h-full w-full max-w-xs flex-col gap-1 overflow-y-auto rounded-r-lg border-r border-line bg-surface-elevated p-6 pt-[calc(1.5rem+var(--safe-top))] pb-[calc(1.5rem+var(--safe-bottom))] shadow-lg animate-drawer-in'
             : size === 'wide'
               ? // Usa la pantalla que haya: 95vh de alto y casi todo el ancho en desktop. El
                 // padding baja en mobile para que la tabla no quede en un canal de 200px.

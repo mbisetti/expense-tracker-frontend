@@ -366,3 +366,26 @@ input[type='number']::-webkit-outer-spin-button {
     animation: none;
   }
 }
+
+/* ── S44 · Safe areas: un solo par de tokens para web y para la app nativa ────────────────
+   Desde S35 el layout compensa el notch con `env(safe-area-inset-*)` (viewport-fit=cover).
+   Eso alcanza en el browser y en la PWA instalada, pero NO adentro de la app de Android:
+   Android 15+ fuerza edge-to-edge y el WebView recibe los insets por su cuenta, así que
+   Capacitor 8 los inyecta como las variables `--safe-area-inset-*` (SystemBars.insetsHandling
+   = 'css' en capacitor.config.ts) en vez de poblar `env()`.
+
+   En vez de duplicar cada regla, los componentes pasan a usar `--safe-top` / `--safe-bottom`
+   y el valor se resuelve UNA vez acá:
+   - Web y iOS nativo: `env(...)`, exactamente lo que ya hacían (el fallback 0px es lo que
+     `env()` ya devolvía solo, así que el render del browser no cambia en nada).
+   - Android nativo: la variable de Capacitor, con `env()` de respaldo por si algún día la
+     inyección se apaga.
+   El `.native-android` lo pone `bootstrapNative()` en el <html> al arrancar. */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html.native-android {
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+}

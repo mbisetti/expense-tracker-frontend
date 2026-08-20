@@ -1,4 +1,50 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
+import { isNative } from './platform';
+
+// S44 — La base de la API depende de dónde corre el bundle.
+//
+// En web la topología es same-origin desde S9: el backend sirve el SPA y `VITE_API_URL` es
+// `/api/v1`, relativo. Adentro de la app nativa eso NO existe — el origen del WebView es
+// `capacitor://localhost` (iOS) o `https://localhost` (Android), así que una ruta relativa
+// pega contra el bundle local y devuelve el index.html en vez de JSON.
+//
+// Por eso en nativo (y sólo en nativo) se le antepone un origen absoluto. La web devuelve el
+// valor configurado tal cual, byte por byte lo de siempre: cero riesgo de regresión.
+//
+// El origen vive en `VITE_NATIVE_API_ORIGIN` y no hardcodeado porque hoy apunta al dominio
+// provisional de Railway, y cambia cuando caiga el NOMBRE (bloqueador №1 del roadmap).
+function resolveBaseUrl(): string {
+  const configured = import.meta.env.VITE_API_URL;
+  if (!isNative()) return configured;
+
+  // Ya es absoluta (ej. apuntando a una máquina de la red local para probar en un teléfono
+  // con `npm run dev`): se respeta y no se toca.
+  if (/^https?:\/\//.test(configured)) return configured;
+
+  const origin = import.meta.env.VITE_NATIVE_API_ORIGIN;
+  if (!origin) {
+    // Falla ruidosa y temprana. La alternativa es una app que arranca y da 404 en cada
+    // pantalla, que es mucho más caro de diagnosticar desde un teléfono.
+    //
+    // El throw solo no alcanza: corta la evaluación del bundle antes de que corra
+    // `bootstrapNative()`, y con `launchAutoHide: false` el síntoma sería un splash puesto
+    // para siempre. Se esconde el splash y se escribe el error por pantalla, para que un
+    // build mal hecho se vea como lo que es y no como una app colgada en el logo.
+    void import('@capacitor/splash-screen')
+      .then(({ SplashScreen }) => SplashScreen.hide())
+      .catch(() => {});
+    const root = document.getElementById('root');
+    if (root) {
+      root.textContent =
+        'Error de build: falta VITE_NATIVE_API_ORIGIN, el origen de la API para la app nativa.';
+    }
+    throw new Error(
+      'VITE_NATIVE_API_ORIGIN no está definida: el build nativo necesita un origen absoluto para la API.'
+    );
+  }
+  return `${origin.replace(/\/$/, '')}${configured}`;
+}
+
+const BASE_URL = resolveBaseUrl();
 
 export class ApiError extends Error {
   readonly status: number;
