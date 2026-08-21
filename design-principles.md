@@ -1,4 +1,4 @@
-# Design Principles — "Manguitos" (nombre provisional)
+# Design Principles — "Maat"
 
 **Sprint 18 · Bloque 1 · Opus 4.8 · Julio 2026 · Estado: APROBADO y en producción desde S18-S19** *(paleta índigo provisional hasta el informe de diseño pendiente)*
 

@@ -31,7 +31,7 @@ describe('PublicHome', () => {
     renderPublicHome({ accessToken: null, status: 'unauthenticated', setAccessToken: () => {} });
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Manguitos' }),
+      await screen.findByRole('heading', { level: 1, name: 'Maat' }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Crear cuenta' }).length).toBeGreaterThan(0);
   });
@@ -40,6 +40,6 @@ describe('PublicHome', () => {
     renderPublicHome({ accessToken: null, status: 'loading', setAccessToken: () => {} });
 
     expect(screen.getByText('Cargando...')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { level: 1, name: 'Manguitos' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1, name: 'Maat' })).not.toBeInTheDocument();
   });
 });

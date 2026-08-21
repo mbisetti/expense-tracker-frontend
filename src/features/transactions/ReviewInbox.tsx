@@ -30,8 +30,8 @@ import type { TransactionListItem } from './api';
 
 const ORIGIN_LABEL: Record<string, string> = {
   IMPORT: 'del archivo',
-  BOT: 'lo anotó Vaqui',
-  TELEGRAM_IMPORT: 'lo leyó Vaqui',
+  BOT: 'lo anotó Thoth',
+  TELEGRAM_IMPORT: 'lo leyó Thoth',
   AUTO_DEBIT: 'débito automático',
   MANUAL: 'a mano',
 };

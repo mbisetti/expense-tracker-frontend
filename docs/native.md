@@ -40,16 +40,15 @@ En esta máquina no hay JDK ni Android SDK en Windows, pero **sí en WSL** (Open
 
 ---
 
-## 2. Lo que bloquea el NOMBRE
+## 2. Lo que bloqueaba el NOMBRE (decidido 19 Ago 2026: "Maat")
 
-El appId por default es `app.manguitos.provisional` y **dice "provisional" a propósito**: es
-imposible publicar sin darse cuenta. El package name de Google Play es **inmutable
-post-publicación** (`roadmap.md`, riesgo #3), así que este es un cambio de una sola bala.
-
-Cuando caiga la decisión:
+El appId es **`ar.com.maat.app`** (reverse-DNS de `maat.com.ar`; aplicado el 20 Ago con
+`npm run app:id -- ar.com.maat.app`). El package name de Google Play es **inmutable
+post-publicación** (`roadmap.md`, riesgo #3): NO volver a cambiarlo salvo decisión consciente
+antes de publicar. Si hiciera falta, el ritual es el mismo:
 
 ```bash
-npm run app:id -- com.elnombre.app
+npm run app:id -- <nuevo.id>
 npx cap sync
 npm run app:check-id
 ```
@@ -59,8 +58,8 @@ También dependen del nombre/dominio:
 - El `custom_url_scheme` de Android, que es el que hace volver el OAuth de Google (§4).
 - Los Universal Links de iOS y App Links de Android, que necesitan un dominio con
   `apple-app-site-association` y `assetlinks.json` servidos por HTTPS.
-- `VITE_NATIVE_API_ORIGIN` en `.env.production`, que hoy apunta al dominio provisional de
-  Railway.
+- `VITE_NATIVE_API_ORIGIN` en `.env.production` — ya apunta a `https://maat.com.ar`
+  (20 Ago 2026).
 
 ---
 
@@ -182,7 +181,7 @@ Mac o no.
 - [ ] Refresh token nativo funcionando (§3) — sin esto la sesión se muere sola
 - [ ] Google Sign-In nativo (§4)
 - [ ] Al menos una integración nativa fuerte para la guía 4.2 (§5)
-- [ ] Ícono y splash definitivos (los actuales derivan del favicon provisional del mango)
+- [ ] Ícono y splash definitivos (los actuales derivan de la pluma de Maat del favicon, arte temporal del 20 Ago)
 - [ ] Política de privacidad en un dominio propio (la piden las dos stores)
 - [ ] Data safety de Play y privacy nutrition labels de Apple
 - [ ] Keystore de release de Android **guardado donde no se pierda**: si se pierde, no se puede

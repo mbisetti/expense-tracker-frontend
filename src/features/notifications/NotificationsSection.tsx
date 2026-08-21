@@ -38,7 +38,7 @@ export function NotificationsSection() {
         <div className="flex flex-col">
           <h2 className="text-lg font-semibold text-ink">Notificaciones</h2>
           <span className="text-sm text-muted">
-            Qué te avisamos y por dónde. In-app es la campanita; Telegram te lo manda Vaqui.
+            Qué te avisamos y por dónde. In-app es la campanita; Telegram te lo manda Thoth.
           </span>
         </div>
 

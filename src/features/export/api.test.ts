@@ -29,15 +29,15 @@ describe('buildExportQuery', () => {
 describe('fallbackFilename', () => {
   it('arma el mismo nombre que manda el server', () => {
     const day = new Date(2026, 6, 24);
-    expect(fallbackFilename('transactions', day)).toBe('manguitos-transacciones-20260724.xlsx');
-    expect(fallbackFilename('accounts', day)).toBe('manguitos-movimientos-20260724.xlsx');
-    expect(fallbackFilename('expenses', day)).toBe('manguitos-gastos-20260724.xlsx');
-    expect(fallbackFilename('incomes', day)).toBe('manguitos-ingresos-20260724.xlsx');
+    expect(fallbackFilename('transactions', day)).toBe('maat-transacciones-20260724.xlsx');
+    expect(fallbackFilename('accounts', day)).toBe('maat-movimientos-20260724.xlsx');
+    expect(fallbackFilename('expenses', day)).toBe('maat-gastos-20260724.xlsx');
+    expect(fallbackFilename('incomes', day)).toBe('maat-ingresos-20260724.xlsx');
   });
 
   it('padea mes y día', () => {
     expect(fallbackFilename('expenses', new Date(2026, 0, 5))).toBe(
-      'manguitos-gastos-20260105.xlsx',
+      'maat-gastos-20260105.xlsx',
     );
   });
 });

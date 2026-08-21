@@ -76,7 +76,7 @@ export function TransactionsPage() {
   const [tab, setTab] = useState<'feed' | 'review'>('feed');
   const pendingReviewQuery = useTransactions({ pendingReview: true, size: 1 });
   const pendingCount = pendingReviewQuery.data?.totalElements ?? 0;
-  // S39: deep-link del centro de notificaciones (`?review=1`) — el tap en "Vaqui cargó tal
+  // S39: deep-link del centro de notificaciones (`?review=1`) — el tap en "Thoth cargó tal
   // archivo" abre la bandeja. Se consume UNA vez, cuando llega el contador, y sólo si HAY algo
   // pendiente: la tab no se renderiza con cero, así que abrirla dejaría la página en blanco.
   // Sin toast: que no haya nada que revisar no es un error, es la buena noticia.

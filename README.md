@@ -1,6 +1,6 @@
-# Expense Tracker — Frontend ("Manguitos")
+# Expense Tracker — Frontend ("Maat")
 
-React + Vite + TypeScript frontend for the personal finance dashboard. Live app: https://expense-tracker-marko.up.railway.app
+React + Vite + TypeScript frontend for the personal finance dashboard. Live app: https://maat.com.ar
 
 **Stack:** React 19 · Vite · TypeScript · TanStack Query · custom design system (no UI framework)
 

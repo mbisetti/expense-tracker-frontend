@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Manguitos</string>
-    <string name="title_activity_main">Manguitos</string>
-    <string name="package_name">app.manguitos.provisional</string>
-    <string name="custom_url_scheme">app.manguitos.provisional</string>
+    <string name="app_name">Maat</string>
+    <string name="title_activity_main">Maat</string>
+    <string name="package_name">ar.com.maat.app</string>
+    <string name="custom_url_scheme">ar.com.maat.app</string>
 </resources>

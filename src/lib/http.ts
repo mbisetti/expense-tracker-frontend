@@ -10,8 +10,8 @@ import { isNative } from './platform';
 // Por eso en nativo (y sólo en nativo) se le antepone un origen absoluto. La web devuelve el
 // valor configurado tal cual, byte por byte lo de siempre: cero riesgo de regresión.
 //
-// El origen vive en `VITE_NATIVE_API_ORIGIN` y no hardcodeado porque hoy apunta al dominio
-// provisional de Railway, y cambia cuando caiga el NOMBRE (bloqueador №1 del roadmap).
+// El origen vive en `VITE_NATIVE_API_ORIGIN` y no hardcodeado: hoy apunta a maat.com.ar y
+// puede cambiar sin tocar código (por ejemplo si algún día se separa un dominio de API).
 function resolveBaseUrl(): string {
   const configured = import.meta.env.VITE_API_URL;
   if (!isNative()) return configured;
@@ -153,7 +153,7 @@ export async function httpBlob(path: string, options?: RequestInit): Promise<Blo
   };
 }
 
-// `attachment; filename="manguitos-gastos-20260724.xlsx"` → el nombre. En dev el header es
+// `attachment; filename="maat-gastos-20260724.xlsx"` → el nombre. En dev el header es
 // cross-origin y sólo se lee porque el backend lo expone (Access-Control-Expose-Headers).
 function parseFilename(header: string | null): string | null {
   if (!header) return null;

@@ -16,8 +16,8 @@ import type { CapacitorConfig } from '@capacitor/cli';
 // project.pbxproj de Xcode, y el nombre del directorio del paquete de Java — que es el que
 // nadie se acuerda y el único que además hay que MOVER, no editar.
 // `npm run app:check-id` verifica que los diez coincidan.
-const APP_ID = process.env.CAP_APP_ID ?? 'app.manguitos.provisional';
-const APP_NAME = process.env.CAP_APP_NAME ?? 'Manguitos';
+const APP_ID = process.env.CAP_APP_ID ?? 'ar.com.maat.app';
+const APP_NAME = process.env.CAP_APP_NAME ?? 'Maat';
 
 const config: CapacitorConfig = {
   appId: APP_ID,

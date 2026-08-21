@@ -34,11 +34,13 @@ const GHOST_LINK_SM =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2';
 
 function WordmarkIcon(props: SVGProps<SVGSVGElement>) {
-  // Silueta simple estilo mango — decorativo, acompaña al texto "Manguitos" (nunca solo).
+  // La pluma de Maat — decorativa, acompaña al texto "Maat" (nunca sola). Mismo glifo que
+  // el favicon, en versión outline.
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable={false} {...props}>
-      <path d="M8 3c3 0 8 2 8 9a7 7 0 0 1-7 7c-4 0-7-3-7-7C2 7 5 3 8 3Z" />
-      <path d="M9 3c1-1.5 2.5-2 4-2" />
+      <path d="M9.3 19.8 L9.3 7.2 C9.3 3.9 11.1 2.1 13.2 2.1 C15.3 2.1 16.5 3.9 16.4 6.9 C16.2 11.4 14.4 17.4 10.5 19.8 Z" />
+      <path d="M11 9 L11 17" />
+      <path d="M10 20 L9 22.3" />
     </svg>
   );
 }
@@ -47,7 +49,7 @@ function Wordmark() {
   return (
     <span className="inline-flex items-center gap-2 text-lg font-semibold text-ink">
       <WordmarkIcon className="h-6 w-6 text-brand" />
-      Manguitos
+      Maat
     </span>
   );
 }
@@ -287,7 +289,7 @@ const TRUST_ITEMS = [
   },
   {
     title: 'Código propio',
-    body: 'Manguitos se construye a medida, sin depender de plantillas cerradas ni de trackers de terceros.',
+    body: 'Maat se construye a medida, sin depender de plantillas cerradas ni de trackers de terceros.',
   },
 ];
 
@@ -317,10 +319,10 @@ export function LandingPage() {
             <div className="text-center lg:text-left">
               <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold leading-[1.2] text-ink lg:justify-start">
                 <WordmarkIcon className="h-7 w-7 shrink-0 text-brand" />
-                Manguitos
+                Maat
               </h1>
               <p className="mt-3 text-xl font-semibold leading-[1.2] text-ink sm:text-2xl">
-                Cuidá tus manguitos.
+                Tus finanzas en orden.
               </p>
               <p className="mt-4 text-base leading-relaxed text-body">
                 Gastos, presupuestos, ingresos y transferencias en un solo lugar. Sin planillas,
@@ -416,7 +418,7 @@ export function LandingPage() {
             >
               GitHub
             </a>
-            <span>&copy; {year} Manguitos</span>
+            <span>&copy; {year} Maat</span>
           </div>
         </div>
       </footer>

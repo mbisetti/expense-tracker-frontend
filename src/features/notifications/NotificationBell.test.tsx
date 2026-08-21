@@ -26,7 +26,7 @@ function item(overrides: Partial<NotificationItem> = {}): NotificationItem {
   return {
     id: 'n1',
     type: 'BOT_MOVEMENT',
-    title: 'Vaqui anotó $20.000 · nafta',
+    title: 'Thoth anotó $20.000 · nafta',
     body: 'Efectivo · Transporte',
     targetType: 'TRANSACTION',
     targetId: 'tx-1',
@@ -132,7 +132,7 @@ describe('NotificationBell', () => {
     expect(await screen.findByRole('dialog', { name: 'Notificaciones' })).toBeInTheDocument();
     expect(screen.getByText('Movimientos')).toBeInTheDocument();
     expect(screen.getByText('Alertas')).toBeInTheDocument();
-    expect(screen.getByText('Vaqui anotó $20.000 · nafta')).toBeInTheDocument();
+    expect(screen.getByText('Thoth anotó $20.000 · nafta')).toBeInTheDocument();
     expect(screen.getByText('Te pasaste en Comida')).toBeInTheDocument();
   });
 
@@ -153,7 +153,7 @@ describe('NotificationBell', () => {
         payload({
           movements: {
             recent: [item()],
-            older: [item({ id: 'n9', title: 'Vaqui anotó $500 · cafe', read: true })],
+            older: [item({ id: 'n9', title: 'Thoth anotó $500 · cafe', read: true })],
             unreadCount: 1,
           },
         }),
@@ -162,11 +162,11 @@ describe('NotificationBell', () => {
     wrap(<NotificationBell />);
 
     fireEvent.click(await screen.findByRole('button', { name: /Notificaciones/ }));
-    expect(screen.queryByText('Vaqui anotó $500 · cafe')).toBeNull();
+    expect(screen.queryByText('Thoth anotó $500 · cafe')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: '+ 1 anterior' }));
 
-    expect(screen.getByText('Vaqui anotó $500 · cafe')).toBeInTheDocument();
+    expect(screen.getByText('Thoth anotó $500 · cafe')).toBeInTheDocument();
   });
 
   // D3: abrir = marcar leída + ir al editor de la transacción.
@@ -181,7 +181,7 @@ describe('NotificationBell', () => {
     wrap(<NotificationBell />);
 
     fireEvent.click(await screen.findByRole('button', { name: /Notificaciones/ }));
-    fireEvent.click(await screen.findByText('Vaqui anotó $20.000 · nafta'));
+    fireEvent.click(await screen.findByText('Thoth anotó $20.000 · nafta'));
 
     await waitFor(() =>
       expect(

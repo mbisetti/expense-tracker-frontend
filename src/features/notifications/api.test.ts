@@ -11,7 +11,7 @@ function item(
   return {
     id: 'n1',
     type: 'BOT_IMPORT',
-    title: 'Vaqui cargó resumen-visa.pdf · 42 movimientos',
+    title: 'Thoth cargó resumen-visa.pdf · 42 movimientos',
     body: 'Quedaron en Por revisar.',
     targetType,
     targetId,

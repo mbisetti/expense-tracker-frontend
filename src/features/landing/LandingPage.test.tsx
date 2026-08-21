@@ -15,8 +15,8 @@ describe('LandingPage', () => {
   it('renderiza el hero con el wordmark, el value prop y los CTA', () => {
     renderLanding();
 
-    expect(screen.getByRole('heading', { level: 1, name: 'Manguitos' })).toBeInTheDocument();
-    expect(screen.getByText('Cuidá tus manguitos.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Maat' })).toBeInTheDocument();
+    expect(screen.getByText('Tus finanzas en orden.')).toBeInTheDocument();
 
     const registerLinks = screen.getAllByRole('link', { name: 'Crear cuenta' });
     expect(registerLinks.length).toBeGreaterThan(0);
@@ -57,6 +57,6 @@ describe('LandingPage', () => {
     renderLanding();
 
     const year = new Date().getFullYear();
-    expect(screen.getByText(`© ${year} Manguitos`)).toBeInTheDocument();
+    expect(screen.getByText(`© ${year} Maat`)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,4 @@
-package app.manguitos.provisional;
+package ar.com.maat.app;
 
 import com.getcapacitor.BridgeActivity;
 

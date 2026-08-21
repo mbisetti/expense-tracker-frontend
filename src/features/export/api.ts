@@ -36,5 +36,5 @@ export function fallbackFilename(dataset: ExportDataset, today: Date): string {
     String(today.getMonth() + 1).padStart(2, '0'),
     String(today.getDate()).padStart(2, '0'),
   ].join('');
-  return `manguitos-${DATASET_FILES[dataset]}-${stamp}.xlsx`;
+  return `maat-${DATASET_FILES[dataset]}-${stamp}.xlsx`;
 }

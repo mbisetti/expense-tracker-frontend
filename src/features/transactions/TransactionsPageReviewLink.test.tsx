@@ -7,7 +7,7 @@ import { TransactionsPage } from './TransactionsPage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { jsonResponse } from '../../test/mockResponse';
 
-// S39 §6.1 — deep-link del centro de notificaciones a la bandeja. El tap en "Vaqui cargó
+// S39 §6.1 — deep-link del centro de notificaciones a la bandeja. El tap en "Thoth cargó
 // resumen-visa.pdf" cae en /transactions?review=1 y tiene que abrir la tab "Por revisar".
 //
 // El caso interesante es el de abajo: si mientras tanto ya revisaste todo, la tab NO existe.
@@ -97,7 +97,7 @@ describe('TransactionsPage — deep-link ?review=1 (S39)', () => {
     // La descripción se edita en la planilla, así que es el value de un input.
     expect(await screen.findByDisplayValue('Pago con QR Super')).toBeInTheDocument();
     // S39: la bandeja dice quién lo trajo.
-    expect(await screen.findByText('lo leyó Vaqui')).toBeInTheDocument();
+    expect(await screen.findByText('lo leyó Thoth')).toBeInTheDocument();
   });
 
   it('sin el param arranca en el feed aunque haya pendientes', async () => {

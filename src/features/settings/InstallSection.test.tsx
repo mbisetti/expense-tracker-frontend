@@ -68,6 +68,6 @@ describe('InstallSection', () => {
     renderSection();
 
     expect(screen.queryByRole('heading', { name: 'Instalar la app' })).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Manguitos quedó instalada');
+    expect(screen.getByRole('status')).toHaveTextContent('Maat quedó instalada');
   });
 });

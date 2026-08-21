@@ -5,8 +5,8 @@
 //
 //   npm i -D sharp --no-save && node scripts/generate-pwa-icons.mjs
 //
-// Los íconos son PROVISIONALES (D1 del spec): derivan del glifo del mango de
-// `public/favicon.svg`. Cuando caiga la decisión NOMBRE, se cambia el arte de acá,
+// Arte actual: la pluma de Maat (post-NOMBRE, 20 Ago 2026; temporal hasta el arte
+// final). Deriva del glifo de `public/favicon.svg`. Si cambia el arte, se cambia acá,
 // se vuelve a correr y se regeneran los mismos 5 paths — gracias a `id: "/"` en el
 // manifest, las instalaciones existentes se actualizan solas.
 
@@ -19,23 +19,22 @@ const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'p
 
 const BRAND = '#4F46E5'
 
-// Los dos paths del mango, copiados tal cual de public/favicon.svg (sistema de
-// coordenadas del viewBox 32×32, SIN el translate que trae el favicon).
+// Los tres paths de la pluma, copiados tal cual de public/favicon.svg (sistema de
+// coordenadas del viewBox 32×32, SIN el translate que trae el favicon). El raquis va
+// en el color de marca: es espacio negativo contra el fondo del ícono.
 const GLYPH = `
   <path
-    d="M15.9 6.8c1.3-1 2.9-1.7 4.7-1.6-.1 1.3-.7 2.5-1.6 3.5 2.3 2.1 3.5 5.2 3.3 8.7-.3 6.3-4.7 11.3-9.6 11.3-5.7 0-10.1-4.7-10.1-10.5 0-5.5 3.9-11.1 9.1-12 1.6-.3 3.1 0 4.2.6Z"
-    fill="#F59E0B"
+    d="M12.4 26.4 L12.4 9.6 C12.4 5.2 14.8 2.8 17.6 2.8 C20.4 2.8 22 5.2 21.8 9.2 C21.6 15.2 19.2 23.2 14 26.4 Z"
+    fill="#FFFFFF"
   />
-  <path
-    d="M24 4.9c.4-1.2.4-2.4.1-3.3-1.2.4-2.3 1.3-2.8 2.5.9 0 1.9.3 2.7.8Z"
-    fill="#34D399"
-  />
+  <path d="M14.6 10.8 L14.6 24" stroke="${BRAND}" stroke-width="1.4" stroke-linecap="round" />
+  <path d="M13.2 26.4 L12 30" stroke="#FFFFFF" stroke-width="1.4" stroke-linecap="round" />
 `
 
-// Bounding box del glifo en esas coordenadas (mango + hoja). Se centra a partir de acá
+// Bounding box del glifo en esas coordenadas (pluma + cálamo, con sus strokes). Se centra a partir de acá
 // en vez de reusar el `translate(4 4)` del favicon, que a 32px pasa desapercibido pero a
 // 512 deja el mango descentrado y con la base cortada.
-const BOX = { x: 2.6, y: 1.6, w: 21.5, h: 27.2 }
+const BOX = { x: 11.3, y: 2.8, w: 10.7, h: 27.9 }
 
 // `fit` = fracción del lado que ocupa el lado mayor del glifo.
 //   any/apple: 0.78, el glifo respira dentro del cuadrado como en el favicon.

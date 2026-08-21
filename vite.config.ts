@@ -4,7 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const DESCRIPTION =
-  'Manguitos: gastos, presupuestos, ingresos y transferencias multi-moneda en un solo lugar. Cuidá tus manguitos.'
+  'Maat: gastos, presupuestos, ingresos y transferencias multi-moneda en un solo lugar. Tus finanzas en orden.'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -28,8 +28,8 @@ export default defineConfig({
         // decisión NOMBRE se cambian name/íconos y las instalaciones existentes se
         // actualizan solas, sin reinstalar.
         id: '/',
-        name: 'Manguitos',
-        short_name: 'Manguitos',
+        name: 'Maat',
+        short_name: 'Maat',
         lang: 'es',
         description: DESCRIPTION,
         // Instalada, la app abre en la app — no en la landing, que es material de browser

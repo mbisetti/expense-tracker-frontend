@@ -27,7 +27,7 @@ const PREFS: NotificationPrefs = {
   types: [
     {
       type: 'BOT_MOVEMENT',
-      label: 'Movimientos que anota Vaqui',
+      label: 'Movimientos que anota Thoth',
       block: 'MOVEMENTS',
       inApp: true,
       telegram: false,
@@ -73,13 +73,13 @@ describe('NotificationsSection', () => {
     stubFetch(() => jsonResponse(200, PREFS));
     wrap(<NotificationsSection />);
 
-    expect(await screen.findByText('Movimientos que anota Vaqui')).toBeInTheDocument();
+    expect(await screen.findByText('Movimientos que anota Thoth')).toBeInTheDocument();
     expect(screen.getByText('Presupuesto excedido')).toBeInTheDocument();
     expect(
-      screen.getByRole('switch', { name: 'Movimientos que anota Vaqui, in-app' }),
+      screen.getByRole('switch', { name: 'Movimientos que anota Thoth, in-app' }),
     ).toHaveAttribute('aria-checked', 'true');
     expect(
-      screen.getByRole('switch', { name: 'Movimientos que anota Vaqui, Telegram' }),
+      screen.getByRole('switch', { name: 'Movimientos que anota Thoth, Telegram' }),
     ).toHaveAttribute('aria-checked', 'false');
   });
 

@@ -93,7 +93,7 @@ describe('ExportSection (/datos)', () => {
   it('exporta el dataset elegido y usa el nombre del Content-Disposition', async () => {
     stubFetch((url) =>
       url.includes('/export/')
-        ? blobResponse('attachment; filename="manguitos-gastos-20260724.xlsx"')
+        ? blobResponse('attachment; filename="maat-gastos-20260724.xlsx"')
         : jsonResponse(200, []),
     );
     wrap(<ExportSection />);
@@ -103,7 +103,7 @@ describe('ExportSection (/datos)', () => {
 
     await waitFor(() => expect(downloads).toHaveLength(1));
     expect(exportCalls()[0].url).toContain('/export/expenses');
-    expect(downloads[0].filename).toBe('manguitos-gastos-20260724.xlsx');
+    expect(downloads[0].filename).toBe('maat-gastos-20260724.xlsx');
     // La URL efímera se libera: si no, el Blob queda vivo hasta recargar la página.
     expect(revokedUrls).toEqual(createdUrls);
   });
@@ -125,7 +125,7 @@ describe('ExportSection (/datos)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Exportar' }));
 
     await waitFor(() => expect(downloads).toHaveLength(1));
-    expect(downloads[0].filename).toMatch(/^manguitos-transacciones-\d{8}\.xlsx$/);
+    expect(downloads[0].filename).toMatch(/^maat-transacciones-\d{8}\.xlsx$/);
   });
 
   it('el selector de cuenta aparece sólo en "Movimientos por cuenta" y viaja en la query', async () => {

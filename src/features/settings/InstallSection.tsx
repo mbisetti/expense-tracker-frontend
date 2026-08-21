@@ -18,7 +18,7 @@ export function InstallSection() {
   useEffect(() => {
     if (!justInstalled || announced.current) return;
     announced.current = true;
-    toast.success('¡Listo! Manguitos quedó instalada.');
+    toast.success('¡Listo! Maat quedó instalada.');
   }, [justInstalled, toast]);
 
   if (status === 'hidden') return null;

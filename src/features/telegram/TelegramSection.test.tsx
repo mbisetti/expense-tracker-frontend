@@ -22,7 +22,7 @@ function stubFetch(handler: (url: string, options?: RequestInit) => Promise<Resp
 }
 
 function status(overrides: Partial<TelegramLinkStatus>): TelegramLinkStatus {
-  return { linked: false, botUsername: 'ManguitosBot', code: null, codeExpiresAt: null, ...overrides };
+  return { linked: false, botUsername: 'ThothBot', code: null, codeExpiresAt: null, ...overrides };
 }
 
 function wrap(children: ReactNode) {
@@ -82,8 +82,8 @@ describe('TelegramSection', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Generar código' }));
 
     expect(await screen.findByText('ABC234')).toBeInTheDocument();
-    const link = screen.getByRole('link', { name: '@ManguitosBot' });
-    expect(link).toHaveAttribute('href', 'https://t.me/ManguitosBot');
+    const link = screen.getByRole('link', { name: '@ThothBot' });
+    expect(link).toHaveAttribute('href', 'https://t.me/ThothBot');
   });
 
   it('desvincular pide confirmación y pega al DELETE', async () => {

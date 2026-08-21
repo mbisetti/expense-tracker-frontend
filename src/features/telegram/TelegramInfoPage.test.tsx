@@ -49,7 +49,7 @@ afterEach(() => {
 describe('TelegramInfoPage', () => {
   it('muestra funciones y comandos', async () => {
     stubFetch(() =>
-      jsonResponse(200, { linked: true, botUsername: 'ManguitosBot', code: null, codeExpiresAt: null }),
+      jsonResponse(200, { linked: true, botUsername: 'ThothBot', code: null, codeExpiresAt: null }),
     );
     wrap(<TelegramInfoPage />);
 
@@ -62,8 +62,8 @@ describe('TelegramInfoPage', () => {
     expect(screen.getByText('/saldo')).toBeInTheDocument();
     expect(screen.getByText('/tarjeta')).toBeInTheDocument();
 
-    const bot = await screen.findByRole('link', { name: 'Abrir @ManguitosBot en Telegram' });
-    expect(bot).toHaveAttribute('href', 'https://t.me/ManguitosBot');
+    const bot = await screen.findByRole('link', { name: 'Abrir @ThothBot en Telegram' });
+    expect(bot).toHaveAttribute('href', 'https://t.me/ThothBot');
   });
 
   it('enviar una recomendación pega al POST con el contexto del bot y limpia el campo', async () => {
