@@ -171,20 +171,34 @@ export function MenuIcon(props: IconProps) {
   );
 }
 
-// Logo de marca (Manguitos): mango minimalista. Colores de IDENTIDAD hardcodeados a
-// propósito (dorado + hoja verde) — excepción admitida a la regla de tokens, igual que el
-// color de una categoría es dato: un logo tiene su color propio, no es chrome tokenizado.
-export function MangoIcon(props: IconProps) {
+// Logo de marca (Maat): la pluma de la diosa, trazo sobre currentColor — el caller le da
+// el color (text-brand en el header), así funciona sobre cualquier fondo y en los dos temas.
+// Mismo glifo que public/favicon.svg, en versión outline para tamaños chicos.
+export function FeatherIcon(props: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden focusable={false} {...props}>
-      <path
-        d="M11.9 5.1c1-.8 2.2-1.3 3.5-1.2-.1 1-.5 1.9-1.2 2.6 1.7 1.6 2.6 3.9 2.5 6.5-.2 4.7-3.5 8.5-7.2 8.5-4.3 0-7.6-3.5-7.6-7.9 0-4.1 2.9-8.3 6.8-9 1.2-.2 2.3 0 3.2.5Z"
-        fill="#F59E0B"
-      />
-      <path
-        d="M18 3.7c.3-.9.3-1.8.1-2.5-.9.3-1.7 1-2.1 1.9.7 0 1.4.2 2 .6Z"
-        fill="#34D399"
-      />
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+      focusable={false}
+      {...props}
+    >
+      <path d="M9.3 19.8 L9.3 7.2 C9.3 3.9 11.1 2.1 13.2 2.1 C15.3 2.1 16.5 3.9 16.4 6.9 C16.2 11.4 14.4 17.4 10.5 19.8 Z" />
+      <path d="M11 9 L11 17" />
+      <path d="M10 20 L9 22.3" />
+    </svg>
+  );
+}
+
+export function MailIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="m3 7 9 6 9-6" />
     </svg>
   );
 }

@@ -63,6 +63,13 @@ export function LoginPage() {
             disabled={isPending}
           />
 
+          {/* S25.3: el reset vive en su propia pantalla pública. */}
+          <div className="flex justify-end">
+            <Link to="/forgot-password" className="text-sm text-brand">
+              ¿Olvidaste tu contraseña?
+            </Link>
+          </div>
+
           <Button type="submit" loading={isPending} className="mt-2">
             {isPending ? 'Ingresando...' : 'Ingresar'}
           </Button>

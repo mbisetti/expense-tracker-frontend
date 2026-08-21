@@ -14,6 +14,8 @@ import { useAuth } from '../auth/useAuth';
 import { useDeleteAccount, type DeleteAccountProof } from '../auth/useDeleteAccount';
 import { signInWithGoogle } from '../../lib/googleAuth';
 import { useMe, useUpdateMe } from '../auth/useMe';
+import { useResendVerification } from '../auth/useResendVerification';
+import { Badge } from '../../components/ui/Badge';
 import { NotificationsSection } from '../notifications/NotificationsSection';
 import { TelegramSection } from '../telegram/TelegramSection';
 import { InstallSection } from './InstallSection';
@@ -44,6 +46,7 @@ export function SettingsPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const deleteAccount = useDeleteAccount();
+  const resendVerification = useResendVerification();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
 
@@ -64,6 +67,19 @@ export function SettingsPage() {
 
   // S7: borrar la cuenta pide probar identidad de nuevo. El token dice "alguien entró alguna
   // vez"; para algo irreversible hace falta "sos vos, ahora".
+  // S25.2 — mismo rescate que el banner del header, desde Ajustes.
+  const handleResendVerification = () => {
+    resendVerification.mutate(undefined, {
+      onSuccess: () => toast.success('Mail reenviado. Revisá tu casilla.'),
+      onError: (error) =>
+        toast.error(
+          error.code === 'RATE_LIMIT_EXCEEDED'
+            ? 'Demasiados intentos. Esperá un momento.'
+            : 'No se pudo reenviar el mail. Intentá de nuevo.',
+        ),
+    });
+  };
+
   const runDelete = (proof: DeleteAccountProof) => {
     deleteAccount.mutate(proof, {
       onSuccess: () => {
@@ -188,9 +204,34 @@ export function SettingsPage() {
       <TelegramSection />
 
       <Card>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold text-ink">Cuenta</h2>
+
+          {/* S25.2: estado de verificación del email. El botón repite el rescate del banner. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-col">
+              <span className="text-sm text-ink">{me?.email}</span>
+              <span className="text-sm text-muted">Email de la cuenta</span>
+            </div>
+            {me?.emailVerified ? (
+              <Badge status="ok" label="Verificado" />
+            ) : (
+              <div className="flex items-center gap-2">
+                <Badge status="warning" label="Sin verificar" />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  loading={resendVerification.isPending}
+                  onClick={handleResendVerification}
+                >
+                  Reenviar mail
+                </Button>
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-col">
-            <h2 className="text-lg font-semibold text-ink">Cuenta</h2>
             <span className="text-sm text-muted">
               Borrar tu cuenta elimina todos tus datos. No se puede deshacer.
             </span>

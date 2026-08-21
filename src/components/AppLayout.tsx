@@ -5,7 +5,8 @@ import { useLogout } from '../features/auth/useLogout';
 import { NotificationBell } from '../features/notifications/NotificationBell';
 import { Modal } from './ui/Modal';
 import { OfflineBanner } from './OfflineBanner';
-import { MangoIcon, MenuIcon, UserIcon } from './ui/icons';
+import { VerifyEmailBanner } from '../features/auth/VerifyEmailBanner';
+import { FeatherIcon, MenuIcon, UserIcon } from './ui/icons';
 
 const NAV_LINK_CLASS = ({ isActive }: { isActive: boolean }) =>
   [
@@ -100,10 +101,10 @@ export function AppLayout() {
             <MenuIcon className="h-6 w-6" />
           </button>
 
-          {/* Marca: mango + Manguitos → lleva al inicio */}
-          <NavLink to="/dashboard" className="flex items-center gap-2 no-underline" aria-label="Manguitos, inicio">
-            <MangoIcon className="h-6 w-6" />
-            <span className="text-lg font-semibold text-ink">Manguitos</span>
+          {/* Marca: pluma + Maat → lleva al inicio */}
+          <NavLink to="/dashboard" className="flex items-center gap-2 no-underline" aria-label="Maat, inicio">
+            <FeatherIcon className="h-6 w-6 text-brand" />
+            <span className="text-lg font-semibold text-ink">Maat</span>
           </NavLink>
 
           {/* Nav horizontal (desktop lg+) */}
@@ -172,6 +173,8 @@ export function AppLayout() {
 
         {/* S35: va DENTRO del header sticky para que el aviso no se pierda al scrollear. */}
         <OfflineBanner />
+        {/* S25.2: misma lógica de ubicación — el pedido de verificar no se pierde al scrollear. */}
+        <VerifyEmailBanner />
       </header>
 
       {/* Drawer lateral (mobile): se desliza de izquierda a derecha */}

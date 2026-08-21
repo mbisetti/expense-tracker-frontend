@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AuthContext } from '../features/auth/context';
+import { ToastProvider } from './ui/ToastProvider';
 import { runBackInterceptors } from '../lib/nativeBack';
 import { AppLayout } from './AppLayout';
 import { ok } from '../test/mockResponse';
@@ -16,15 +17,19 @@ function renderLayout(initialEntries: string[] = ['/dashboard']) {
       <AuthContext.Provider
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
-        <MemoryRouter initialEntries={initialEntries}>
-          <Routes>
-            <Route element={<AppLayout />}>
-              <Route path="/dashboard" element={<p>Página Overview</p>} />
-              <Route path="/accounts" element={<p>Página Cuentas</p>} />
-              <Route path="/settings" element={<p>Página Ajustes</p>} />
-            </Route>
-          </Routes>
-        </MemoryRouter>
+        {/* S25.2: ToastProvider porque el banner de verificación (dentro del header) usa
+            useToast — en la app real envuelve al router entero desde main.tsx. */}
+        <ToastProvider>
+          <MemoryRouter initialEntries={initialEntries}>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route path="/dashboard" element={<p>Página Overview</p>} />
+                <Route path="/accounts" element={<p>Página Cuentas</p>} />
+                <Route path="/settings" element={<p>Página Ajustes</p>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,
   );

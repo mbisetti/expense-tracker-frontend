@@ -32,6 +32,9 @@ export type Me = {
   workingCurrencies: string[];
   /** S7: false = entró solo con Google y no tiene contraseña que pedirle al reautenticar. */
   hasPassword: boolean;
+  /** S25.2: false = todavía no clickeó el link del mail. Nunca bloquea nada (D1): la app
+   *  muestra el banner "Verificá tu email" y la fila de Ajustes, nada más. */
+  emailVerified: boolean;
   createdAt: string;
 };
 
@@ -67,5 +70,32 @@ export function refresh(): Promise<AuthResponse> {
 export function logout(): Promise<void> {
   return http<void>('/auth/logout', {
     method: 'POST',
+  });
+}
+
+// S25.2/25.3 — flujos de email. Los tres son públicos: el usuario abre el link del mail en un
+// browser que puede no tener sesión. El token viaja en el body (no en la URL del endpoint,
+// que termina en logs). El reenvío NO está acá: es autenticado (useResendVerification).
+
+export function verifyEmail(token: string): Promise<void> {
+  return http<void>('/auth/verify-email', {
+    method: 'POST',
+    body: JSON.stringify({ token }),
+  });
+}
+
+// La respuesta es 204 exista o no el email (anti-enumeración): el "éxito" del form siempre
+// dice lo mismo.
+export function forgotPassword(email: string): Promise<void> {
+  return http<void>('/auth/forgot-password', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export function resetPassword(token: string, newPassword: string): Promise<void> {
+  return http<void>('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token, newPassword }),
   });
 }

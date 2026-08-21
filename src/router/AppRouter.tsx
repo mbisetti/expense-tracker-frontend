@@ -1,6 +1,9 @@
 import { createBrowserRouter, RouterProvider, type RouteObject } from 'react-router-dom';
 import { LoginPage } from '../features/auth/LoginPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
+import { VerifyEmailPage } from '../features/auth/VerifyEmailPage';
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { PublicHome } from '../features/landing/PublicHome';
 import { AccountsPage } from '../features/accounts/AccountsPage';
@@ -23,6 +26,11 @@ import { UiGalleryPage } from '../features/dev/UiGalleryPage';
 const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
   { path: '/register', element: <RegisterPage />, errorElement: <RouteErrorBoundary /> },
+  // S25.2/25.3: destinos de los links que llegan por mail + pedido de reset. Públicas: el
+  // usuario puede abrirlas en un browser sin sesión.
+  { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <RouteErrorBoundary /> },
+  { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteErrorBoundary /> },
+  { path: '/reset-password', element: <ResetPasswordPage />, errorElement: <RouteErrorBoundary /> },
   {
     element: <ProtectedRoute />,
     errorElement: <RouteErrorBoundary />,
