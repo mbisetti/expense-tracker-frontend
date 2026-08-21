@@ -231,6 +231,14 @@ export function SettingsPage() {
             )}
           </div>
 
+          {/* D5: sin verificar, el mail de "olvidé mi contraseña" no se manda. Avisado acá y
+              en el banner, ANTES de que pase. */}
+          {me && !me.emailVerified && (
+            <p className="text-sm text-warning">
+              Sin verificar no podés recuperar tu contraseña si la olvidás.
+            </p>
+          )}
+
           <div className="flex flex-col">
             <span className="text-sm text-muted">
               Borrar tu cuenta elimina todos tus datos. No se puede deshacer.

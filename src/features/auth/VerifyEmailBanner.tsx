@@ -36,6 +36,7 @@ export function VerifyEmailBanner() {
       <MailIcon className="h-4 w-4 shrink-0" />
       <span>
         Verificá tu email: te mandamos un mail a <span className="font-medium">{me.email}</span>.
+        Sin verificar no podés recuperar tu contraseña si la olvidás.
       </span>
       <button
         type="button"

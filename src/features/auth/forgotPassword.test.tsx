@@ -61,12 +61,20 @@ describe('olvidé mi contraseña', () => {
     stubFetch(204);
     renderPage();
 
-    fireEvent.change(await screen.findByLabelText(/Email/), {
+    // D5: el aviso de que el link solo llega a emails verificados está ANTES de mandar.
+    expect(
+      await screen.findByText(/llega solo si tu email está verificado/),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/Email/), {
       target: { value: 'marko@test.com' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Mandar link' }));
 
     expect(await screen.findByRole('heading', { name: 'Revisá tu casilla' })).toBeInTheDocument();
+    expect(
+      screen.getByText(/a un email sin verificar no le mandamos links/i),
+    ).toBeInTheDocument();
     expect(JSON.parse(forgotReq.body!)).toEqual({ email: 'marko@test.com' });
   });
 

@@ -72,6 +72,10 @@ describe('banner de verificación de email', () => {
 
     expect(await screen.findByText(/Verificá tu email/)).toBeInTheDocument();
     expect(screen.getByText('marko@test.com')).toBeInTheDocument();
+    // D5: el warning de la consecuencia real de no verificar.
+    expect(
+      screen.getByText(/Sin verificar no podés recuperar tu contraseña/),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reenviar' }));
     expect(await screen.findByText('Mail reenviado. Revisá tu casilla.')).toBeInTheDocument();

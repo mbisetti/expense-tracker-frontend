@@ -49,7 +49,7 @@ export function ForgotPasswordPage() {
             </p>
             <p className="text-sm text-muted">
               Si entraste con Google, no tenés contraseña: volvé e ingresá con el botón de
-              Google.
+              Google. Y a un email sin verificar no le mandamos links de recuperación.
             </p>
             <Link to="/login" className="text-sm text-brand">
               Volver a iniciar sesión
@@ -59,7 +59,8 @@ export function ForgotPasswordPage() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <h1 className="text-2xl font-semibold text-ink">Restablecer contraseña</h1>
             <p className="text-sm text-muted">
-              Decinos tu email y te mandamos un link para elegir una contraseña nueva.
+              Decinos tu email y te mandamos un link para elegir una contraseña nueva. El link
+              llega solo si tu email está verificado.
             </p>
 
             <Input
