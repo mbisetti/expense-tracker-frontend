@@ -20,14 +20,6 @@ const CURRENCY_LABEL: Record<string, string> = {
   EUR: 'Euro (EUR)',
 };
 
-// S25.4 (D8): el sidebar navega por anclas. La lista es estática a propósito: si una sección
-// se oculta sola (InstallSection instalada), el click simplemente no scrollea — sin sorpresas.
-const SECTIONS = [
-  { id: 'preferencias', label: 'Preferencias' },
-  { id: 'instalacion', label: 'Instalar la app' },
-  { id: 'notificaciones', label: 'Notificaciones' },
-];
-
 // "Ajustes y preferencias" — preferencias de la app y nada más desde S25.4: el email, la
 // contraseña, los conectores y el borrado viven en la página Cuenta (D7).
 export function SettingsPage() {
@@ -54,37 +46,11 @@ export function SettingsPage() {
     );
   };
 
-  const scrollToSection = (id: string) => {
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
   return (
-    <section className="text-left lg:grid lg:grid-cols-[190px_1fr] lg:items-start lg:gap-6">
-      {/* D8: sidebar estático (solo desktop) — el contenido scrollea, esto queda quieto. */}
-      <aside className="hidden lg:block">
-        <nav
-          aria-label="Secciones de ajustes"
-          className="sticky top-24 flex flex-col gap-1 rounded-md border border-line bg-surface-elevated p-2"
-        >
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => scrollToSection(s.id)}
-              className="flex min-h-11 items-center rounded-sm px-3 text-left text-sm text-ink transition-colors duration-200 ease-out hover:bg-brand-bg"
-            >
-              {s.label}
-            </button>
-          ))}
-        </nav>
-      </aside>
+    <section className="flex flex-col gap-4 text-left">
+      <h1>Ajustes y preferencias</h1>
 
-      <div className="flex flex-col gap-4">
-        <h1>Ajustes y preferencias</h1>
-
-        {/* scroll-mt: que el ancla no quede tapada por el header sticky. */}
-        <div id="preferencias" className="scroll-mt-24">
-          <Card>
+      <Card>
             <div className="flex flex-col gap-4">
               <h2 className="text-lg font-semibold text-ink">Preferencias</h2>
 
@@ -148,19 +114,13 @@ export function SettingsPage() {
                 <option value="US">Estados Unidos</option>
               </Select>
             </div>
-          </Card>
-        </div>
+      </Card>
 
-        {/* S35: instalar la PWA. Se oculta sola si ya está instalada o si el browser no sabe. */}
-        <div id="instalacion" className="scroll-mt-24">
-          <InstallSection />
-        </div>
+      {/* S35: instalar la PWA. Se oculta sola si ya está instalada o si el browser no sabe. */}
+      <InstallSection />
 
-        {/* S34: qué notificaciones recibir y por qué canal. */}
-        <div id="notificaciones" className="scroll-mt-24">
-          <NotificationsSection />
-        </div>
-      </div>
+      {/* S34: qué notificaciones recibir y por qué canal. */}
+      <NotificationsSection />
     </section>
   );
 }

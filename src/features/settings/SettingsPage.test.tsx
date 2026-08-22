@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
@@ -35,7 +35,7 @@ afterEach(() => {
 });
 
 describe('SettingsPage', () => {
-  it('muestra las preferencias y el sidebar; la cuenta se mudó a su propia página (S25.4)', () => {
+  it('muestra las preferencias; la cuenta se mudó a su propia página (S25.4)', () => {
     renderSettings();
 
     expect(screen.getByRole('heading', { name: 'Ajustes y preferencias' })).toBeInTheDocument();
@@ -43,11 +43,8 @@ describe('SettingsPage', () => {
     expect(screen.getByLabelText('Formato de fecha', { exact: false })).toBeInTheDocument();
     expect(screen.getByLabelText('Calendario', { exact: false })).toBeInTheDocument();
 
-    // D8: el sidebar con los subtítulos de cada sección.
-    const sidebar = screen.getByRole('navigation', { name: 'Secciones de ajustes' });
-    expect(within(sidebar).getByRole('button', { name: 'Preferencias' })).toBeInTheDocument();
-    expect(within(sidebar).getByRole('button', { name: 'Instalar la app' })).toBeInTheDocument();
-    expect(within(sidebar).getByRole('button', { name: 'Notificaciones' })).toBeInTheDocument();
+    // D8 revertida (pedido de Marko post-deploy): sin sidebar, columna simple.
+    expect(screen.queryByRole('navigation', { name: 'Secciones de ajustes' })).not.toBeInTheDocument();
 
     // D7: lo de la cuenta ya NO vive acá (borrado, email, Telegram → página Cuenta).
     expect(screen.queryByRole('button', { name: 'Borrar cuenta' })).not.toBeInTheDocument();

@@ -52,12 +52,13 @@ export function TelegramInfoPage() {
   return (
     <section className="flex flex-col gap-4 text-left">
       <div className="flex flex-col gap-1">
+        {/* S25.4 (D7): el bot vive en los Conectores de la página Cuenta, no en Ajustes. */}
         <Link
-          to="/settings"
+          to="/account"
           className="flex items-center gap-1 self-start text-sm text-muted transition-colors hover:text-ink"
         >
           <ChevronLeftIcon className="h-4 w-4" />
-          Ajustes
+          Cuenta
         </Link>
         <h1>El bot de Telegram</h1>
         <p className="text-sm text-muted">
