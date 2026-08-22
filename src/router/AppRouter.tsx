@@ -4,6 +4,8 @@ import { RegisterPage } from '../features/auth/RegisterPage';
 import { VerifyEmailPage } from '../features/auth/VerifyEmailPage';
 import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
+import { ConfirmEmailChangePage } from '../features/auth/ConfirmEmailChangePage';
+import { AccountPage } from '../features/account/AccountPage';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { PublicHome } from '../features/landing/PublicHome';
 import { AccountsPage } from '../features/accounts/AccountsPage';
@@ -31,6 +33,8 @@ const routes: RouteObject[] = [
   { path: '/verify-email', element: <VerifyEmailPage />, errorElement: <RouteErrorBoundary /> },
   { path: '/forgot-password', element: <ForgotPasswordPage />, errorElement: <RouteErrorBoundary /> },
   { path: '/reset-password', element: <ResetPasswordPage />, errorElement: <RouteErrorBoundary /> },
+  // S25.4: destino del link de cambio de email (llega al email NUEVO).
+  { path: '/confirm-email-change', element: <ConfirmEmailChangePage />, errorElement: <RouteErrorBoundary /> },
   {
     element: <ProtectedRoute />,
     errorElement: <RouteErrorBoundary />,
@@ -50,6 +54,8 @@ const routes: RouteObject[] = [
           { path: '/payment-methods', element: <PaymentMethodsPage /> },
           { path: '/datos', element: <DataPage /> },
           { path: '/settings', element: <SettingsPage /> },
+          // S25.4 (D7): datos de la cuenta, conectores y borrado — antes vivían en Ajustes.
+          { path: '/account', element: <AccountPage /> },
           // S33: mini-landing del bot — se llega desde el ícono de info en Ajustes.
           { path: '/telegram', element: <TelegramInfoPage /> },
         ],

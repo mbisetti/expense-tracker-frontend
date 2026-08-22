@@ -156,6 +156,15 @@ export function AppLayout() {
                 >
                   Ajustes y preferencias
                 </NavLink>
+                {/* S25.4 (D7): datos, contraseña, email, conectores y borrado. */}
+                <NavLink
+                  to="/account"
+                  role="menuitem"
+                  onClick={closeAccountMenu}
+                  className={ACCOUNT_ITEM_CLASS}
+                >
+                  Cuenta
+                </NavLink>
                 <div className="my-1 border-t border-line" />
                 <button
                   type="button"

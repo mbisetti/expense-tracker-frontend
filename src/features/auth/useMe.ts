@@ -20,7 +20,7 @@ export function useUpdateMe() {
   // PATCH parcial: se manda solo lo que cambia. S27.1 agrega `workingCurrencies`, y el
   // `setQueryData` de abajo es lo que hace que el selector de moneda se actualice al instante
   // pese al staleTime de 5 min del perfil.
-  return useMutation<Me, ApiError, { defaultCurrency?: string; workingCurrencies?: string[] }>({
+  return useMutation<Me, ApiError, { defaultCurrency?: string; workingCurrencies?: string[]; name?: string }>({
     mutationFn: (input) =>
       http<Me>('/users/me', { method: 'PATCH', body: JSON.stringify(input) }),
     onSuccess: (data) => {

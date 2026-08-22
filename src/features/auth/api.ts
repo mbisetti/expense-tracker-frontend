@@ -32,6 +32,8 @@ export type Me = {
   workingCurrencies: string[];
   /** S7: false = entró solo con Google y no tiene contraseña que pedirle al reautenticar. */
   hasPassword: boolean;
+  /** S25.4: la cuenta tiene Google vinculado. Para la fila de Conectores de la página Cuenta. */
+  googleLinked: boolean;
   /** S25.2: false = todavía no clickeó el link del mail. Nunca bloquea nada (D1): la app
    *  muestra el banner "Verificá tu email" y la fila de Ajustes, nada más. */
   emailVerified: boolean;

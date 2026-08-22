@@ -105,7 +105,7 @@ describe('AppLayout — nav', () => {
     expect(screen.queryByRole('dialog', { name: 'Menú' })).not.toBeInTheDocument();
   });
 
-  it('el menú de la persona: Datos + Ajustes y preferencias + Cerrar sesión, y cerrar sesión cierra el menú y llama a logout', () => {
+  it('el menú de la persona: Datos + Ajustes + Cuenta + Cerrar sesión, y cerrar sesión cierra el menú y llama a logout', () => {
     vi.stubGlobal('fetch', vi.fn(() => ok({})));
     renderLayout();
 
@@ -116,6 +116,8 @@ describe('AppLayout — nav', () => {
     const menu = screen.getByRole('menu', { name: 'Cuenta' });
     expect(within(menu).getByRole('menuitem', { name: 'Datos' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Ajustes y preferencias' })).toBeInTheDocument();
+    // S25.4 (D7): un renglón abajo de Ajustes.
+    expect(within(menu).getByRole('menuitem', { name: 'Cuenta' })).toBeInTheDocument();
 
     fireEvent.click(within(menu).getByRole('menuitem', { name: 'Cerrar sesión' }));
     expect(screen.queryByRole('menu', { name: 'Cuenta' })).not.toBeInTheDocument();
