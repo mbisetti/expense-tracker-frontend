@@ -14,6 +14,7 @@ import { useResendVerification } from '../auth/useResendVerification';
 import { useChangePassword } from '../auth/useChangePassword';
 import { useRequestEmailChange } from '../auth/useRequestEmailChange';
 import { signInWithGoogle } from '../../lib/googleAuth';
+import { WhatsAppSection } from '../whatsapp/WhatsAppSection';
 import { TelegramSection } from '../telegram/TelegramSection';
 import type { ApiError } from '../../lib/http';
 
@@ -301,7 +302,7 @@ export function AccountPage() {
           <div className="flex flex-col">
             <h2 className="text-lg font-semibold text-ink">Conectores</h2>
             <span className="text-sm text-muted">
-              Lo que está enchufado a tu cuenta. El bot de Telegram se maneja acá abajo.
+              Lo que está enchufado a tu cuenta.
             </span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -317,6 +318,9 @@ export function AccountPage() {
           </div>
         </div>
       </Card>
+
+      {/* S45: el bot de WhatsApp (oculto si el canal no está configurado en el entorno). */}
+      <WhatsAppSection />
 
       {/* S30: el bot de Telegram (oculto si el backend no tiene bot configurado). */}
       <TelegramSection />
