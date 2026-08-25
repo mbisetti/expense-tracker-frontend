@@ -17,6 +17,7 @@ import { Select } from '../../components/ui/Select';
 import { DateField } from '../../components/ui/DateField';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Amount } from '../../components/ui/Amount';
 import { Badge } from '../../components/ui/Badge';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -352,7 +353,18 @@ export function TransactionsPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <h1>Transacciones</h1>
+      {/* La acción primaria va en el header (patrón de toda la app). Antes era un <Button>
+          suelto en la columna flex → se estiraba al ancho completo (1024px de botón). */}
+      <PageHeader
+        title="Transacciones"
+        actions={
+          !formOpen && (
+            <Button type="button" onClick={openCreate}>
+              Nuevo movimiento
+            </Button>
+          )
+        }
+      />
 
       {/* Sprint 23 (D9): chips de cuenta con scroll horizontal — reemplazan el texto de saldos
           y filtran el feed al tocarlos (mismo estado que el select "Cuenta"). Universo = TODAS
@@ -387,12 +399,6 @@ export function TransactionsPage() {
             );
           })}
         </div>
-      )}
-
-      {!formOpen && (
-        <Button type="button" onClick={openCreate}>
-          Nuevo movimiento
-        </Button>
       )}
 
       {formOpen && (
@@ -495,10 +501,11 @@ export function TransactionsPage() {
           (§3); la relación 3:1 es lo que se lee como "esto es un grupo y aquello es otra cosa".
           `items-center` + el wrap por grupo evita que en pantalla chica queden tres botones
           sueltos en escalera contra el margen.
-          El grupo entero va CENTRADO (antes `justify-end`): amontonado contra el borde derecho
-          leía como una barra de sistema y no como las acciones de esta pantalla. La proximidad
-          de arriba (2 vs 6) se mantiene intacta — es la que dice qué botones son familia. */}
-      <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          Alineado a la DERECHA, como las acciones secundarias de un toolbar: centrado flotaba
+          en medio de la página sin relación visual con el feed al que pertenece. Con el header
+          de página (título + acción primaria) arriba, la derecha ya no lee como "barra de
+          sistema". La proximidad (2 vs 6) se mantiene — es la que dice qué botones son familia. */}
+      <div className="flex flex-wrap items-center justify-end gap-x-6 gap-y-2">
         <div className="flex flex-wrap items-center gap-2">
           <ImportStatementButtons />
         </div>
@@ -808,7 +815,8 @@ export function TransactionsPage() {
             </table>
           </div>
 
-          <nav aria-label="Paginación" className="flex items-center gap-3 text-sm">
+          {/* Centrada: pegada al margen izquierdo dejaba todo el resto de la fila vacío. */}
+          <nav aria-label="Paginación" className="flex items-center justify-center gap-3 text-sm">
             <Button
               type="button"
               variant="secondary"

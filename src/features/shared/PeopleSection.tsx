@@ -3,7 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { EditButton } from '../../components/ui/ActionsMenu';
+import { DeleteButton, EditButton } from '../../components/ui/ActionsMenu';
 import { useToast } from '../../components/ui/toastContext';
 import { usePeople, useCreatePerson, useUpdatePerson, useDeletePerson } from './useShared';
 import { sharedErrorMessage } from './errorMessages';
@@ -125,16 +125,11 @@ export function PeopleSection() {
                   ) : (
                     <>
                       <span className="text-ink">{person.name}</span>
+                      {/* Dos íconos parejos (lápiz + tacho): el "Borrar" con texto en cada una
+                          de las 14 filas pesaba más que los nombres que administra. */}
                       <div className="flex items-center gap-1">
                         <EditButton onClick={() => startEdit(person)} label={person.name} />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setConfirmDelete(person)}
-                        >
-                          Borrar
-                        </Button>
+                        <DeleteButton onClick={() => setConfirmDelete(person)} label={person.name} />
                       </div>
                     </>
                   )}

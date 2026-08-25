@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../components/ui/toastContext';
 import { ExpectedIncomeCard } from './ExpectedIncomeCard';
@@ -54,14 +55,25 @@ export function IncomePage() {
 
   return (
     <section className="text-left flex flex-col gap-4">
-      <h1>Ingresos</h1>
+      {/* La acción primaria vive en el header, como en el resto de la app — antes era un botón
+          `w-full` de 1024px entre dos cards. */}
+      <PageHeader
+        title="Ingresos"
+        actions={
+          !formOpen && (
+            <Button type="button" onClick={openCreate}>
+              Registrar ingreso
+            </Button>
+          )
+        }
+      />
 
       {/* S36 (FR-8): la card de esperados va PRIMERO y el alta se colapsa detrás de un botón,
           como en Transacciones. Las fuentes quedan a mano porque son las que se tickean. */}
       <ExpectedIncomeCard autoConfirmSourceId={autoConfirmSourceId} />
 
       <div ref={formRef} tabIndex={-1}>
-        {formOpen ? (
+        {formOpen && (
           <IncomeEntryForm
             // Remonta al cambiar de entrada: el form arranca su estado de los props.
             key={editing?.id ?? 'new'}
@@ -69,12 +81,6 @@ export function IncomePage() {
             onClose={closeForm}
             onDelete={(entry) => setConfirmingDelete(entry)}
           />
-        ) : (
-          // Ancho completo, como las cards: un botón chico suelto en una columna de cards se
-          // leía como un elemento fuera de la grilla.
-          <Button type="button" className="w-full" onClick={openCreate}>
-            Registrar ingreso
-          </Button>
         )}
       </div>
 

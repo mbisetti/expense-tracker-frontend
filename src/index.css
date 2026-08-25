@@ -269,48 +269,58 @@ body {
   margin: 0;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+/* Estilos de elemento EN @layer base: sin capa le ganaban a las utilities (unlayered > layered)
+   y todo `text-*` escrito en un h1/h2/code era letra muerta — el h1 de 56px del template pisaba
+   hasta el "Iniciar sesión" de la card de login. En base son el default y las utilities mandan.
+   El tamaño del h1 baja del 56px del template a la escala del design system (§2: tope 2xl). */
+@layer base {
+  h1,
+  h2 {
+    font-family: var(--heading);
+    color: var(--text-h);
+    margin: 0;
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
   }
-}
-p {
-  margin: 0;
-}
+  /* 1.125rem = el `text-lg font-semibold` que ya usa la mayoría de los títulos de card:
+     así un <h2> pelado y uno con clases quedan idénticos, sin dos tamaños conviviendo. */
+  h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  p {
+    margin: 0;
+  }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
+  /* Los controles de form NO heredan tipografía por default (un <textarea> pelado sale en
+     monospace del browser). Mismo criterio que el reset de <button> de arriba. */
+  input,
+  textarea,
+  select {
+    font: inherit;
+    letter-spacing: inherit;
+  }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  code,
+  .counter {
+    font-family: var(--mono);
+    display: inline-flex;
+    border-radius: 4px;
+    color: var(--text-h);
+  }
+
+  code {
+    font-size: 15px;
+    line-height: 135%;
+    padding: 4px 8px;
+    background: var(--code-bg);
+  }
 }
 
 /* color-scheme sigue el tema de la APP (no el del SO): sin esto, los controles nativos

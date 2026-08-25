@@ -4,6 +4,7 @@ import { useDeleteCategory } from './useCategoryMutations';
 import { categoryErrorMessage } from './errorMessages';
 import { CategoryForm } from './CategoryForm';
 import { Button } from '../../components/ui/Button';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -55,11 +56,14 @@ export function CategoriesPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <h1>Categorías</h1>
-
-      <Button type="button" onClick={openCreate} className="self-start">
-        Nueva categoría
-      </Button>
+      <PageHeader
+        title="Categorías"
+        actions={
+          <Button type="button" onClick={openCreate}>
+            Nueva categoría
+          </Button>
+        }
+      />
 
       {isPending && <Skeleton variant="list" rows={4} />}
 
@@ -79,17 +83,22 @@ export function CategoriesPage() {
             return (
               <section key={type} className="flex flex-col gap-1">
                 <h2 className="text-lg font-semibold text-ink">{label}</h2>
-                <ul className="m-0 flex list-none flex-col divide-y divide-line p-0">
+                {/* Dos columnas desde sm: una lista de nombres cortos a 1024px de ancho dejaba
+                    el medio vacío y la página al doble de largo. El borde va por ítem (no
+                    divide-y, que no funciona en grid). */}
+                <ul className="m-0 grid list-none grid-cols-1 gap-x-8 p-0 sm:grid-cols-2">
                   {group.map((category) => {
                     // Defensa: las categorías del sistema (userId null) no se administran desde acá
                     const isSystem = category.userId === null;
                     return (
                       <li
                         key={category.id}
-                        className="flex items-center justify-between gap-3 py-2 text-sm"
+                        className="flex min-h-11 items-center justify-between gap-3 border-b border-line py-1 text-sm"
                       >
                         <span className="flex items-center gap-2">
-                          {category.color && (
+                          {/* El hueco del color se reserva SIEMPRE: sin esto, los nombres de las
+                              categorías sin color quedaban corridos respecto del resto. */}
+                          {category.color ? (
                             // Color elegido por el usuario: es DATO, no chrome (§ design-principles.md
                             // "excepción: el color elegible por el usuario para una categoría").
                             <span
@@ -97,6 +106,8 @@ export function CategoriesPage() {
                               className="inline-block h-3.5 w-3.5 shrink-0 rounded-sm border border-line"
                               style={{ background: category.color }}
                             />
+                          ) : (
+                            <span aria-hidden="true" className="inline-block h-3.5 w-3.5 shrink-0" />
                           )}
                           <span className="text-ink">{category.name}</span>
                           {/* Sprint 24: marca visual de esencialidad (info, barato). */}

@@ -317,11 +317,13 @@ export function LandingPage() {
         <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
           <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
             <div className="text-center lg:text-left">
-              <h1 className="flex items-center justify-center gap-2 text-2xl font-semibold leading-[1.2] text-ink lg:justify-start">
+              {/* Escala del hero EXPLÍCITA: antes salía del h1 global del template (56px);
+                  con los elementos en @layer base, acá se declara el tamaño grande a propósito. */}
+              <h1 className="flex items-center justify-center gap-2 text-4xl font-semibold leading-[1.2] text-ink lg:justify-start lg:text-5xl">
                 <WordmarkIcon className="h-7 w-7 shrink-0 text-brand" />
                 Maat
               </h1>
-              <p className="mt-3 text-xl font-semibold leading-[1.2] text-ink sm:text-2xl">
+              <p className="mt-4 text-xl font-semibold leading-[1.2] text-ink sm:text-2xl">
                 Tus finanzas en orden.
               </p>
               <p className="mt-4 text-base leading-relaxed text-body">

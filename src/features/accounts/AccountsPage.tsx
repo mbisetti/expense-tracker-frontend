@@ -20,6 +20,7 @@ import { TransferForm } from '../transfers/TransferForm';
 import { TRANSFER_TITLES, type LabelledQuickAction, type QuickAction } from './quickActions';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Modal } from '../../components/ui/Modal';
 import { DotsVerticalIcon } from '../../components/ui/icons';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -165,19 +166,31 @@ export function AccountsPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <div className="flex items-center justify-between gap-2">
-        <h1>Cuentas</h1>
-        {topLevel.length > 1 && (
-          <button
-            type="button"
-            aria-label="Ordenar cuentas"
-            onClick={() => setReorderOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-brand-bg hover:text-ink"
-          >
-            <DotsVerticalIcon className="h-5 w-5" />
-          </button>
-        )}
-      </div>
+      {/* La acción primaria vive en el header (título izquierda, acciones derecha) — antes era
+          un botón centrado al FINAL de la página, después de scrollear todas las cuentas. Con
+          cero cuentas se esconde: el CTA del EmptyState es el único "Nueva cuenta". */}
+      <PageHeader
+        title="Cuentas"
+        actions={
+          <>
+            {topLevel.length > 1 && (
+              <button
+                type="button"
+                aria-label="Ordenar cuentas"
+                onClick={() => setReorderOpen(true)}
+                className="flex h-11 w-11 items-center justify-center rounded-md text-muted transition-colors hover:bg-brand-bg hover:text-ink"
+              >
+                <DotsVerticalIcon className="h-5 w-5" />
+              </button>
+            )}
+            {accounts && topLevel.length > 0 && (
+              <Button type="button" onClick={openCreate}>
+                Nueva cuenta
+              </Button>
+            )}
+          </>
+        }
+      />
 
       {isPending && <Skeleton variant="list" rows={3} />}
 
@@ -197,42 +210,37 @@ export function AccountsPage() {
       )}
 
       {accounts && topLevel.length > 0 && (
-        <>
-          <div className="flex flex-col gap-4">
-            {groups.map((group) => {
-              const showHeader = group.institution && group.accounts.length >= 2;
-              return (
-                <Card key={group.key}>
-                  {showHeader && (
-                    <div className="mb-3 text-base font-semibold text-ink">{group.institution}</div>
-                  )}
-                  <div className="flex flex-col">
-                    {group.accounts.map((account, i) => (
-                      <div key={account.id} className={i > 0 ? 'mt-4 border-t border-line pt-4' : ''}>
-                        <AccountCardBody
-                          account={account}
-                          allAccounts={allAccounts}
-                          paymentMethods={paymentMethods ?? []}
-                          onEdit={() => openEdit(account)}
-                          onAddCard={() => setCardFormFor(account)}
-                          onQuickAction={(action) => runQuickAction(account, action)}
-                          onOpenPerformance={() => setPerformanceFor(account)}
-                          onEditHolding={(holding) => setHoldingFor({ account, holding })}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
-
-          <div className="flex justify-center pt-2">
-            <Button type="button" onClick={openCreate}>
-              Nueva cuenta
-            </Button>
-          </div>
-        </>
+        /* Desktop: dos columnas tipo masonry (CSS columns) — una sola columna de cards de
+           ~500px de alto cada una daba una página de 6000px+ con la mitad del ancho muerto.
+           El orden del usuario se lee de arriba hacia abajo, primero la columna izquierda. */
+        <div className="flex flex-col gap-4 lg:block lg:columns-2 lg:gap-4">
+          {groups.map((group) => {
+            const showHeader = group.institution && group.accounts.length >= 2;
+            return (
+              <Card key={group.key} className="lg:mb-4 lg:break-inside-avoid">
+                {showHeader && (
+                  <div className="mb-3 text-base font-semibold text-ink">{group.institution}</div>
+                )}
+                <div className="flex flex-col">
+                  {group.accounts.map((account, i) => (
+                    <div key={account.id} className={i > 0 ? 'mt-4 border-t border-line pt-4' : ''}>
+                      <AccountCardBody
+                        account={account}
+                        allAccounts={allAccounts}
+                        paymentMethods={paymentMethods ?? []}
+                        onEdit={() => openEdit(account)}
+                        onAddCard={() => setCardFormFor(account)}
+                        onQuickAction={(action) => runQuickAction(account, action)}
+                        onOpenPerformance={() => setPerformanceFor(account)}
+                        onEditHolding={(holding) => setHoldingFor({ account, holding })}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       <ReorderAccountsModal

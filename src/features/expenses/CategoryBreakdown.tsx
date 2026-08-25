@@ -174,11 +174,14 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
             : 'No hay gastos no esenciales este mes.'}
         </p>
       ) : (
-        <>
+        /* Desktop: donut y leyenda lado a lado — el donut centrado solo en 1024px de ancho
+           dejaba dos flancos vacíos del tamaño del gráfico. Mobile sigue apilado. */
+        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[280px_1fr] lg:items-center lg:gap-8">
           <Suspense fallback={<Skeleton variant="chart" />}>
             <CategoryDonut slices={slices} currency={data.currency} />
           </Suspense>
 
+          <div className="flex min-w-0 flex-col gap-3">
           <ul className="m-0 flex list-none flex-col divide-y divide-line p-0">
             {listRows.map((category) => {
               const key = category.categoryId ?? 'uncategorized';
@@ -243,7 +246,8 @@ export function CategoryBreakdown({ data, onDrill }: CategoryBreakdownProps) {
               {showAll ? 'Ver menos' : `Ver todos (${collapsed.length})`}
             </button>
           )}
-        </>
+          </div>
+        </div>
       )}
     </div>
   );

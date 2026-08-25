@@ -12,6 +12,7 @@ import { SavingsGoalSection } from '../savings/SavingsGoalSection';
 import { ExpectedIncomeCard } from '../income/ExpectedIncomeCard';
 import { CommitmentsCard } from './CommitmentsCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { PageHeader } from '../../components/ui/PageHeader';
 
 const MonthlyChart = lazy(() =>
   import('./MonthlyChart').then((m) => ({ default: m.MonthlyChart })),
@@ -30,7 +31,7 @@ export function DashboardPage() {
 
   return (
     <section className="text-left flex flex-col gap-4">
-      <h1>Dashboard</h1>
+      <PageHeader title="Dashboard" />
 
       {isPending && <OverviewSkeleton />}
 
@@ -83,12 +84,19 @@ export function DashboardPage() {
         </>
       )}
 
-      <ExpectedIncomeCard />
-      {/* Justo debajo del esperado, que es contra lo que se mide: primero cuánto entra, después
-          cuánto de eso ya tiene dueño. */}
-      <CommitmentsCard />
-      <BudgetSection />
-      <SavingsGoalSection />
+      {/* Desktop: los pares relacionados van lado a lado (lo que entra vs lo que ya tiene
+          dueño; presupuestos vs objetivos) — una sola columna de cards dejaba media pantalla
+          vacía en 1024px de contenido. items-start: cada card con su alto, sin estirarse. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+        <ExpectedIncomeCard />
+        {/* Al lado del esperado, que es contra lo que se mide: cuánto entra vs cuánto de eso ya
+            tiene dueño. */}
+        <CommitmentsCard />
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+        <BudgetSection />
+        <SavingsGoalSection />
+      </div>
 
       {transactions.isPending && <ListSkeleton />}
       {transactions.isError && (

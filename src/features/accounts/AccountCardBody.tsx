@@ -156,20 +156,28 @@ export function AccountCardBody({
             </a>
           )}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <Amount amount={account.balance} currency={account.currency} tone="neutral" size="lg" />
-          {subBalances.length > 0 && (
-            <div className="flex flex-wrap justify-end gap-1.5">
-              {subBalances.map((b) => (
-                <SubBalanceChip
-                  key={b.currency}
-                  currency={b.currency}
-                  balance={b.balance}
-                  favoriteCurrency={me?.defaultCurrency}
-                />
-              ))}
-            </div>
-          )}
+        <div className="flex items-start gap-1">
+          <div className="flex flex-col items-end gap-1">
+            <Amount amount={account.balance} currency={account.currency} tone="neutral" size="lg" />
+            {subBalances.length > 0 && (
+              <div className="flex flex-wrap justify-end gap-1.5">
+                {subBalances.map((b) => (
+                  <SubBalanceChip
+                    key={b.currency}
+                    currency={b.currency}
+                    balance={b.balance}
+                    favoriteCurrency={me?.defaultCurrency}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          {/* El lápiz va en la esquina de la card (patrón estándar de card editable) — antes
+              tenía una fila propia al pie con su divisor: ~60px de chrome por cuenta. El margen
+              negativo lo mete en el padding de la Card sin agrandar la fila del título. */}
+          <div className="-mr-2 -mt-2">
+            <EditButton label={account.name} onClick={onEdit} />
+          </div>
         </div>
       </div>
 
@@ -267,10 +275,6 @@ export function AccountCardBody({
       {/* S40 (D7): la cuenta sistema muestra de quién es cada peso. Se reconoce por la MARCA y
           no por el nombre: renombrarla es libre y la card la sigue reconociendo. */}
       {account.systemRole === 'FRIEND_DEBTS' && <FriendDebtsBreakdown />}
-
-      <div className="flex justify-end border-t border-line pt-3">
-        <EditButton label={account.name} onClick={onEdit} />
-      </div>
     </div>
   );
 }

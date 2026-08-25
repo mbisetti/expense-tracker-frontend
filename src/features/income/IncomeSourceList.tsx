@@ -88,7 +88,9 @@ export function IncomeSourceList() {
       <div className="flex items-center justify-between">
         <h2>Fuentes de ingreso</h2>
         {!formOpen && (
-          <Button type="button" size="sm" onClick={() => setFormOpen(true)}>
+          // secondary: la acción primaria de la página es "Registrar ingreso" (header);
+          // dos botones rellenos de marca en la misma pantalla competían por el ojo.
+          <Button type="button" size="sm" variant="secondary" onClick={() => setFormOpen(true)}>
             Nueva fuente
           </Button>
         )}

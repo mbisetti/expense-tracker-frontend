@@ -16,6 +16,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { useToast } from '../../components/ui/toastContext';
 import { BottomNav } from '../../components/ui/BottomNav';
+import { PageHeader } from '../../components/ui/PageHeader';
 
 const BUTTON_VARIANTS: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger'];
 const BUTTON_SIZES: ButtonSize[] = ['sm', 'md', 'lg'];
@@ -119,6 +120,31 @@ export function UiGalleryPage() {
           ))}
         </div>
       </header>
+
+      <Section title="PageHeader">
+        <Row label="título solo">
+          <div className="w-full rounded-md border border-dashed border-line p-3">
+            <PageHeader title="Datos" />
+          </div>
+        </Row>
+        <Row label="con acciones (acción primaria de la página, a la derecha)">
+          <div className="w-full rounded-md border border-dashed border-line p-3">
+            <PageHeader
+              title="Cuentas"
+              actions={<Button type="button">Nueva cuenta</Button>}
+            />
+          </div>
+        </Row>
+        <Row label="con back link y bajada">
+          <div className="w-full rounded-md border border-dashed border-line p-3">
+            <PageHeader
+              title="El bot de Telegram"
+              backTo={{ to: '/dev/ui', label: 'Cuenta' }}
+              description="Anotá gastos desde el chat, sin abrir la app."
+            />
+          </div>
+        </Row>
+      </Section>
 
       <Section title="Button">
         {BUTTON_VARIANTS.map((variant) => (
@@ -396,7 +422,7 @@ export function UiGalleryPage() {
         <Row label="frame mobile (375×640) — real, aria-current según la ruta activa">
           <div className="flex flex-col gap-2">
             <div
-              className="relative mx-auto h-[640px] w-[375px] overflow-hidden rounded-lg border border-line bg-surface"
+              className="relative mx-auto h-[640px] w-full max-w-[375px] overflow-hidden rounded-lg border border-line bg-surface"
               style={{ transform: 'translateZ(0)' }}
               // Sólo para esta demo: neutraliza la navegación real (el Link de react-router
               // aborta si el evento ya llega con defaultPrevented), así el click no saca a

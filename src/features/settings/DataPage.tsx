@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { ChevronDownIcon } from '../../components/ui/icons';
 import { ExportSection } from '../export/ExportSection';
 import { ImportSection } from '../import/ImportSection';
@@ -13,7 +14,7 @@ const ROW_CLASS =
 export function DataPage() {
   return (
     <section className="flex flex-col gap-4 text-left">
-      <h1>Datos</h1>
+      <PageHeader title="Datos" />
 
       <Card>
         <div className="flex flex-col gap-3">

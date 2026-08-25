@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { CurrencyTabs } from '../dashboard/CurrencyTabs';
 import { Amount } from '../../components/ui/Amount';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useMe } from '../auth/useMe';
@@ -224,16 +225,18 @@ export function ExpensesPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1>Gastos</h1>
-        <PeriodNav
-          year={period.year}
-          month={period.month}
-          onPrev={goPrev}
-          onNext={goNext}
-          canGoNext={canGoNext}
-        />
-      </div>
+      <PageHeader
+        title="Gastos"
+        actions={
+          <PeriodNav
+            year={period.year}
+            month={period.month}
+            onPrev={goPrev}
+            onNext={goNext}
+            canGoNext={canGoNext}
+          />
+        }
+      />
 
       {currencies.length > 1 && (
         <CurrencyTabs currencies={currencies} selected={active} onSelect={setPicked} />

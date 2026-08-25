@@ -5,6 +5,7 @@ import { paymentMethodErrorMessage } from './errorMessages';
 import { PaymentMethodForm } from './PaymentMethodForm';
 import { useAccounts } from '../accounts/useAccounts';
 import { Button } from '../../components/ui/Button';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Modal } from '../../components/ui/Modal';
 import { EditButton } from '../../components/ui/ActionsMenu';
 import { Skeleton } from '../../components/ui/Skeleton';
@@ -59,11 +60,14 @@ export function PaymentMethodsPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <h1>Métodos de pago</h1>
-
-      <Button type="button" onClick={openCreate} className="self-start">
-        Nuevo método de pago
-      </Button>
+      <PageHeader
+        title="Métodos de pago"
+        actions={
+          <Button type="button" onClick={openCreate}>
+            Nuevo método de pago
+          </Button>
+        }
+      />
 
       {isPending && <Skeleton variant="list" rows={4} />}
 

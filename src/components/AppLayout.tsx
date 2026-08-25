@@ -197,7 +197,9 @@ export function AppLayout() {
         </nav>
       </Modal>
 
-      <main className="mx-auto w-full max-w-5xl px-4 pb-[calc(2rem+var(--safe-bottom))]">
+      {/* pt-6: el aire entre el header sticky y el título lo pone el layout — antes salía del
+          margin de 32px del h1 global del template, que ya no existe. */}
+      <main className="mx-auto w-full max-w-5xl px-4 pt-6 pb-[calc(2rem+var(--safe-bottom))]">
         <Outlet />
       </main>
     </>
