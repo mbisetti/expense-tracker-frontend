@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 
 const TABS = [
-  { to: '/dashboard', label: 'Overview' },
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/transactions', label: 'Transacciones' },
   { to: '/income', label: 'Ingresos' },
   { to: '/accounts', label: 'Cuentas' },

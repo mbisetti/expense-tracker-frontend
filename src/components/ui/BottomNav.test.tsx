@@ -11,7 +11,7 @@ describe('BottomNav (v2, tokenizada)', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole('link', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Transacciones' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Ingresos' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cuentas' })).toBeInTheDocument();

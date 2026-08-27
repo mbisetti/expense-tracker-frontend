@@ -131,7 +131,7 @@ export function AccountCardBody({
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-ink">{account.name}</span>
             {account.isInformal && (
-              <Tooltip text="Plata fuera del sistema bancario (efectivo, colchón, cripto en mano). Suma a tu balance total; el Overview la desglosa como “Informal”.">
+              <Tooltip text="Plata fuera del sistema bancario (efectivo, colchón, cripto en mano). Suma a tu balance total; el Dashboard la desglosa como “Informal”.">
                 <Badge status="info" label="Informal" />
               </Tooltip>
             )}

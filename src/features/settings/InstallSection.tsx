@@ -30,7 +30,7 @@ export function InstallSection() {
           <h2 className="text-lg font-semibold text-ink">Instalar la app</h2>
           <span className="text-sm text-muted">
             Queda con ícono propio en tu teléfono o escritorio, abre en pantalla completa y
-            arranca directo en tu Overview.
+            arranca directo en tu Dashboard.
           </span>
         </div>
 

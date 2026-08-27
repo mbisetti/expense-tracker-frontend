@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Input } from '../../components/ui/Input';
 import { Badge } from '../../components/ui/Badge';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -196,7 +197,7 @@ export function AccountPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <h1>Cuenta</h1>
+      <PageHeader title="Cuenta" />
 
       <Card>
         <div className="flex flex-col gap-4">

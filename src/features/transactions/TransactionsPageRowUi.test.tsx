@@ -93,6 +93,17 @@ function stubFetch(txContent: unknown[], transfers: unknown[] = []) {
 
 afterEach(() => vi.unstubAllGlobals());
 
+// Variante DESKTOP de la tabla: useIsDesktop decide qué celdas se montan y en jsdom no hay
+// matchMedia (default mobile). Este stub simula md+ para los tests que miran las columnas
+// Tipo/Categoría/Cuenta; sin stub, la fila se testea en su variante mobile (sub-línea).
+function stubDesktop() {
+  vi.stubGlobal('matchMedia', () => ({
+    matches: true,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }));
+}
+
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
@@ -207,6 +218,7 @@ describe('TransactionsPage — presentación de las filas', () => {
   });
 
   it('la transferencia intra-cuenta parte el nombre y el par de monedas en dos renglones', async () => {
+    stubDesktop();
     stubFetch([], [intraTransfer]);
     renderPage();
 
@@ -219,7 +231,18 @@ describe('TransactionsPage — presentación de las filas', () => {
     expect(within(row).queryByText(/Mercado Pago · ARS/)).not.toBeInTheDocument();
   });
 
+  it('en mobile la fila de transferencia lleva el recorrido en la sub-línea', async () => {
+    // SIN stubDesktop: jsdom = variante mobile. La columna Cuenta no se monta y el recorrido
+    // (cuenta · monedas) baja a un renglón bajo la descripción.
+    stubFetch([], [intraTransfer]);
+    renderPage();
+
+    const row = (await screen.findByText('Compra de dólares')).closest('tr')!;
+    expect(within(row).getByText('Mercado Pago · ARS → USD')).toBeInTheDocument();
+  });
+
   it('el tipo "Entre cuentas" va en dos renglones', async () => {
+    stubDesktop();
     stubFetch([], [intraTransfer]);
     renderPage();
 

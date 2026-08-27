@@ -64,7 +64,9 @@ export function SavingsGoalSection() {
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="m-0">Objetivos de ahorro</h2>
         {!isEmpty && (
-          <Button type="button" size="sm" onClick={openCreate}>
+          // secondary: mismo criterio que BudgetSection — el primario relleno queda para el
+          // CTA del EmptyState.
+          <Button type="button" size="sm" variant="secondary" onClick={openCreate}>
             Nuevo
           </Button>
         )}

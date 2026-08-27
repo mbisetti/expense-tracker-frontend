@@ -68,7 +68,10 @@ export function BudgetSection() {
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="m-0">Presupuestos del mes</h2>
         {!isEmpty && (
-          <Button type="button" size="sm" onClick={openCreate}>
+          // secondary: es la acción de UNA card en una página sin acción primaria propia; dos
+          // "Nuevo" rellenos lado a lado (con Objetivos) competían. El CTA primario queda para
+          // el EmptyState, que es la única acción de la card vacía.
+          <Button type="button" size="sm" variant="secondary" onClick={openCreate}>
             Nuevo
           </Button>
         )}

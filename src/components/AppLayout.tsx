@@ -28,11 +28,12 @@ const ICON_BTN_CLASS =
 const ACCOUNT_ITEM_CLASS =
   'flex min-h-11 items-center rounded-sm px-3 text-sm text-ink no-underline transition-colors duration-200 ease-out hover:bg-brand-bg';
 
-// Nav principal CORTO (Sprint 21): Overview (ex-Dashboard), Cuentas, Transacciones, Ingresos.
-// Categorías y Métodos de pago se movieron a Ajustes; el tema y Cerrar sesión, al menú de la
-// persona. La ruta /transfers sigue viva (link "Registrar pago") pero no está en el nav.
+// Nav principal CORTO (Sprint 21). El label volvió a "Dashboard" (decisión de Marko, 27 Ago):
+// el título de la página siempre dijo Dashboard y nav ≠ título confundía. Categorías y Métodos
+// de pago se movieron a Ajustes; el tema y Cerrar sesión, al menú de la persona. La ruta
+// /transfers sigue viva (link "Registrar pago") pero no está en el nav.
 const ROUTES = [
-  { to: '/dashboard', label: 'Overview' },
+  { to: '/dashboard', label: 'Dashboard' },
   { to: '/accounts', label: 'Cuentas' },
   { to: '/transactions', label: 'Transacciones' },
   { to: '/expenses', label: 'Gastos' },

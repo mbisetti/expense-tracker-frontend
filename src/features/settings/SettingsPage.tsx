@@ -1,5 +1,6 @@
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { PageHeader } from '../../components/ui/PageHeader';
 import { Select } from '../../components/ui/Select';
 import { useToast } from '../../components/ui/toastContext';
 import { useTheme } from '../../lib/useTheme';
@@ -48,7 +49,7 @@ export function SettingsPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <h1>Ajustes y preferencias</h1>
+      <PageHeader title="Ajustes y preferencias" />
 
       <Card>
             <div className="flex flex-col gap-4">

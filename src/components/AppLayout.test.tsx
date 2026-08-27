@@ -23,7 +23,7 @@ function renderLayout(initialEntries: string[] = ['/dashboard']) {
           <MemoryRouter initialEntries={initialEntries}>
             <Routes>
               <Route element={<AppLayout />}>
-                <Route path="/dashboard" element={<p>Página Overview</p>} />
+                <Route path="/dashboard" element={<p>Página Dashboard</p>} />
                 <Route path="/accounts" element={<p>Página Cuentas</p>} />
                 <Route path="/settings" element={<p>Página Ajustes</p>} />
               </Route>
@@ -55,7 +55,7 @@ describe('AppLayout — nav', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Menú' });
     const nav = within(dialog).getByRole('navigation', { name: 'Menú' });
-    for (const label of ['Overview', 'Cuentas', 'Transacciones', 'Ingresos']) {
+    for (const label of ['Dashboard', 'Cuentas', 'Transacciones', 'Ingresos']) {
       expect(within(nav).getByRole('link', { name: label })).toBeInTheDocument();
     }
     // Ajustes vive en el menú de la persona, no en el drawer; Categorías/Métodos en Ajustes
@@ -68,7 +68,7 @@ describe('AppLayout — nav', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Abrir menú' }));
 
     const dialog = screen.getByRole('dialog', { name: 'Menú' });
-    expect(within(dialog).getByRole('link', { name: 'Overview' })).toHaveAttribute(
+    expect(within(dialog).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
       'aria-current',
       'page',
     );

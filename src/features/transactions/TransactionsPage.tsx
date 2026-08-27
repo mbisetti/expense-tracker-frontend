@@ -28,6 +28,7 @@ import { SharedInfoButton } from '../shared/SharedInfoButton';
 import { useToast } from '../../components/ui/toastContext';
 import { formatDate, useDateFormat } from '../../lib/dateFormat';
 import { formatMoney } from '../../lib/money';
+import { useIsDesktop } from '../../lib/useIsDesktop';
 import { SharedExpenseModal } from '../shared/SharedExpenseModal';
 import type { TransactionFilters, TransactionListItem, TransactionType } from './api';
 import type { TransferListItem } from '../transfers/api';
@@ -109,6 +110,11 @@ export function TransactionsPage() {
     settledCount?: number;
   } | null>(null);
   const [sharedDetail, setSharedDetail] = useState<string | null>(null);
+
+  // Decide qué instancia de la ⓘ de compartidos y de la sub-línea mobile se monta: son el
+  // MISMO control en dos lugares (columna Tipo vs celda Descripción) y no pueden convivir en
+  // el DOM — dos botones con el mismo nombre accesible.
+  const isDesktop = useIsDesktop();
 
   const toast = useToast();
   const { pref: dateFmt } = useDateFormat();
@@ -614,7 +620,12 @@ export function TransactionsPage() {
               globito del tooltip a las últimas filas. En mobile no hay hover, así que no se pierde
               nada. */}
           <div className={`overflow-x-auto lg:overflow-visible ${isPlaceholderData ? 'opacity-60' : ''}`}>
-            <table className="w-full min-w-[48rem] table-fixed border-collapse text-sm">
+            {/* Mobile (<md): la tabla se ADAPTA en vez de scrollear — Tipo/Categoría/Cuenta no
+                se montan (gate por isDesktop, NO por CSS: con table-fixed una celda display:none
+                corre de slot a las siguientes y las columnas visibles heredan anchos ajenos) y
+                esa info baja a una sub-línea bajo la descripción. El min-w que forzaba el
+                scroll horizontal queda sólo de md hacia arriba, donde ya no hace falta. */}
+            <table className="w-full table-fixed border-collapse text-sm md:min-w-[48rem]">
               {/* Sprint 23 (D3): una línea por celda — todo `whitespace-nowrap` salvo la
                   descripción, que trunca con tooltip (title). +8px de aire (pr-4). El wrapper
                   scrollea en horizontal. D10: la columna Fecha con la voz de los montos. */}
@@ -624,24 +635,26 @@ export function TransactionsPage() {
                   trunca; el resto tiene ancho declarado. `min-w` mantiene el scroll horizontal
                   del wrapper SÓLO en pantallas angostas (mobile), como antes. */}
               <colgroup>
-                <col className="w-[6.5rem]" />
+                <col className="w-[5.5rem] md:w-[6.5rem]" />
                 {/* Tipo: 7rem y no 5.5 — tiene que entrar "Ingreso" + la ⓘ del gasto compartido
                     sin desbordar. El espacio sale de Descripción, que es la que tiene holgura. */}
-                <col className="w-[7rem]" />
+                {isDesktop && <col className="w-[7rem]" />}
                 <col />
-                <col className="w-[8rem]" />
-                <col className="w-[10rem]" />
-                <col className="w-[8.5rem]" />
+                {isDesktop && <col className="w-[8rem]" />}
+                {isDesktop && <col className="w-[10rem]" />}
+                <col className="w-[7rem] md:w-[8.5rem]" />
                 {/* Acciones: un solo lápiz de 44px (target táctil) + aire. */}
-                <col className="w-14" />
+                <col className="w-12 md:w-14" />
               </colgroup>
               <thead>
                 <tr className="border-b border-line text-left text-muted">
                   <th className="whitespace-nowrap py-2 pr-4 font-medium">Fecha</th>
-                  <th className="whitespace-nowrap py-2 pr-4 font-medium">Tipo</th>
+                  {isDesktop && <th className="whitespace-nowrap py-2 pr-4 font-medium">Tipo</th>}
                   <th className="py-2 pr-4 font-medium">Descripción</th>
-                  <th className="whitespace-nowrap py-2 pr-4 font-medium">Categoría</th>
-                  <th className="whitespace-nowrap py-2 pr-4 font-medium">Cuenta</th>
+                  {isDesktop && (
+                    <th className="whitespace-nowrap py-2 pr-4 font-medium">Categoría</th>
+                  )}
+                  {isDesktop && <th className="whitespace-nowrap py-2 pr-4 font-medium">Cuenta</th>}
                   <th className="whitespace-nowrap py-2 pr-4 font-medium">Monto</th>
                   <th className="py-2 font-medium"></th>
                 </tr>
@@ -653,6 +666,7 @@ export function TransactionsPage() {
                       <td className="whitespace-nowrap py-2 pr-4 font-semibold tabular-nums text-ink">
                         {formatDate(row.item.date, dateFmt)}
                       </td>
+                      {isDesktop && (
                       <td className="py-2 pr-4 text-body">
                         <div className="flex items-center gap-1.5">
                           <span className="whitespace-nowrap">
@@ -660,7 +674,9 @@ export function TransactionsPage() {
                           </span>
                           {/* V36: el detalle del reparto, a la derecha del tipo — un gasto
                               compartido es una variante de "Gasto", y acá el ícono queda fuera
-                              del texto libre de la descripción (que trunca y movía su posición). */}
+                              del texto libre de la descripción (que trunca y movía su posición).
+                              En mobile esta celda no se monta y la ⓘ vive en la celda de
+                              descripción — una sola instancia en el DOM. */}
                           {row.item.sharedAmount > 0 && (
                             <SharedInfoButton
                               label="Ver detalle del gasto compartido"
@@ -684,6 +700,7 @@ export function TransactionsPage() {
                           )}
                         </div>
                       </td>
+                      )}
                       <td className="py-2 pr-4 text-ink">
                         <div className="flex items-center gap-1.5">
                           <div className="truncate" title={row.item.description ?? ''}>
@@ -704,7 +721,36 @@ export function TransactionsPage() {
                               explicaba ni llevaba a ningún lado. Lo reemplaza la ⓘ de la columna
                               Tipo, que sí hace las dos cosas; la descripción del cobro ya dice
                               "Cobro de {persona} — {gasto}". */}
+                          {/* Mobile: la columna Tipo está oculta y sus ⓘ (reparto / cobro de un
+                              compartido) son interactivas — acá vive la única instancia. */}
+                          {!isDesktop && row.item.sharedAmount > 0 && (
+                            <SharedInfoButton
+                              label="Ver detalle del gasto compartido"
+                              text={`Gasto compartido: pagaste el total y te deben una parte. Tocá para ver el reparto de ${row.item.description ? `«${row.item.description}»` : 'este gasto'}.`}
+                              onClick={() => setSharedDetail(row.item.id)}
+                            />
+                          )}
+                          {!isDesktop && row.item.settledExpenseId && (
+                            <SharedInfoButton
+                              label="Ver el gasto compartido que originó este cobro"
+                              text={`Te devolvieron tu parte de ${
+                                row.item.settledExpenseDescription
+                                  ? `«${row.item.settledExpenseDescription}»`
+                                  : 'un gasto compartido'
+                              }. Suma al saldo pero no cuenta como ingreso del mes. Tocá para ver el reparto.`}
+                              onClick={() => setSharedDetail(row.item.settledExpenseId!)}
+                            />
+                          )}
                         </div>
+                        {/* Mobile: lo que decían las columnas ocultas, en una sub-línea. El "—"
+                            de una categoría vacía se filtra: "— · Cuenta" no dice nada. */}
+                        {!isDesktop && (
+                          <div className="truncate text-xs text-muted">
+                            {[categoryName(row.item.categoryId), accountName(row.item.accountId)]
+                              .filter((part) => part && part !== '—')
+                              .join(' · ')}
+                          </div>
+                        )}
                         {/* V36: lo que realmente gastaste vos — es este número el que va a
                             categorías y presupuestos, no el total de la derecha. */}
                         {row.item.sharedAmount > 0 && (
@@ -716,12 +762,16 @@ export function TransactionsPage() {
                           </div>
                         )}
                       </td>
-                      <td className="truncate py-2 pr-4 text-body">
-                        {categoryName(row.item.categoryId)}
-                      </td>
-                      <td className="truncate py-2 pr-4 text-body">
-                        {accountName(row.item.accountId)}
-                      </td>
+                      {isDesktop && (
+                        <td className="truncate py-2 pr-4 text-body">
+                          {categoryName(row.item.categoryId)}
+                        </td>
+                      )}
+                      {isDesktop && (
+                        <td className="truncate py-2 pr-4 text-body">
+                          {accountName(row.item.accountId)}
+                        </td>
+                      )}
                       <td className="whitespace-nowrap py-2 pr-4">
                         <Amount
                           amount={row.item.amount}
@@ -745,21 +795,32 @@ export function TransactionsPage() {
                       </td>
                       {/* "Entre / cuentas" en dos renglones: en una sola línea forzaba el ancho de
                           la columna. Minúscula en "cuentas" para no divergir del filtro de Tipo. */}
-                      <td className="py-4 pr-4 leading-tight text-body">
-                        Entre
-                        <br />
-                        cuentas
-                      </td>
+                      {isDesktop && (
+                        <td className="py-4 pr-4 leading-tight text-body">
+                          Entre
+                          <br />
+                          cuentas
+                        </td>
+                      )}
                       <td className="py-4 pr-4 text-ink">
                         <div className="truncate" title={row.item.description ?? ''}>
                           {row.item.description ?? '—'}
                         </div>
+                        {/* Mobile: la columna Cuenta está oculta — el recorrido va acá abajo. */}
+                        {!isDesktop && (
+                          <div className="truncate text-xs text-muted">
+                            {row.item.fromAccountId === row.item.toAccountId
+                              ? `${accountName(row.item.fromAccountId)} · ${row.item.fromCurrency} → ${row.item.toCurrency}`
+                              : `${accountName(row.item.fromAccountId)} → ${accountName(row.item.toAccountId)}`}
+                          </div>
+                        )}
                       </td>
-                      <td className="py-4 pr-4 text-body">—</td>
+                      {isDesktop && <td className="py-4 pr-4 text-body">—</td>}
                       {/* Sprint 23 (D5): dos líneas — origen · moneda / destino · moneda.
                           Intra-cuenta (misma cuenta, cambio de moneda): también dos renglones,
                           nombre arriba y el par de monedas abajo apagado — antes era una sola
                           línea `Cuenta · ARS → USD` que estiraba la columna. */}
+                      {isDesktop && (
                       <td className="py-4 pr-4 text-body">
                         {row.item.fromAccountId === row.item.toAccountId ? (
                           <div className="flex flex-col leading-tight">
@@ -779,6 +840,7 @@ export function TransactionsPage() {
                           </div>
                         )}
                       </td>
+                      )}
                       {/* Cross-currency apila los dos montos: en una línea no entra en la columna
                           de ancho fijo y se derramaba sobre la de acciones. */}
                       <td className="py-4 pr-4">
