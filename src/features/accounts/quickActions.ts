@@ -22,12 +22,26 @@ export function actionsFor(account: Account): QuickAction[] {
   if (account.type === 'CRYPTO') return ['add', 'withdraw', 'trade', 'adjust'];
   if (isInvestmentAccount(account.type)) return ['add', 'withdraw', 'adjust'];
   if (account.type === 'DEBT') return ['pay', 'adjust'];
+  // S46 (D5): efectivo, banco y billetera ganan el ajuste, que hasta S45 el server rechazaba.
+  // Es el saldo inicial del que arranca y la conciliación del que se desfasó: la cuenta que no
+  // cierra con el homebanking se arregla acá y no inventando un ingreso.
+  if (account.type === 'CASH' || account.type === 'BANK' || account.type === 'WALLET') {
+    return ['adjust'];
+  }
   return [];
 }
 
-/** El copy del botón de ajuste cambia con el tipo: en una deuda no se pregunta cuánto "vale". */
+/**
+ * El copy del botón de ajuste cambia con el tipo: en una deuda no se pregunta cuánto "vale", y
+ * en una caja de ahorro tampoco. Una inversión VALE (su precio se mueve solo); en el banco lo
+ * que hay es plata, y la pregunta es cuánta.
+ */
 export function adjustLabel(account: Account): string {
-  return account.type === 'DEBT' ? 'Ajustar deuda' : 'Actualizar valor';
+  if (account.type === 'DEBT') return 'Ajustar deuda';
+  if (account.type === 'CASH' || account.type === 'BANK' || account.type === 'WALLET') {
+    return 'Actualizar saldo';
+  }
+  return 'Actualizar valor';
 }
 
 /** Las acciones con label fijo. `adjust` y `trade` tienen diálogo propio y label propio. */

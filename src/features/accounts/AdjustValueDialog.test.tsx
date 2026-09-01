@@ -91,6 +91,25 @@ describe('AdjustValueDialog (S40 D2)', () => {
       screen.getByText(/no como ingreso del mes: que suba la valuación no te puso un peso/),
     ).toBeInTheDocument();
   });
+
+  // S46 (D5): el mismo diálogo abierto desde una caja de ahorro. En el banco no se pregunta
+  // cuánto VALE algo (nada se mueve solo ahí): se pregunta cuánta plata hay.
+  it('S46: en una cuenta común pregunta cuánta plata hay hoy', () => {
+    const onConfirm = renderDialog(account('BANK', 0));
+
+    expect(screen.getByText('Tenés ahora')).toBeInTheDocument();
+    expect(screen.queryByText('Vale ahora')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/no cuenta como ingreso del mes: decir cuánta plata tenés no es haber cobrado/),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/¿Cuánto tenés hoy\?/), {
+      target: { value: '500000' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+    expect(onConfirm).toHaveBeenCalledWith({ currency: 'ARS', currentValue: 500000 });
+  });
 });
 
 // ── S43 (D7): la sugerencia de mercado ──────────────────────────────────────────────────────

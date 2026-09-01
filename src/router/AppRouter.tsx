@@ -18,6 +18,7 @@ import { PaymentMethodsPage } from '../features/paymentMethods/PaymentMethodsPag
 import { SettingsPage } from '../features/settings/SettingsPage';
 import { TelegramInfoPage } from '../features/telegram/TelegramInfoPage';
 import { DataPage } from '../features/settings/DataPage';
+import { OnboardingPage } from '../features/onboarding/OnboardingPage';
 import { AppLayout } from '../components/AppLayout';
 import { RouteErrorBoundary } from '../components/RouteErrorBoundary';
 import { UiGalleryPage } from '../features/dev/UiGalleryPage';
@@ -39,6 +40,10 @@ const routes: RouteObject[] = [
     element: <ProtectedRoute />,
     errorElement: <RouteErrorBoundary />,
     children: [
+      // S46 (D1): la guía de primeros pasos va protegida pero FUERA de AppLayout. Todavía no hay
+      // a dónde volver, y la nav de una app recién creada son cinco links a cinco pantallas
+      // vacías. La salida es "Saltar por ahora", que está en todos los pasos.
+      { path: '/onboarding', element: <OnboardingPage /> },
       {
         element: <AppLayout />,
         children: [

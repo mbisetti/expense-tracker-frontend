@@ -74,10 +74,22 @@ describe('AccountQuickActions (S40 D4)', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('el resto de los tipos no muestra la fila (como antes de S40)', () => {
-    for (const type of ['CASH', 'BANK', 'WALLET', 'CREDIT'] as AccountType[]) {
-      expect(actionsFor(account(type))).toEqual([]);
+  // S46 (D5) da vuelta lo que S40 había fijado acá: efectivo, banco y billetera SÍ ofrecen el
+  // ajuste. El server los rechazaba, y por eso un usuario nuevo no tenía forma de decir "hoy
+  // tengo 500k en el banco"; ahora es el saldo inicial de la guía y la conciliación de siempre.
+  it('S46: efectivo, banco y billetera ofrecen actualizar saldo', () => {
+    for (const type of ['CASH', 'BANK', 'WALLET'] as AccountType[]) {
+      expect(actionsFor(account(type))).toEqual(['adjust']);
     }
+
+    render(<AccountQuickActions account={account('BANK')} onAction={() => {}} />);
+    // El copy cambia con el tipo: una inversión VALE, en el banco lo que hay es plata.
+    expect(screen.getByRole('button', { name: 'Actualizar saldo' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Actualizar valor' })).not.toBeInTheDocument();
+  });
+
+  it('la tarjeta de crédito sigue sin acciones: su saldo es el resumen del ciclo', () => {
+    expect(actionsFor(account('CREDIT'))).toEqual([]);
   });
 
   it('propaga la acción elegida', () => {

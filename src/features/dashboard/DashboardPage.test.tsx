@@ -76,7 +76,20 @@ const pageFixture = {
   totalPages: 1,
 };
 
-function stubEndpoints(overview: unknown, monthly: unknown, page: unknown) {
+const ME_ONBOARDED = {
+  id: 'u1',
+  email: 'a@a.com',
+  name: 'Ana',
+  defaultCurrency: 'ARS',
+  workingCurrencies: [],
+  hasPassword: true,
+  googleLinked: false,
+  emailVerified: true,
+  onboarded: true,
+  createdAt: '2026-07-01T10:00:00Z',
+};
+
+function stubEndpoints(overview: unknown, monthly: unknown, page: unknown, me: unknown = ME_ONBOARDED) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
@@ -88,6 +101,8 @@ function stubEndpoints(overview: unknown, monthly: unknown, page: unknown) {
       if (url.includes('/summary/overview')) return ok(overview);
       if (url.includes('/summary/monthly')) return ok(monthly);
       if (url.includes('/transactions')) return ok(page);
+      // S46 (D9): el CTA del empty state depende de si el usuario ya vio la guía.
+      if (url.includes('/users/me')) return ok(me);
       throw new Error('URL inesperada: ' + url);
     }),
   );
@@ -203,6 +218,24 @@ describe('DashboardPage', () => {
     expect(
       screen.getByText('Creá una cuenta y registrá transacciones para ver el resumen.'),
     ).toBeInTheDocument();
+    // S46 (D9): ya vio la guía, así que lo que falta es una cuenta.
+    expect(await screen.findByRole('button', { name: 'Nueva cuenta' })).toBeInTheDocument();
+  });
+
+  // S46 (D9) — el caso que motivó el sprint: registro con Google, dashboard vacío. Hasta acá no
+  // ofrecía NADA, ni un botón.
+  it('sin datos y sin haber visto la guía, el CTA es la guía', async () => {
+    stubEndpoints(
+      { byCurrency: [] },
+      { byCurrency: [] },
+      { content: [], page: 0, size: 5, totalElements: 0, totalPages: 0 },
+      { ...ME_ONBOARDED, onboarded: false },
+    );
+
+    renderPage();
+
+    expect(await screen.findByRole('button', { name: 'Empezar la guía' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Nueva cuenta' })).not.toBeInTheDocument();
   });
 
   it('muestra los últimos movimientos con descripción, fallback y montos formateados', async () => {
@@ -294,6 +327,7 @@ describe('DashboardPage', () => {
         // monta y no agrega skeletons al conteo de carga parcial.
         if (url.includes('/summary/commitments'))
           return ok({ month: 7, year: 2026, byCurrency: [] });
+        if (url.includes('/users/me')) return ok(ME_ONBOARDED);
         if (url.includes('/summary/overview')) {
           overviewCalls += 1;
           // primer fetch: dos monedas; refetch: USD ya no existe

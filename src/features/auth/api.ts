@@ -37,6 +37,8 @@ export type Me = {
   /** S25.2: false = todavía no clickeó el link del mail. Nunca bloquea nada (D1): la app
    *  muestra el banner "Verificá tu email" y la fila de Ajustes, nada más. */
   emailVerified: boolean;
+  /** S46 (D2): ya terminó o saltó la guía de primeros pasos. false = todavía la puede ver. */
+  onboarded: boolean;
   createdAt: string;
 };
 
@@ -61,6 +63,15 @@ export function googleLogin(payload: GoogleLoginRequest): Promise<AuthResponse> 
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+// S46 (D3) — el perfil con un token EXPLÍCITO, para el instante después del login con Google.
+//
+// useHttp no sirve ahí: toma el token del contexto por closure, y en el onSuccess de la
+// mutación ese closure todavía tiene el token viejo (null). Acá el token es el que acaba de
+// llegar en la respuesta.
+export function fetchMe(accessToken: string): Promise<Me> {
+  return http<Me>('/users/me', { headers: { Authorization: `Bearer ${accessToken}` } });
 }
 
 export function refresh(): Promise<AuthResponse> {

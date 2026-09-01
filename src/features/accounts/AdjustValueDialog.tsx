@@ -40,6 +40,10 @@ export function AdjustValueDialog({
   onCancel,
 }: AdjustValueDialogProps) {
   const isDebt = account.type === 'DEBT';
+  // S46 (D5): efectivo, banco y billetera. El diálogo es el mismo, el copy no: acá no se
+  // pregunta cuánto VALE algo, se pregunta cuánta plata hay.
+  const isPlain =
+    account.type === 'CASH' || account.type === 'BANK' || account.type === 'WALLET';
   const { data: me } = useMe();
 
   const currencyOptions = currencyOptionsFor(account, me?.workingCurrencies, me?.defaultCurrency);
@@ -62,7 +66,13 @@ export function AdjustValueDialog({
     <Modal
       open
       onClose={onCancel}
-      title={isDebt ? `Ajustar la deuda de ${account.name}` : `Actualizar ${account.name}`}
+      title={
+        isDebt
+          ? `Ajustar la deuda de ${account.name}`
+          : isPlain
+            ? `Actualizar el saldo de ${account.name}`
+            : `Actualizar ${account.name}`
+      }
       footer={
         <div className="flex gap-3">
           <Button
@@ -83,7 +93,9 @@ export function AdjustValueDialog({
         <p className="text-sm text-body">
           {isDebt
             ? 'Decinos cuánto debés hoy y anotamos la diferencia (intereses, punitorios, un cargo que no esperabas).'
-            : 'Decinos cuánto vale hoy y anotamos la diferencia. No hace falta que calcules nada.'}
+            : isPlain
+              ? 'Decinos cuánta plata hay hoy y anotamos la diferencia. No hace falta que calcules nada.'
+              : 'Decinos cuánto vale hoy y anotamos la diferencia. No hace falta que calcules nada.'}
         </p>
 
         {currencyOptions.length > 1 && (
@@ -103,14 +115,16 @@ export function AdjustValueDialog({
         )}
 
         <div className="flex items-baseline justify-between gap-3 text-sm">
-          <span className="text-muted">{isDebt ? 'Debés ahora' : 'Vale ahora'}</span>
+          <span className="text-muted">
+            {isDebt ? 'Debés ahora' : isPlain ? 'Tenés ahora' : 'Vale ahora'}
+          </span>
           <span className="font-semibold tabular-nums text-ink">
             {formatMoney(currentValue, currency)}
           </span>
         </div>
 
         <MoneyInput
-          label={isDebt ? '¿Cuánto debés hoy?' : '¿Cuánto vale hoy?'}
+          label={isDebt ? '¿Cuánto debés hoy?' : isPlain ? '¿Cuánto tenés hoy?' : '¿Cuánto vale hoy?'}
           id="adjust-value"
           value={value}
           onValueChange={setValue}
@@ -164,14 +178,16 @@ export function AdjustValueDialog({
         )}
         {!canSubmit && value.trim() !== '' && (
           <p role="alert" className="text-sm text-expense">
-            El valor de hoy no puede ser negativo.
+            {isPlain ? 'El saldo de hoy no puede ser negativo.' : 'El valor de hoy no puede ser negativo.'}
           </p>
         )}
 
         <p className="text-xs text-muted">
           {isDebt
             ? 'Mueve el saldo de la cuenta pero no cuenta como gasto del mes: no es plata que salió de ningún lado.'
-            : 'Mueve el saldo y cuenta como rendimiento, pero no como ingreso del mes: que suba la valuación no te puso un peso en el bolsillo.'}
+            : isPlain
+              ? 'Mueve el saldo de la cuenta pero no cuenta como ingreso del mes: decir cuánta plata tenés no es haber cobrado.'
+              : 'Mueve el saldo y cuenta como rendimiento, pero no como ingreso del mes: que suba la valuación no te puso un peso en el bolsillo.'}
         </p>
       </div>
     </Modal>

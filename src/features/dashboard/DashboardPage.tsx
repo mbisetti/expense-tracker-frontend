@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CurrencyTabs } from './CurrencyTabs';
 import { ConsolidatedBanner } from './ConsolidatedBanner';
 import { OverviewCards } from './OverviewCards';
@@ -13,12 +14,19 @@ import { ExpectedIncomeCard } from '../income/ExpectedIncomeCard';
 import { CommitmentsCard } from './CommitmentsCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageHeader } from '../../components/ui/PageHeader';
+import { useMe } from '../auth/useMe';
 
 const MonthlyChart = lazy(() =>
   import('./MonthlyChart').then((m) => ({ default: m.MonthlyChart })),
 );
 
 export function DashboardPage() {
+  const navigate = useNavigate();
+  // S46 (D9): el dashboard vacío es el primer contacto del que se registró con Google, y hasta
+  // ahora no ofrecía NADA. El CTA depende de por qué está vacío: si nunca vio la guía, la guía;
+  // si ya la vio (o la saltó) y sigue sin cuentas, el alta de cuenta.
+  const { data: me } = useMe();
+  const guidePending = me?.onboarded === false;
   const { data, isPending, isError } = useDashboardOverview();
   const monthly = useMonthlySummary();
   const transactions = useTransactions({ page: 0, size: 5, sort: 'date', direction: 'DESC' });
@@ -44,7 +52,13 @@ export function DashboardPage() {
       {data && data.byCurrency.length === 0 && (
         <EmptyState
           title="Todavía no hay datos"
-          message="Creá una cuenta y registrá transacciones para ver el resumen."
+          message={
+            guidePending
+              ? 'Te llevamos por los primeros pasos: tu moneda, tus cuentas y cuánta plata tenés hoy.'
+              : 'Creá una cuenta y registrá transacciones para ver el resumen.'
+          }
+          actionLabel={guidePending ? 'Empezar la guía' : 'Nueva cuenta'}
+          onAction={() => navigate(guidePending ? '/onboarding' : '/accounts')}
         />
       )}
 
