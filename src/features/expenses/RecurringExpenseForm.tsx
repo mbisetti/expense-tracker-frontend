@@ -9,6 +9,8 @@ import { Button } from '../../components/ui/Button';
 import { useToast } from '../../components/ui/toastContext';
 import { useCategories } from '../categories/useCategories';
 import { useAccounts } from '../accounts/useAccounts';
+import { useMe } from '../auth/useMe';
+import { currencyOptionsForAny } from '../../lib/currencyOptions';
 import { usePaymentMethods } from '../paymentMethods/usePaymentMethods';
 import { numberToAmountDisplay, parseAmountInput } from '../../lib/money';
 import { transactionErrorMessage } from '../transactions/errorMessages';
@@ -54,6 +56,14 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
   const patchConfig = (patch: Partial<RecurringConfig>) => setConfig((c) => ({ ...c, ...patch }));
 
   const { data: accounts } = useAccounts();
+  const { data: me } = useMe();
+  // S25.7: antes acá iba `[currency]`, una lista de UNA opción. Ver currencyOptionsForAny.
+  const currencyOptions = currencyOptionsForAny(
+    currency,
+    accounts,
+    me?.workingCurrencies,
+    me?.defaultCurrency,
+  );
   // Métodos de la cuenta de débito elegida (sólo cuando el débito automático está prendido).
   const { data: paymentMethods } = usePaymentMethods(
     config.autoDebit && config.debitAccountId ? config.debitAccountId : undefined,
@@ -160,7 +170,7 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
           <CurrencySelect
             id="rec-currency"
             label="Moneda"
-            options={currency ? [currency] : []}
+            options={currencyOptions}
             value={currency}
             onChange={setCurrency}
             disabled={isPending}
