@@ -26,10 +26,6 @@ export function useGoogleLogin() {
     mutationFn: googleLogin,
     onSuccess: async (data) => {
       setAccessToken(data.accessToken);
-      if (from) {
-        navigate(from, { replace: true });
-        return;
-      }
       let onboarded: boolean | undefined;
       try {
         const me = await fetchMe(data.accessToken);
@@ -39,7 +35,18 @@ export function useGoogleLogin() {
       } catch {
         // Un perfil que no se pudo leer no es motivo para dejar al usuario sin destino.
       }
-      navigate(onboarded === false ? '/onboarding' : '/dashboard', { replace: true });
+      // Fix del 2 Sep: el `from` se chequeaba ACÁ ARRIBA y cortaba antes de mirar `onboarded`,
+      // así que una guía pendiente perdía contra cualquier destino guardado. Y ese destino no
+      // sólo se anota al entrar a un link protegido: también al CERRAR SESIÓN. Te deslogueás
+      // desde Gastos, entrás con una cuenta nueva de Google, y aterrizás en un Gastos vacío.
+      //
+      // La regla queda dicha en una línea: `from` sirve para devolver a alguien a donde estaba;
+      // nunca para saltearle una guía que no hizo. Un usuario que YA la vio vuelve a su link.
+      if (onboarded === false) {
+        navigate('/onboarding', { replace: true });
+        return;
+      }
+      navigate(from ?? '/dashboard', { replace: true });
     },
   });
 }

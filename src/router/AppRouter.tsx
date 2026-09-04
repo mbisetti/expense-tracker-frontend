@@ -19,6 +19,7 @@ import { SettingsPage } from '../features/settings/SettingsPage';
 import { TelegramInfoPage } from '../features/telegram/TelegramInfoPage';
 import { DataPage } from '../features/settings/DataPage';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage';
+import { OnboardingGate } from '../features/onboarding/OnboardingGate';
 import { AppLayout } from '../components/AppLayout';
 import { RouteErrorBoundary } from '../components/RouteErrorBoundary';
 import { UiGalleryPage } from '../features/dev/UiGalleryPage';
@@ -45,24 +46,32 @@ const routes: RouteObject[] = [
       // vacías. La salida es "Saltar por ahora", que está en todos los pasos.
       { path: '/onboarding', element: <OnboardingPage /> },
       {
-        element: <AppLayout />,
+        // Fix del 2 Sep: con la guia pendiente, TODA pantalla privada lleva a la guia. El
+        // gate envuelve a AppLayout y no a /onboarding, que es su hermana de arriba: asi la
+        // guia queda excluida sola y no hace falta chequear la ruta ni cuidarse de un loop.
+        element: <OnboardingGate />,
         children: [
-          { path: '/dashboard', element: <DashboardPage /> },
-          { path: '/accounts', element: <AccountsPage /> },
-          { path: '/transactions', element: <TransactionsPage /> },
-          { path: '/expenses', element: <ExpensesPage /> },
-          { path: '/income', element: <IncomePage /> },
-          // Sprint 22.2: la página vieja de transferencias (TransfersPage) queda en el código
-          // pero SIN ruta accesible — los transfers se registran desde Transacciones
-          // (TransferForm embebido) y se sacó el link "Registrar pago" del resumen de tarjeta.
-          { path: '/categories', element: <CategoriesPage /> },
-          { path: '/payment-methods', element: <PaymentMethodsPage /> },
-          { path: '/datos', element: <DataPage /> },
-          { path: '/settings', element: <SettingsPage /> },
-          // S25.4 (D7): datos de la cuenta, conectores y borrado — antes vivían en Ajustes.
-          { path: '/account', element: <AccountPage /> },
-          // S33: mini-landing del bot — se llega desde el ícono de info en Ajustes.
-          { path: '/telegram', element: <TelegramInfoPage /> },
+        {
+          element: <AppLayout />,
+          children: [
+            { path: '/dashboard', element: <DashboardPage /> },
+            { path: '/accounts', element: <AccountsPage /> },
+            { path: '/transactions', element: <TransactionsPage /> },
+            { path: '/expenses', element: <ExpensesPage /> },
+            { path: '/income', element: <IncomePage /> },
+            // Sprint 22.2: la página vieja de transferencias (TransfersPage) queda en el código
+            // pero SIN ruta accesible — los transfers se registran desde Transacciones
+            // (TransferForm embebido) y se sacó el link "Registrar pago" del resumen de tarjeta.
+            { path: '/categories', element: <CategoriesPage /> },
+            { path: '/payment-methods', element: <PaymentMethodsPage /> },
+            { path: '/datos', element: <DataPage /> },
+            { path: '/settings', element: <SettingsPage /> },
+            // S25.4 (D7): datos de la cuenta, conectores y borrado — antes vivían en Ajustes.
+            { path: '/account', element: <AccountPage /> },
+            // S33: mini-landing del bot — se llega desde el ícono de info en Ajustes.
+            { path: '/telegram', element: <TelegramInfoPage /> },
+          ],
+        },
         ],
       },
     ],

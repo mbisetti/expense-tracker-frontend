@@ -138,9 +138,26 @@ describe('destino post-registro (S46 D3)', () => {
     expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
   });
 
-  // redirectFrom sigue ganando: venías a un link protegido y ahí volvés, guía o no.
-  it('venir de un link protegido le gana a la guía', async () => {
+  // Fix del 2 Sep. Esto asertaba lo contrario ("venir de un link protegido le gana a la guía") y
+  // se dio vuelta por un caso real: el destino guardado no se anota sólo al entrar a un link
+  // protegido, TAMBIÉN al cerrar sesión. Marko se deslogueó desde Gastos, se creó una cuenta, y
+  // aterrizó en un Gastos que no tenía nada suyo, con la guía sin aparecer por ningún lado.
+  //
+  // La regla quedó en una línea: `from` sirve para devolver a alguien a donde estaba, nunca para
+  // saltearle una guía que no hizo. Por eso son DOS tests y no uno: lo que decide no es que haya
+  // un destino guardado, es si la guía está pendiente.
+  it('con la guía pendiente, la guía le gana al link protegido', async () => {
     stubFetch(ME);
+    renderApp(['/transactions']);
+
+    await screen.findByRole('heading', { name: 'Iniciar sesión' });
+    await clickGoogle();
+
+    expect(await screen.findByRole('heading', { name: 'Guía' })).toBeInTheDocument();
+  });
+
+  it('con la guía ya hecha, el link protegido sigue ganando', async () => {
+    stubFetch({ ...ME, onboarded: true });
     renderApp(['/transactions']);
 
     await screen.findByRole('heading', { name: 'Iniciar sesión' });
