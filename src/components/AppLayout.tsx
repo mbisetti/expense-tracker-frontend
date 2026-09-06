@@ -38,6 +38,9 @@ const ROUTES = [
   { to: '/transactions', label: 'Transacciones' },
   { to: '/expenses', label: 'Gastos' },
   { to: '/income', label: 'Ingresos' },
+  // S47: sexto item. El nav es corto a proposito, y esto lo estira a sabiendas: una feature que
+  // no se ve no se usa. BottomNav no lo suma (ya es un subconjunto de 4, sin Gastos tampoco).
+  { to: '/grupos', label: 'Grupos' },
 ];
 
 export function AppLayout() {

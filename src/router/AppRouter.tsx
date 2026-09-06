@@ -6,6 +6,9 @@ import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
 import { ConfirmEmailChangePage } from '../features/auth/ConfirmEmailChangePage';
 import { AccountPage } from '../features/account/AccountPage';
+import { GroupsPage } from '../features/groups/GroupsPage';
+import { GroupDetailPage } from '../features/groups/GroupDetailPage';
+import { JoinGroupPage } from '../features/groups/JoinGroupPage';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { PublicHome } from '../features/landing/PublicHome';
 import { AccountsPage } from '../features/accounts/AccountsPage';
@@ -62,7 +65,14 @@ const routes: RouteObject[] = [
             // Sprint 22.2: la página vieja de transferencias (TransfersPage) queda en el código
             // pero SIN ruta accesible — los transfers se registran desde Transacciones
             // (TransferForm embebido) y se sacó el link "Registrar pago" del resumen de tarjeta.
-            { path: '/categories', element: <CategoriesPage /> },
+            // S47 "Seshat". /grupos/unirse va antes que /grupos/:id por claridad; react-router
+          // rankea el segmento estatico por encima del dinamico igual. La pantalla de entrada
+          // vive DENTRO del arbol autenticado: entrar a un grupo exige elegir una cuenta, asi
+          // que no tiene sentido sin sesion.
+          { path: '/grupos', element: <GroupsPage /> },
+          { path: '/grupos/unirse', element: <JoinGroupPage /> },
+          { path: '/grupos/:id', element: <GroupDetailPage /> },
+          { path: '/categories', element: <CategoriesPage /> },
             { path: '/payment-methods', element: <PaymentMethodsPage /> },
             { path: '/datos', element: <DataPage /> },
             { path: '/settings', element: <SettingsPage /> },
