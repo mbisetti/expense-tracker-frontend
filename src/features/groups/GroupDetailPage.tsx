@@ -9,6 +9,8 @@ import { PageHeader } from '../../components/ui/PageHeader';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/toastContext';
 import { GroupBalanceLine } from './GroupBalanceLine';
+import { GroupExpenseModal } from './GroupExpenseModal';
+import { GroupExpensesSection } from './GroupExpensesSection';
 import { MyMembershipCard } from './MyMembershipCard';
 import { groupErrorMessage } from './errorMessages';
 import {
@@ -30,6 +32,7 @@ export function GroupDetailPage() {
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [expenseOpen, setExpenseOpen] = useState(false);
 
   const addMember = useAddGroupMember();
   const removeMember = useRemoveGroupMember();
@@ -119,11 +122,21 @@ export function GroupDetailPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <PageHeader title={group.name} backTo={{ to: '/grupos', label: 'Grupos' }} />
+      <PageHeader
+        title={group.name}
+        backTo={{ to: '/grupos', label: 'Grupos' }}
+        actions={
+          <Button type="button" onClick={() => setExpenseOpen(true)}>
+            Nuevo gasto
+          </Button>
+        }
+      />
 
       <Card header={<h2 className="text-base font-semibold text-ink">Tu saldo</h2>}>
         <GroupBalanceLine balance={group.myBalance} />
       </Card>
+
+      <GroupExpensesSection groupId={group.id} onAdd={() => setExpenseOpen(true)} />
 
       <Card header={<h2 className="text-base font-semibold text-ink">Quiénes están</h2>}>
         <div className="flex flex-col gap-4">
@@ -224,6 +237,18 @@ export function GroupDetailPage() {
           )}
         </div>
       </Card>
+
+      {/* key para que el formulario arranque limpio cada vez que se abre, sin un useEffect que
+          resetee estado. Mismo idioma que MyMembershipCard. */}
+      <GroupExpenseModal
+        key={expenseOpen ? 'abierto' : 'cerrado'}
+        open={expenseOpen}
+        onClose={() => setExpenseOpen(false)}
+        groupId={group.id}
+        currency={group.currency}
+        members={liveMembers}
+        myMemberId={group.myMemberId}
+      />
 
       <ConfirmDialog
         open={confirmLeave}

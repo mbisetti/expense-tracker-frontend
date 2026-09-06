@@ -92,3 +92,49 @@ export type JoinGroupInput = MembershipInput & {
   /** Reclamar una etiqueta que ya existía en el grupo. Sin esto, entrás como miembro nuevo. */
   claimMemberId?: string | null;
 };
+
+// ── El gasto de grupo (bloque B) ────────────────────────────────────────────────────────────
+
+export type SplitType = 'EQUAL' | 'EXACT' | 'PERCENT' | 'SHARES';
+
+export type MemberAmount = {
+  memberId: string;
+  displayName: string;
+  amount: number;
+};
+
+export type GroupExpense = {
+  id: string;
+  amount: number;
+  currency: string;
+  date: string;
+  description: string | null;
+  categoryHint: string | null;
+  splitType: SplitType;
+  createdByName: string;
+  payers: MemberAmount[];
+  splits: MemberAmount[];
+  /** Lo tuyo, calculado por el server para quien pregunta. */
+  yourShare: number;
+  yourPaid: number;
+  /** Quedaron sin fila en su ledger porque todavía no eligieron cuenta. El gasto entró igual. */
+  membersWithoutAccount: string[];
+};
+
+export type CreateGroupExpenseInput = {
+  amount: number;
+  currency?: string;
+  date?: string;
+  description?: string | null;
+  categoryHint?: string | null;
+  splitType: SplitType;
+  /** Quién puso la plata. La suma tiene que ser el total. */
+  payers: { memberId: string; amount: number }[];
+  /**
+   * Quiénes participan. `value` se lee según el splitType: el monto en EXACT, el porcentaje en
+   * PERCENT, las partes en SHARES, y se ignora en EQUAL.
+   *
+   * El que no está en esta lista NO participa del gasto, y en su ledger no se escribe nada.
+   */
+  participants: { memberId: string; value?: number }[];
+};
