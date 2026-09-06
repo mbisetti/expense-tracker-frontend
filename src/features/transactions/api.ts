@@ -59,6 +59,14 @@ export type TransactionFilters = {
   uncategorized?: boolean;
   /** Sprint 24.3: solo las vinculadas a este gasto recurrente (historial del detalle). */
   recurringExpenseId?: string;
+  /**
+   * S47 (D17): solo lo que vino de este grupo.
+   *
+   * El grupo es una DIMENSIÓN del movimiento y no una categoría: cada gasto conserva la suya y
+   * además sabe de qué grupo salió. Por eso esto convive con `categoryId` en vez de competir, y
+   * cruzar los dos contesta la pregunta que importa de verdad (del grupo Depto, cuánto fue Comida).
+   */
+  groupId?: string;
   /** S38: solo lo que entró solo y todavía no miraste. Mandar SOLO true (como uncategorized). */
   pendingReview?: boolean;
   dateFrom?: string;

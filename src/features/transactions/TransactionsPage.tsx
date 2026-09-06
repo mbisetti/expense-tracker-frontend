@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
+import { useGroups } from '../groups/useGroups';
 import { useTransactions } from './useTransactions';
 import { useDeleteTransaction } from './useTransactionMutations';
 import { transactionErrorMessage } from './errorMessages';
@@ -72,6 +73,9 @@ export function TransactionsPage() {
       ? CATEGORY_NONE
       : (searchParams.get('categoryId') ?? ''),
   );
+  // S47 (D17): el grupo es una dimensión del movimiento y convive con la categoría en vez de
+  // competir. Cruzar los dos contesta "del grupo Depto, cuánto fue Comida".
+  const [groupId, setGroupId] = useState(() => searchParams.get('groupId') ?? '');
   // S38: la bandeja de lo que entró solo. Arranca en el feed SIEMPRE, aunque haya pendientes:
   // abrir Transacciones y encontrarse en otra vista sin haberla pedido desorienta. La tab avisa
   // con el número y el usuario entra cuando quiere.
@@ -146,6 +150,7 @@ export function TransactionsPage() {
   };
   const changeAccount = setFilter(setAccountId);
   const changeCategory = setFilter(setCategoryId);
+  const changeGroup = setFilter(setGroupId);
   const changeDateFrom = setFilter(setDateFrom);
   const changeDateTo = setFilter(setDateTo);
 
@@ -177,13 +182,14 @@ export function TransactionsPage() {
       categoryId:
         type !== 'TRANSFER' && categoryId && categoryId !== CATEGORY_NONE ? categoryId : undefined,
       uncategorized: type !== 'TRANSFER' && categoryId === CATEGORY_NONE ? true : undefined,
+      groupId: groupId || undefined,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
       search: search || undefined,
       page: 0,
       size: FETCH_SIZE,
     }),
-    [accountId, type, categoryId, dateFrom, dateTo, search],
+    [accountId, type, categoryId, groupId, dateFrom, dateTo, search],
   );
 
   // Sprint 26: los mismos filtros, mapeados al contrato de /export/transactions. El tipo
@@ -210,6 +216,7 @@ export function TransactionsPage() {
     useTransfers(0, FETCH_SIZE);
   const { data: accounts } = useAccounts();
   const { data: categories } = useCategories();
+  const { data: groups } = useGroups();
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—';
   const categoryName = (id: string | null) =>
@@ -571,6 +578,24 @@ export function TransactionsPage() {
             </option>
           ))}
         </Select>
+
+        {/* S47 (D17): el grupo es otra dimensión, no otra categoría. Sólo aparece si tenés
+            grupos: un filtro que siempre dice "Todos" y no tiene nada más es ruido. */}
+        {groups && groups.length > 0 && (
+          <Select
+            label="Grupo"
+            id="filter-group"
+            value={groupId}
+            onChange={(e) => changeGroup(e.target.value)}
+          >
+            <option value="">Todos</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </Select>
+        )}
 
         <DateField
           label="Desde"
