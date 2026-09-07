@@ -9,6 +9,7 @@ export type NotificationTargetType =
   | 'RECURRING'
   | 'CARD'
   | 'SHARED'
+  | 'GROUP'
   | 'SAVINGS'
   | 'INCOME'
   | 'EXPENSES'
@@ -67,6 +68,11 @@ export function targetPath(item: NotificationItem): string | null {
       return '/expenses#recurrentes';
     case 'SHARED':
       return '/expenses#compartidos';
+    // S47: a diferencia de ACCOUNT, un grupo SÍ tiene permalink propio. Antes el aviso de un
+    // comentario usaba SHARED y llevaba a la sección de compartidos sueltos, que es justo la
+    // pantalla donde las cosas del grupo NO están (D16).
+    case 'GROUP':
+      return item.targetId ? `/grupos/${item.targetId}` : '/grupos';
     case 'CARD':
       return '/accounts';
     // S36 (FR-7/D4): con UNA sola fuente pendiente la notificación trae su id y abre el confirm

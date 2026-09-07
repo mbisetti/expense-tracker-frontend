@@ -6,7 +6,7 @@ import { GroupExpenseModal } from './GroupExpenseModal';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ok } from '../../test/mockResponse';
 import { selectOption } from '../../test/selectOption';
-import type { GroupMember } from './api';
+import type { GroupExpense, GroupMember } from './api';
 
 type Call = { url: string; method: string; body?: string };
 
@@ -25,7 +25,7 @@ function stubFetch() {
       const url = String(input);
       const method = init?.method ?? 'GET';
       calls.push({ url, method, body: typeof init?.body === 'string' ? init.body : undefined });
-      if (url.includes('/expenses') && method === 'POST') {
+      if (url.includes('/expenses') && (method === 'POST' || method === 'PATCH')) {
         return ok({ id: 'e1', membersWithoutAccount: [] });
       }
       if (url.includes('/categories')) return ok([]);
@@ -35,7 +35,26 @@ function stubFetch() {
   return calls;
 }
 
-function renderModal() {
+const EXISTENTE: GroupExpense = {
+  id: 'e1',
+  amount: 3000,
+  currency: 'ARS',
+  date: '2026-09-01',
+  description: 'Cena',
+  categoryHint: null,
+  splitType: 'EQUAL',
+  createdByName: 'Ana',
+  payers: [{ memberId: 'm-ana', displayName: 'Ana', amount: 3000 }],
+  splits: [
+    { memberId: 'm-ana', displayName: 'Ana', amount: 1500 },
+    { memberId: 'm-beto', displayName: 'Beto', amount: 1500 },
+  ],
+  yourShare: 1500,
+  yourPaid: 3000,
+  membersWithoutAccount: [],
+};
+
+function renderModal(expense: GroupExpense | null = null) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={queryClient}>
@@ -50,6 +69,7 @@ function renderModal() {
             currency="ARS"
             members={[ANA, BETO]}
             myMemberId="m-ana"
+            expense={expense}
           />
         </ToastProvider>
       </AuthContext.Provider>
@@ -144,5 +164,29 @@ describe('GroupExpenseModal (S47)', () => {
     await screen.findByText('Cuánto puso cada uno.');
     await screen.findByText(/Entre todos pusieron/);
     expect(screen.getByRole('button', { name: 'Guardar gasto' })).toBeDisabled();
+  });
+
+  it('editando arranca con lo que ya tenía el gasto', async () => {
+    stubFetch();
+    renderModal(EXISTENTE);
+
+    expect(await screen.findByRole('heading', { name: 'Editar gasto' })).toBeInTheDocument();
+    expect((screen.getByLabelText('Descripción') as HTMLInputElement).value).toBe('Cena');
+  });
+
+  it('editando manda un PATCH al gasto, no un alta nueva', async () => {
+    const calls = stubFetch();
+    renderModal(EXISTENTE);
+
+    fireEvent.change(await screen.findByLabelText(/Monto/), { target: { value: '1000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar gasto' }));
+
+    await waitFor(() => {
+      const patch = calls.find((c) => c.method === 'PATCH');
+      expect(patch).toBeDefined();
+      expect(patch!.url).toContain('/expenses/e1');
+      expect(JSON.parse(patch!.body!).amount).toBe(1000);
+    });
+    expect(calls.find((c) => c.method === 'POST')).toBeUndefined();
   });
 });

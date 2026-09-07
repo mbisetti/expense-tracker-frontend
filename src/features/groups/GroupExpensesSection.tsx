@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Amount } from '../../components/ui/Amount';
 import { Card } from '../../components/ui/Card';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
-import { DeleteButton } from '../../components/ui/ActionsMenu';
+import { DeleteButton, EditButton } from '../../components/ui/ActionsMenu';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/toastContext';
@@ -15,12 +15,14 @@ import type { GroupExpense } from './api';
 type GroupExpensesSectionProps = {
   groupId: string;
   onAdd: () => void;
+  onEdit: (expense: GroupExpense) => void;
 };
 
-export function GroupExpensesSection({ groupId, onAdd }: GroupExpensesSectionProps) {
+export function GroupExpensesSection({ groupId, onAdd, onEdit }: GroupExpensesSectionProps) {
   const toast = useToast();
   const { pref } = useDateFormat();
-  const { data: expenses, isPending, isError } = useGroupExpenses(groupId);
+  const { data: page, isPending, isError } = useGroupExpenses(groupId);
+  const expenses = page?.content;
   const deleteExpense = useDeleteGroupExpense();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [detail, setDetail] = useState<GroupExpense | null>(null);
@@ -81,6 +83,7 @@ export function GroupExpensesSection({ groupId, onAdd }: GroupExpensesSectionPro
               </div>
               <div className="flex items-center gap-2">
                 <Amount amount={expense.amount} currency={expense.currency} tone="expense" />
+                <EditButton label={expense.description ?? 'el gasto'} onClick={() => onEdit(expense)} />
                 <DeleteButton label={expense.description ?? 'el gasto'} onClick={() => setConfirmingId(expense.id)} />
               </div>
             </li>

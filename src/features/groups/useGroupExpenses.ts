@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useHttp } from '../../lib/useHttp';
 import type { ApiError } from '../../lib/http';
+import type { PageResponse } from '../transactions/api';
 import type { CreateGroupExpenseInput, GroupExpense } from './api';
 
 // ⚠️ ESTE ARCHIVO MUEVE PLATA, y por eso vive aparte de useGroups.ts.
@@ -24,12 +25,33 @@ function useInvalidateGroupExpense() {
   };
 }
 
+// Paginado: un grupo con un año de historia no entra en una respuesta ni en una pantalla.
 export function useGroupExpenses(groupId: string | undefined) {
   const http = useHttp();
   return useQuery({
     queryKey: ['group-expenses', groupId],
-    queryFn: () => http<GroupExpense[]>(`/groups/${groupId}/expenses`),
+    queryFn: () => http<PageResponse<GroupExpense>>(`/groups/${groupId}/expenses`),
     enabled: Boolean(groupId),
+  });
+}
+
+// Editar es rehacer el gasto entero, no parchearlo: cambiar el monto o el reparto cambia quién le
+// debe a quién. El server responde 409 si alguien ya pagó su parte.
+export function useUpdateGroupExpense() {
+  const http = useHttp();
+  const invalidate = useInvalidateGroupExpense();
+
+  return useMutation<
+    GroupExpense,
+    ApiError,
+    { groupId: string; expenseId: string; input: CreateGroupExpenseInput }
+  >({
+    mutationFn: ({ groupId, expenseId, input }) =>
+      http<GroupExpense>(`/groups/${groupId}/expenses/${expenseId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(input),
+      }),
+    onSuccess: (_data, { groupId }) => invalidate(groupId),
   });
 }
 

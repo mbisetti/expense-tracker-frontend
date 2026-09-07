@@ -12,6 +12,7 @@ import { GroupBalancesSection } from './GroupBalancesSection';
 import { GroupExpenseModal } from './GroupExpenseModal';
 import { GroupExpensesSection } from './GroupExpensesSection';
 import { GroupRecurringSection } from './GroupRecurringSection';
+import type { GroupExpense } from './api';
 import { MyMembershipCard } from './MyMembershipCard';
 import { groupErrorMessage } from './errorMessages';
 import {
@@ -34,6 +35,7 @@ export function GroupDetailPage() {
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<GroupExpense | null>(null);
 
   const addMember = useAddGroupMember();
   const removeMember = useRemoveGroupMember();
@@ -138,7 +140,11 @@ export function GroupDetailPage() {
           por grupo sigue estando en la lista de /grupos, que es donde se mira de un vistazo. */}
       <GroupBalancesSection groupId={group.id} />
 
-      <GroupExpensesSection groupId={group.id} onAdd={() => setExpenseOpen(true)} />
+      <GroupExpensesSection
+        groupId={group.id}
+        onAdd={() => setExpenseOpen(true)}
+        onEdit={setEditingExpense}
+      />
 
       <GroupRecurringSection
         groupId={group.id}
@@ -247,16 +253,21 @@ export function GroupDetailPage() {
         </div>
       </Card>
 
-      {/* key para que el formulario arranque limpio cada vez que se abre, sin un useEffect que
-          resetee estado. Mismo idioma que MyMembershipCard. */}
+      {/* Un solo modal para alta y edición: la key lo remonta al cambiar de gasto, así el
+          formulario arranca del gasto que corresponde sin un useEffect que sincronice estado.
+          Mismo idioma que MyMembershipCard. */}
       <GroupExpenseModal
-        key={expenseOpen ? 'abierto' : 'cerrado'}
-        open={expenseOpen}
-        onClose={() => setExpenseOpen(false)}
+        key={editingExpense?.id ?? (expenseOpen ? 'nuevo' : 'cerrado')}
+        open={expenseOpen || editingExpense !== null}
+        onClose={() => {
+          setExpenseOpen(false);
+          setEditingExpense(null);
+        }}
         groupId={group.id}
         currency={group.currency}
         members={liveMembers}
         myMemberId={group.myMemberId}
+        expense={editingExpense}
       />
 
       <ConfirmDialog

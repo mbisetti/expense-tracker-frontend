@@ -9,8 +9,8 @@ import { useToast } from '../../components/ui/toastContext';
 import { formatMoney, parseAmountInput } from '../../lib/money';
 import { useCategories } from '../categories/useCategories';
 import { groupErrorMessage } from './errorMessages';
-import { useCreateGroupExpense } from './useGroupExpenses';
-import type { GroupMember, SplitType } from './api';
+import { useCreateGroupExpense, useUpdateGroupExpense } from './useGroupExpenses';
+import type { GroupExpense, GroupMember, SplitType } from './api';
 
 type GroupExpenseModalProps = {
   open: boolean;
@@ -19,6 +19,8 @@ type GroupExpenseModalProps = {
   currency: string;
   members: GroupMember[];
   myMemberId: string;
+  /** Presente = estamos editando ese gasto. Ausente = uno nuevo. */
+  expense?: GroupExpense | null;
 };
 
 const SPLIT_LABELS: Record<SplitType, string> = {
@@ -52,25 +54,45 @@ export function GroupExpenseModal({
   currency,
   members,
   myMemberId,
+  expense,
 }: GroupExpenseModalProps) {
   const toast = useToast();
   const { data: categories } = useCategories();
   const createExpense = useCreateGroupExpense();
+  const updateExpense = useUpdateGroupExpense();
+  const editing = expense ?? null;
 
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState(todayLocal());
-  const [categoryId, setCategoryId] = useState('');
-  const [splitType, setSplitType] = useState<SplitType>('EQUAL');
+  // El estado arranca del gasto que se edita, en el MOUNT. El caller monta con key, así que no
+  // hace falta ningún efecto que lo sincronice (mismo idioma que MyMembershipCard).
+  const [amount, setAmount] = useState(editing ? String(editing.amount) : '');
+  const [description, setDescription] = useState(editing?.description ?? '');
+  const [date, setDate] = useState(editing?.date ?? todayLocal());
+  const [categoryId, setCategoryId] = useState(editing?.categoryHint ?? '');
+  // Un reparto por porcentaje o por partes se reabre como MONTOS EXACTOS: la respuesta trae la
+  // plata ya resuelta, no el porcentaje que se tipeó. Es la misma plata; volver a expresarlo en
+  // porcentajes es cambiar el modo y escribirlo de nuevo.
+  const [splitType, setSplitType] = useState<SplitType>(
+    editing ? (editing.splitType === 'EQUAL' ? 'EQUAL' : 'EXACT') : 'EQUAL',
+  );
 
   // Arranca con todos adentro porque es el caso común, pero se destildan: un gasto es de los que
   // participan, no de todo el grupo.
-  const [participants, setParticipants] = useState<string[]>(() => members.map((m) => m.id));
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [participants, setParticipants] = useState<string[]>(() =>
+    editing ? editing.splits.map((s) => s.memberId) : members.map((m) => m.id),
+  );
+  const [values, setValues] = useState<Record<string, string>>(() =>
+    editing && editing.splitType !== 'EQUAL'
+      ? Object.fromEntries(editing.splits.map((s) => [s.memberId, String(s.amount)]))
+      : {},
+  );
 
-  const [singlePayer, setSinglePayer] = useState(myMemberId);
-  const [severalPayers, setSeveralPayers] = useState(false);
-  const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>({});
+  const [singlePayer, setSinglePayer] = useState(editing?.payers[0]?.memberId ?? myMemberId);
+  const [severalPayers, setSeveralPayers] = useState((editing?.payers.length ?? 0) > 1);
+  const [payerAmounts, setPayerAmounts] = useState<Record<string, string>>(() =>
+    editing && editing.payers.length > 1
+      ? Object.fromEntries(editing.payers.map((p) => [p.memberId, String(p.amount)]))
+      : {},
+  );
 
   const total = parseAmountInput(amount) || 0;
   const expenseCategories = (categories ?? []).filter((c) => c.type !== 'INCOME');
@@ -132,44 +154,46 @@ export function GroupExpenseModal({
   const submit = () => {
     if (total <= 0 || splitProblem || payerProblem) return;
 
-    createExpense.mutate(
-      {
-        groupId,
-        input: {
-          amount: total,
-          currency,
-          date,
-          description: description.trim() || null,
-          categoryHint: categoryId || null,
-          splitType,
-          payers: severalPayers
-            ? members
-                .filter((m) => (parseAmountInput(payerAmounts[m.id] ?? '') || 0) > 0)
-                .map((m) => ({ memberId: m.id, amount: parseAmountInput(payerAmounts[m.id]) }))
-            : [{ memberId: singlePayer, amount: total }],
-          participants: participants.map((id) => ({
-            memberId: id,
-            value: splitType === 'EQUAL' ? undefined : parseAmountInput(values[id] ?? '') || 0,
-          })),
-        },
+    const input = {
+      amount: total,
+      currency,
+      date,
+      description: description.trim() || null,
+      categoryHint: categoryId || null,
+      splitType,
+      payers: severalPayers
+        ? members
+            .filter((m) => (parseAmountInput(payerAmounts[m.id] ?? '') || 0) > 0)
+            .map((m) => ({ memberId: m.id, amount: parseAmountInput(payerAmounts[m.id]) }))
+        : [{ memberId: singlePayer, amount: total }],
+      participants: participants.map((id) => ({
+        memberId: id,
+        value: splitType === 'EQUAL' ? undefined : parseAmountInput(values[id] ?? '') || 0,
+      })),
+    };
+
+    const handlers = {
+      onSuccess: (saved: GroupExpense) => {
+        if (saved.membersWithoutAccount.length > 0) {
+          toast.success('Gasto anotado. A alguien del grupo le falta elegir su cuenta.');
+        } else {
+          toast.success(editing ? 'Gasto actualizado.' : 'Gasto anotado.');
+        }
+        reset();
+        onClose();
       },
-      {
-        onSuccess: (expense) => {
-          if (expense.membersWithoutAccount.length > 0) {
-            toast.success('Gasto anotado. A alguien del grupo le falta elegir su cuenta.');
-          } else {
-            toast.success('Gasto anotado.');
-          }
-          reset();
-          onClose();
-        },
-        onError: (error) => toast.error(groupErrorMessage(error)),
-      },
-    );
+      onError: (error: unknown) => toast.error(groupErrorMessage(error)),
+    };
+
+    if (editing) {
+      updateExpense.mutate({ groupId, expenseId: editing.id, input }, handlers);
+    } else {
+      createExpense.mutate({ groupId, input }, handlers);
+    }
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Nuevo gasto" size="wide">
+    <Modal open={open} onClose={onClose} title={editing ? 'Editar gasto' : 'Nuevo gasto'} size="wide">
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {
@@ -306,7 +330,7 @@ export function GroupExpenseModal({
           </Button>
           <Button
             type="submit"
-            loading={createExpense.isPending}
+            loading={createExpense.isPending || updateExpense.isPending}
             disabled={total <= 0 || Boolean(splitProblem) || Boolean(payerProblem)}
           >
             Guardar gasto

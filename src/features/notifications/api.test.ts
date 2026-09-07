@@ -34,6 +34,9 @@ describe('targetPath', () => {
     expect(targetPath(item('SAVINGS'))).toBe('/dashboard');
     expect(targetPath(item('RECURRING'))).toBe('/expenses#recurrentes');
     expect(targetPath(item('SHARED'))).toBe('/expenses#compartidos');
+    // S47: el aviso de un comentario lleva AL GRUPO. Antes usaba SHARED, que lleva a la sección
+    // de compartidos sueltos: justo la pantalla donde las cosas del grupo no están (D16).
+    expect(targetPath({ ...item('GROUP'), targetId: 'g1' })).toBe('/grupos/g1');
     expect(targetPath(item('CARD'))).toBe('/accounts');
     expect(targetPath(item('INCOME', 'src-1'))).toBe('/income?confirm=src-1');
     expect(targetPath(item('EXPENSES'))).toBe('/expenses');
