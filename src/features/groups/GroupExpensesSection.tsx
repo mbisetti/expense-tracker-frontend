@@ -7,8 +7,10 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/toastContext';
 import { formatDate, useDateFormat } from '../../lib/dateFormat';
+import { GroupExpenseDetailModal } from './GroupExpenseDetailModal';
 import { groupErrorMessage } from './errorMessages';
 import { useDeleteGroupExpense, useGroupExpenses } from './useGroupExpenses';
+import type { GroupExpense } from './api';
 
 type GroupExpensesSectionProps = {
   groupId: string;
@@ -21,6 +23,7 @@ export function GroupExpensesSection({ groupId, onAdd }: GroupExpensesSectionPro
   const { data: expenses, isPending, isError } = useGroupExpenses(groupId);
   const deleteExpense = useDeleteGroupExpense();
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<GroupExpense | null>(null);
 
   const confirmDelete = () => {
     if (!confirmingId) return;
@@ -58,7 +61,14 @@ export function GroupExpensesSection({ groupId, onAdd }: GroupExpensesSectionPro
           {expenses.map((expense) => (
             <li key={expense.id} className="flex flex-wrap items-start justify-between gap-2 border-b border-line pb-3 last:border-b-0 last:pb-0">
               <div className="flex flex-col gap-1">
-                <span className="text-ink">{expense.description ?? 'Gasto'}</span>
+                {/* El nombre abre el detalle: cómo quedó repartido y la conversación sobre él. */}
+                <button
+                  type="button"
+                  className="self-start text-left text-ink underline decoration-transparent transition-colors duration-200 ease-out hover:decoration-current"
+                  onClick={() => setDetail(expense)}
+                >
+                  {expense.description ?? 'Gasto'}
+                </button>
                 <span className="text-sm text-muted">
                   {formatDate(expense.date, pref)} · Puso{' '}
                   {expense.payers.map((p) => p.displayName).join(', ')}
@@ -77,6 +87,8 @@ export function GroupExpensesSection({ groupId, onAdd }: GroupExpensesSectionPro
           ))}
         </ul>
       )}
+
+      <GroupExpenseDetailModal groupId={groupId} expense={detail} onClose={() => setDetail(null)} />
 
       <ConfirmDialog
         open={confirmingId !== null}

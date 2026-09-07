@@ -170,6 +170,16 @@ export type CreateSettlementInput = {
   date?: string;
 };
 
+export type GroupComment = {
+  id: string;
+  memberId: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+  /** Lo escribiste vos: el borrar aparece sólo en los propios. */
+  mine: boolean;
+};
+
 export type Settlement = {
   id: string;
   fromMemberId: string;
