@@ -65,10 +65,12 @@ const intraTransfer = {
   createdAt: '2026-06-30T00:00:00',
 };
 
-function stubFetch(txContent: unknown[], transfers: unknown[] = []) {
+function stubFetch(txContent: unknown[], transfers: unknown[] = [], groups: unknown[] = []) {
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string) => {
+      // S47: el nombre del grupo de una fila se resuelve contra esta lista, no viene en la tx.
+      if (url.includes('/groups')) return jsonResponse(200, groups);
       if (url.includes('/transfers'))
         return jsonResponse(200, {
           content: transfers,
@@ -187,6 +189,26 @@ describe('TransactionsPage — presentación de las filas', () => {
     expect(await screen.findByTitle('Cena parrilla')).toBeInTheDocument();
     expect(screen.getByText(/\(2 restantes\)/)).toBeInTheDocument();
     expect(screen.getByText(/Te corresponde/)).toBeInTheDocument();
+  });
+
+  // S47 (D17): sin esto, un gasto que apareció solo en tu cuenta no tiene forma de explicarse.
+  it('la fila de un gasto de grupo dice de qué grupo vino', async () => {
+    stubFetch(
+      [{ ...plainTx, id: 'tx-grupo', groupId: 'g1' }],
+      [],
+      [{ id: 'g1', name: 'Depto', currency: 'ARS', simplifyDebts: true, owner: true, memberCount: 2, myBalance: [] }],
+    );
+    renderPage();
+
+    expect(await screen.findByText('Del grupo Depto')).toBeInTheDocument();
+  });
+
+  it('una fila suelta no dice nada de grupos', async () => {
+    stubFetch([plainTx]);
+    renderPage();
+
+    await screen.findByText('Café');
+    expect(screen.queryByText(/Del grupo/)).not.toBeInTheDocument();
   });
 
   it('la ⓘ del cobro explica de qué gasto vino y abre ese reparto', async () => {

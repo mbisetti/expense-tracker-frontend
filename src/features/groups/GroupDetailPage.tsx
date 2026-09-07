@@ -11,6 +11,7 @@ import { useToast } from '../../components/ui/toastContext';
 import { GroupBalancesSection } from './GroupBalancesSection';
 import { GroupExpenseModal } from './GroupExpenseModal';
 import { GroupExpensesSection } from './GroupExpensesSection';
+import { GroupRecurringSection } from './GroupRecurringSection';
 import { MyMembershipCard } from './MyMembershipCard';
 import { groupErrorMessage } from './errorMessages';
 import {
@@ -138,6 +139,13 @@ export function GroupDetailPage() {
       <GroupBalancesSection groupId={group.id} />
 
       <GroupExpensesSection groupId={group.id} onAdd={() => setExpenseOpen(true)} />
+
+      <GroupRecurringSection
+        groupId={group.id}
+        currency={group.currency}
+        members={liveMembers}
+        myMemberId={group.myMemberId}
+      />
 
       <Card header={<h2 className="text-base font-semibold text-ink">Quiénes están</h2>}>
         <div className="flex flex-col gap-4">

@@ -170,6 +170,42 @@ export type CreateSettlementInput = {
   date?: string;
 };
 
+// ── Recurrentes de grupo (bloque D) ─────────────────────────────────────────────────────────
+
+export type RecurringFrequency = 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'ANNUAL';
+
+export type GroupRecurring = {
+  id: string;
+  name: string;
+  amount: number;
+  currency: string;
+  categoryHint: string | null;
+  payerId: string;
+  payerName: string;
+  splitType: SplitType;
+  frequency: RecurringFrequency;
+  billingDay: number | null;
+  weekday: string | null;
+  dueMonth: number | null;
+  active: boolean;
+  participants: { memberId: string; displayName: string; value: number | null }[];
+};
+
+export type CreateGroupRecurringInput = {
+  name: string;
+  amount: number;
+  currency?: string;
+  categoryHint?: string | null;
+  /** Uno solo: repartir también quién paga cada mes no es un caso real. */
+  payerId: string;
+  splitType: SplitType;
+  frequency: RecurringFrequency;
+  billingDay?: number;
+  weekday?: string;
+  dueMonth?: number;
+  participants: { memberId: string; value?: number }[];
+};
+
 export type GroupComment = {
   id: string;
   memberId: string;

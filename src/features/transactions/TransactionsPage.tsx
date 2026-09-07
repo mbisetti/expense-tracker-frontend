@@ -219,6 +219,10 @@ export function TransactionsPage() {
   const { data: groups } = useGroups();
 
   const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—';
+  // S47 (D17): el nombre se resuelve contra los grupos que ya trajimos para el filtro, así la fila
+  // no necesita que el backend le mande el nombre repetido en cada movimiento.
+  const groupName = (id: string | null | undefined) =>
+    id ? (groups?.find((g) => g.id === id)?.name ?? null) : null;
   const categoryName = (id: string | null) =>
     id ? categories?.find((c) => c.id === id)?.name ?? '—' : '—';
 
@@ -774,6 +778,17 @@ export function TransactionsPage() {
                             {[categoryName(row.item.categoryId), accountName(row.item.accountId)]
                               .filter((part) => part && part !== '—')
                               .join(' · ')}
+                          </div>
+                        )}
+                        {/* S47 (D17): de qué grupo vino. Va en su propia línea y no en la
+                            sub-línea de mobile porque en desktop también importa: sin esto, un
+                            gasto que apareció solo en tu cuenta no tiene forma de explicarse. */}
+                        {groupName(row.item.groupId) && (
+                          // Un solo nodo de texto y no "Del grupo {nombre}": partido, el DOM queda
+                          // con dos text nodes y cualquiera que lo busque por su texto no lo
+                          // encuentra, empezando por los tests.
+                          <div className="truncate text-xs text-muted">
+                            {`Del grupo ${groupName(row.item.groupId)}`}
                           </div>
                         )}
                         {/* V36: lo que realmente gastaste vos — es este número el que va a

@@ -33,6 +33,14 @@ export type TransactionListItem = {
   origin?: string | null;
   /** S38: true = entró solo y todavía no lo miraste. Es lo que define la bandeja. */
   pendingReview?: boolean;
+  /**
+   * S47 (D17): de qué grupo vino, o null si es una tx suelta.
+   *
+   * Opcional como `origin` y `pendingReview`, y por el mismo motivo que los hizo opcionales a
+   * ellos en S38: este tipo lo construyen a mano una docena de fixtures de test, y volverlo
+   * obligatorio obliga a un commit mecánico que toca archivos que no tienen nada que ver.
+   */
+  groupId?: string | null;
 };
 
 export type TransactionResponse = TransactionListItem & {
