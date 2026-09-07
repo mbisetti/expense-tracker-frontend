@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/Input';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { useToast } from '../../components/ui/toastContext';
-import { GroupBalanceLine } from './GroupBalanceLine';
+import { GroupBalancesSection } from './GroupBalancesSection';
 import { GroupExpenseModal } from './GroupExpenseModal';
 import { GroupExpensesSection } from './GroupExpensesSection';
 import { MyMembershipCard } from './MyMembershipCard';
@@ -132,9 +132,10 @@ export function GroupDetailPage() {
         }
       />
 
-      <Card header={<h2 className="text-base font-semibold text-ink">Tu saldo</h2>}>
-        <GroupBalanceLine balance={group.myBalance} />
-      </Card>
+      {/* Antes acá había una card "Tu saldo" con sólo lo mío. La reemplaza esta, que dice quién
+          le debe a quién e incluye mis filas: dos cards hablando de saldos era repetir. Mi neto
+          por grupo sigue estando en la lista de /grupos, que es donde se mira de un vistazo. */}
+      <GroupBalancesSection groupId={group.id} />
 
       <GroupExpensesSection groupId={group.id} onAdd={() => setExpenseOpen(true)} />
 

@@ -138,3 +138,46 @@ export type CreateGroupExpenseInput = {
    */
   participants: { memberId: string; value?: number }[];
 };
+
+// ── Saldos y pagos (bloque C) ───────────────────────────────────────────────────────────────
+
+export type PairBalance = {
+  fromMemberId: string;
+  fromName: string;
+  toMemberId: string;
+  toName: string;
+  amount: number;
+  currency: string;
+};
+
+export type GroupBalances = {
+  /**
+   * La verdad. Sale de los gastos, uno por uno, con la misma cuenta que hizo el reparto, así que
+   * coincide con lo que cada uno ve en su ledger.
+   */
+  pairwise: PairBalance[];
+  /** La misma plata con menos pagos. Es una sugerencia y no se guarda en ningún lado. */
+  simplified: PairBalance[];
+  simplifyEnabled: boolean;
+};
+
+export type CreateSettlementInput = {
+  fromMemberId: string;
+  toMemberId: string;
+  /** El saldo entero entre esas dos personas en esa moneda. */
+  amount: number;
+  currency: string;
+  date?: string;
+};
+
+export type Settlement = {
+  id: string;
+  fromMemberId: string;
+  fromName: string;
+  toMemberId: string;
+  toName: string;
+  amount: number;
+  currency: string;
+  date: string;
+  membersWithoutAccount: string[];
+};

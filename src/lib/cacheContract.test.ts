@@ -50,6 +50,8 @@ const MONEY_MOVING_HOOKS = [
   // S47: un gasto de grupo escribe transacciones reales en el ledger de VARIOS usuarios a la vez.
   // Es el único hook de la app que mueve plata de más de una persona.
   'groups/useGroupExpenses.ts',
+  // S47: anotar un pago escribe en el ledger de los DOS (transferencia de un lado, cobro del otro).
+  'groups/useGroupSettlements.ts',
 ];
 
 const REQUIRED_KEYS = ['transactions', 'accounts', 'summary'];
