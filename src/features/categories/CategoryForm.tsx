@@ -1,6 +1,8 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
+import { useCategories } from './useCategories';
 import { useCreateCategory, useUpdateCategory, type UpdateCategoryInput } from './useCategoryMutations';
 import { categoryErrorMessage } from './errorMessages';
+import { suggestColorFor } from './categoryColors';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Switch } from '../../components/ui/Switch';
@@ -19,14 +21,25 @@ type CategoryFormProps = {
 export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps) {
   const isEdit = category !== undefined;
   const toast = useToast();
+  // Query cacheada (la página ya la tiene): no hay request extra.
+  const { data: categories } = useCategories();
 
   const [name, setName] = useState(category?.name ?? '');
   const [type, setType] = useState<CategoryType>(category?.type ?? 'EXPENSE');
-  // El input type=color necesita un hex válido aunque la categoría no tenga color;
-  // comparar contra initialColor (no contra category.color) evita mandar el default
-  // en PATCHes donde el usuario no tocó el picker
-  const initialColor = category?.color ?? '#aa3bff';
-  const [color, setColor] = useState(initialColor);
+  // S48 (D5): antes el picker arrancaba en un violeta fijo que el alta mandaba siempre, y toda
+  // categoría creada sin tocarlo salía del mismo color. Ahora se propone uno que no choca con
+  // lo que se grafica junto con el tipo elegido. `pickedColor` null = no tocaste el picker: el
+  // color efectivo es el propuesto y se recalcula si cambiás el tipo; tocarlo lo fija.
+  const [pickedColor, setPickedColor] = useState<string | null>(category?.color ?? null);
+  const suggestedColor = useMemo(
+    () => suggestColorFor(type, Array.isArray(categories) ? categories : undefined),
+    [type, categories],
+  );
+  const color = pickedColor ?? suggestedColor;
+  // Comparar contra initialColor (no contra category.color) evita mandar el default en PATCHes
+  // donde el usuario no tocó el picker. Sin color guardado, initial y efectivo son el mismo
+  // propuesto y se mueven juntos.
+  const initialColor = category?.color ?? suggestedColor;
   // Sprint 24 (D3/D7): esencialidad. En INCOME el flag no se muestra (conceptualmente es de gasto).
   const [isEssential, setIsEssential] = useState(category?.isEssential ?? false);
 
@@ -112,7 +125,7 @@ export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps)
           id="cat-color"
           type="color"
           value={color}
-          onChange={(e) => setColor(e.target.value)}
+          onChange={(e) => setPickedColor(e.target.value)}
           disabled={isPending}
           className="h-11 w-16 cursor-pointer rounded-sm border border-line bg-surface-sunken disabled:cursor-not-allowed disabled:opacity-50"
         />
