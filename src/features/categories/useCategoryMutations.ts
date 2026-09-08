@@ -46,6 +46,20 @@ export function useUpdateCategory() {
   });
 }
 
+// S48: reordena las categorías del usuario. Body = el orden completo de ids (los tres tipos
+// concatenados); el server asigna sort_order = índice. Invalida categories para que la página
+// y todos los selects hereden el orden nuevo.
+export function useReorderCategories() {
+  const http = useHttp();
+  const invalidate = useInvalidateCategories();
+
+  return useMutation<void, ApiError, string[]>({
+    mutationFn: (categoryIds) =>
+      http<void>('/categories/order', { method: 'PUT', body: JSON.stringify({ categoryIds }) }),
+    onSuccess: invalidate,
+  });
+}
+
 export function useDeleteCategory() {
   const http = useHttp();
   const invalidate = useInvalidateCategories();

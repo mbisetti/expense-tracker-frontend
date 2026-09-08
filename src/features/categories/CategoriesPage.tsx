@@ -3,6 +3,7 @@ import { useCategories } from './useCategories';
 import { useDeleteCategory } from './useCategoryMutations';
 import { categoryErrorMessage } from './errorMessages';
 import { CategoryForm } from './CategoryForm';
+import { OrganizeCategoriesModal } from './OrganizeCategoriesModal';
 import { Button } from '../../components/ui/Button';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Badge } from '../../components/ui/Badge';
@@ -25,10 +26,14 @@ export function CategoriesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [organizeOpen, setOrganizeOpen] = useState(false);
 
   const toast = useToast();
   const { data: categories, isPending, isError } = useCategories();
   const deleteMutation = useDeleteCategory();
+
+  // S48: el modal de organizar sólo trabaja con las del usuario (las del sistema no se editan).
+  const ownCategories = categories?.filter((c) => c.userId !== null) ?? [];
 
   const openCreate = () => {
     setEditing(null);
@@ -59,9 +64,20 @@ export function CategoriesPage() {
       <PageHeader
         title="Categorías"
         actions={
-          <Button type="button" onClick={openCreate}>
-            Nueva categoría
-          </Button>
+          // Un primario por pantalla: Organizar es secundario (S48).
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setOrganizeOpen(true)}
+              disabled={ownCategories.length === 0}
+            >
+              Organizar
+            </Button>
+            <Button type="button" onClick={openCreate}>
+              Nueva categoría
+            </Button>
+          </div>
         }
       />
 
@@ -148,6 +164,12 @@ export function CategoriesPage() {
           }
         />
       </Modal>
+
+      <OrganizeCategoriesModal
+        open={organizeOpen}
+        categories={ownCategories}
+        onClose={() => setOrganizeOpen(false)}
+      />
 
       <ConfirmDialog
         open={confirmingDeleteId !== null}

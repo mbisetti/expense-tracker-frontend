@@ -109,4 +109,24 @@ describe('CategoriesPage', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(screen.getByText('Mascotas')).toBeInTheDocument();
   });
+
+  // S48: el botón secundario abre el modal de organizar, sólo con las del usuario.
+  it('"Organizar" abre el modal con las categorías del usuario y sin las del sistema', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => jsonResponse(200, [userCategory, systemCategory])),
+    );
+
+    renderPage();
+    // Hasta que carga la lista el botón está deshabilitado (no hay nada que organizar).
+    await screen.findByText('Mascotas');
+    fireEvent.click(screen.getByRole('button', { name: 'Organizar' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Organizar categorías' });
+    expect(within(dialog).getByRole('button', { name: 'Mover Mascotas' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Mover Alimentación' })).not.toBeInTheDocument();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
