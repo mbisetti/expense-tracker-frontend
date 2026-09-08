@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { ExpectedIncomeCard } from './ExpectedIncomeCard';
@@ -36,7 +37,13 @@ function renderCard(autoConfirmSourceId?: string) {
         value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
       >
         <ToastProvider>
-          <ExpectedIncomeCard autoConfirmSourceId={autoConfirmSourceId} />
+          <MemoryRouter
+            initialEntries={[
+              autoConfirmSourceId ? `/income?confirm=${autoConfirmSourceId}` : '/income',
+            ]}
+          >
+            <ExpectedIncomeCard />
+          </MemoryRouter>
         </ToastProvider>
       </AuthContext.Provider>
     </QueryClientProvider>,

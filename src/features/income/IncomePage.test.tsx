@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { IncomePage } from './IncomePage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
@@ -109,6 +109,58 @@ function stubEndpoints(options?: {
       if (url.includes('/accounts')) return ok(accounts);
       throw new Error('URL inesperada: ' + url);
     }),
+  );
+}
+
+// Una fuente esperada y todavía sin cobrar: es lo que el deep-link ?confirm= tiene que abrir.
+const pendingExpectedIncome = {
+  month: 7,
+  year: 2026,
+  byCurrency: [{ currency: 'ARS', expectedTotal: 500000, pendingTotal: 500000, pendingCount: 1 }],
+  sources: [
+    {
+      sourceId: 'src1',
+      name: 'Sueldo',
+      currency: 'ARS',
+      expectedAmount: 500000,
+      billingDay: 5,
+      dueMonth: null,
+      frequency: 'MONTHLY',
+      expectedCount: 1,
+      receivedCount: 0,
+      lastEntryId: null,
+    },
+  ],
+};
+
+function DeepLinkTrigger({ sourceId }: { sourceId: string }) {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate('/income?confirm=' + sourceId)}>
+      simular notificación
+    </button>
+  );
+}
+
+// Ingresos montada SIN el param: el deep-link llega después, por navegación, como cuando el
+// usuario ya está parado en la pantalla y toca la notificación.
+function renderPageStandingOnIncome() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider
+        value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
+      >
+        <ToastProvider>
+          <MemoryRouter initialEntries={['/income']}>
+            <DeepLinkTrigger sourceId="src1" />
+            <IncomePage />
+          </MemoryRouter>
+        </ToastProvider>
+      </AuthContext.Provider>
+    </QueryClientProvider>,
   );
 }
 
@@ -329,5 +381,19 @@ describe('IncomePage', () => {
     renderPage();
 
     expect(await screen.findByText('· Aguinaldo 1/2')).toBeInTheDocument();
+  });
+
+  // S36 (FR-7): el deep-link del centro de notificaciones también llega con Ingresos YA
+  // abierta. Leer el param sólo al montar dejaba el tap sin efecto: cambiaba la URL y nada más.
+  it('FR-7: el deep-link ?confirm= abre el confirm con la página ya montada', async () => {
+    stubEndpoints({ expectedIncome: pendingExpectedIncome });
+    renderPageStandingOnIncome();
+
+    expect(await screen.findByText('Ingresos esperados del mes')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Confirmar ingreso')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'simular notificación' }));
+
+    expect(await screen.findByLabelText('Confirmar ingreso')).toBeInTheDocument();
   });
 });

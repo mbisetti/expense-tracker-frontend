@@ -11,6 +11,7 @@ import { useDeleteIncomeEntry } from './useIncomeMutations';
 import { ConfirmIncomeDialog } from './ConfirmIncomeDialog';
 import { expectedStateBadge } from './expectedFormat';
 import { incomeErrorMessage } from './errorMessages';
+import { useDeepLinkParam } from '../../lib/useDeepLinkParam';
 import type { ExpectedIncomeSource, IncomeFrequency } from './api';
 
 const FREQUENCY_LABEL: Record<IncomeFrequency, string> = {
@@ -21,27 +22,29 @@ const FREQUENCY_LABEL: Record<IncomeFrequency, string> = {
   ANNUAL: 'una vez al año',
 };
 
-type Props = {
-  /**
-   * S36 (FR-7/D4): deep-link del centro de notificaciones (`/income?confirm=<sourceId>`). Con
-   * una sola fuente pendiente la notificación deja de ser un cartel y abre directo su confirm.
-   */
-  autoConfirmSourceId?: string | null;
-};
-
-export function ExpectedIncomeCard({ autoConfirmSourceId }: Props = {}) {
+export function ExpectedIncomeCard() {
   const toast = useToast();
   const { data, isPending, isError } = useExpectedIncome();
   const deleteMutation = useDeleteIncomeEntry();
   const [confirming, setConfirming] = useState<ExpectedIncomeSource | null>(null);
   const [undoing, setUndoing] = useState<ExpectedIncomeSource | null>(null);
-  const [autoConfirmDone, setAutoConfirmDone] = useState(false);
   const dayOfMonth = new Date().getDate();
+
+  /**
+   * S36 (FR-7/D4): deep-link del centro de notificaciones (`/income?confirm=<sourceId>`). Con
+   * una sola fuente pendiente la notificación deja de ser un cartel y abre directo su confirm.
+   *
+   * La orden la lee la card y no IncomePage, que era de donde bajaba como prop: el que ejecuta
+   * es el que tiene que apagarla, y apagar el estado de OTRO componente durante el render es
+   * justo lo que React prohíbe. Además el flag local "ya lo hice" quedaba prendido para siempre,
+   * así que un segundo tap sobre la misma notificación no abría nada.
+   */
+  const [autoConfirmSourceId, consumeAutoConfirm] = useDeepLinkParam('confirm');
 
   // Se consume UNA vez, cuando llega el feed (mismo patrón que el `?edit=` de Transacciones).
   // Si la fuente ya no está pendiente, no se abre nada: el usuario la cargó mientras tanto.
-  if (autoConfirmSourceId && !autoConfirmDone && data) {
-    setAutoConfirmDone(true);
+  if (autoConfirmSourceId && data) {
+    consumeAutoConfirm();
     const target = data.sources.find((s) => s.sourceId === autoConfirmSourceId);
     if (target && target.receivedCount < target.expectedCount) {
       setConfirming(target);

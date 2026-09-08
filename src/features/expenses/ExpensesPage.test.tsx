@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
 import { ExpensesPage } from './ExpensesPage';
 import { ToastProvider } from '../../components/ui/ToastProvider';
@@ -164,5 +164,64 @@ describe('ExpensesPage', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'USD' }));
     expect((await screen.findAllByText('Viajes')).length).toBeGreaterThan(0);
     expect(screen.queryAllByText('Ocio')).toHaveLength(0);
+  });
+});
+
+// El deep-link por hash tiene que funcionar también con Gastos YA abierta: el tap en una alerta
+// de compartidos o recurrentes no remonta la página, y engancharse sólo al montaje lo dejaba sin
+// efecto (misma familia de bug que el ?edit= de Transacciones).
+function DeepLinkTrigger({ to }: { to: string }) {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(to)}>
+      simular notificación
+    </button>
+  );
+}
+
+function renderPageStandingOnExpenses() {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={queryClient}>
+      <AuthContext.Provider
+        value={{ accessToken: 'test-token', status: 'authenticated', setAccessToken: () => {} }}
+      >
+        <ToastProvider>
+          <MemoryRouter initialEntries={['/expenses']}>
+            <DeepLinkTrigger to="/expenses#recortar" />
+            <ExpensesPage />
+          </MemoryRouter>
+        </ToastProvider>
+      </AuthContext.Provider>
+    </QueryClientProvider>,
+  );
+}
+
+describe('ExpensesPage — deep-link por hash con la página ya abierta', () => {
+  it('abre la sección del hash sin remontar la página', async () => {
+    renderPageStandingOnExpenses();
+    // Arranca colapsada, como en la app.
+    expect(await screen.findByRole('heading', { name: 'Dónde recortar' })).toBeInTheDocument();
+    expect(screen.queryByText(/Recortando 20% de lo no esencial/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'simular notificación' }));
+
+    expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
+  });
+
+  it('el segundo tap sobre la misma alerta vuelve a abrirla', async () => {
+    renderPageStandingOnExpenses();
+    await screen.findByRole('heading', { name: 'Dónde recortar' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'simular notificación' }));
+    expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
+
+    // El usuario la colapsa a mano y vuelve a tocar la MISMA notificación (misma URL).
+    fireEvent.click(screen.getByRole('button', { name: 'Dónde recortar' }));
+    expect(screen.queryByText(/Recortando 20% de lo no esencial/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'simular notificación' }));
+
+    expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { CurrencyTabs } from '../dashboard/CurrencyTabs';
 import { Amount } from '../../components/ui/Amount';
 import { PageHeader } from '../../components/ui/PageHeader';
@@ -145,7 +146,26 @@ export function ExpensesPage() {
   // el total de lo que DEBÉS sin abrirla. React Query dedupea con el fetch de OwedSection.
   const { data: owed } = usePersonDebts();
   const sections = useSectionsOpen(SECTION_DEFAULTS);
-  const scrolledToHash = useRef(false);
+
+  // Deep-link por hash (#recurrentes, #compartidos): lo manda el centro de notificaciones.
+  // useSectionsOpen lo resuelve al MONTAR, que alcanza si venías de otra pantalla. Estando ya
+  // parado en Gastos no se monta nada, así que el tap cambiaba la URL y no abría la sección.
+  //
+  // `location.key` cambia en CADA navegación, incluso hacia la URL en la que ya estás: es lo
+  // que distingue "tocó la notificación otra vez" de un re-render cualquiera. Los links de
+  // sección de la página usan history.replaceState y no pasan por el router, así que navegar la
+  // página a mano no dispara nada de esto.
+  const location = useLocation();
+  const [navKey, setNavKey] = useState(location.key);
+  if (location.key !== navKey) {
+    setNavKey(location.key);
+    const target = location.hash.slice(1);
+    if (target && target in SECTION_DEFAULTS) sections.open(target);
+  }
+
+  // El scroll sí es un efecto (toca el DOM), y se hace una vez por navegación: sin el ref,
+  // cualquier refetch del resumen volvería a saltar a la sección del hash.
+  const scrolledForKey = useRef<string | null>(null);
 
   const goTo = (id: string) => {
     sections.open(id);
@@ -156,18 +176,19 @@ export function ExpensesPage() {
     );
   };
 
-  // Deep-link (#recurrentes): la apertura la resolvió el initial state de useSectionsOpen;
-  // acá solo el scroll, una vez que hay datos renderizados. Sin setState (regla del repo).
+  // Deep-link (#recurrentes): la apertura la resolvió el ajuste de arriba (o, al montar, el
+  // initial state de useSectionsOpen); acá solo el scroll, una vez que hay datos renderizados.
+  // Sin setState (regla del repo).
   useEffect(() => {
-    if (scrolledToHash.current || !data) return;
-    scrolledToHash.current = true;
-    const id = window.location.hash.slice(1);
+    if (!data || scrolledForKey.current === location.key) return;
+    scrolledForKey.current = location.key;
+    const id = location.hash.slice(1);
     if (id && id in SECTION_DEFAULTS) {
       requestAnimationFrame(() =>
         document.getElementById(id)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }),
       );
     }
-  }, [data]);
+  }, [data, location.key, location.hash]);
 
   const now = currentPeriod();
   const canGoNext = period.year < now.year || (period.year === now.year && period.month < now.month);

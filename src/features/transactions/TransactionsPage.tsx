@@ -30,6 +30,7 @@ import { useToast } from '../../components/ui/toastContext';
 import { formatDate, useDateFormat } from '../../lib/dateFormat';
 import { formatMoney } from '../../lib/money';
 import { useIsDesktop } from '../../lib/useIsDesktop';
+import { useDeepLinkParam } from '../../lib/useDeepLinkParam';
 import { SharedExpenseModal } from '../shared/SharedExpenseModal';
 import type { TransactionFilters, TransactionListItem, TransactionType } from './api';
 import type { TransferListItem } from '../transfers/api';
@@ -86,9 +87,8 @@ export function TransactionsPage() {
   // archivo" abre la bandeja. Se consume UNA vez, cuando llega el contador, y sólo si HAY algo
   // pendiente: la tab no se renderiza con cero, así que abrirla dejaría la página en blanco.
   // Sin toast: que no haya nada que revisar no es un error, es la buena noticia.
-  const [pendingReviewDeepLink, setPendingReviewDeepLink] = useState(
-    () => searchParams.get('review') === '1',
-  );
+  const [reviewDeepLink, consumeReviewDeepLink] = useDeepLinkParam('review');
+  const pendingReviewDeepLink = reviewDeepLink === '1';
   const [dateFrom, setDateFrom] = useState(() => searchParams.get('dateFrom') ?? '');
   const [dateTo, setDateTo] = useState(() => searchParams.get('dateTo') ?? '');
   const [searchInput, setSearchInput] = useState('');
@@ -103,9 +103,11 @@ export function TransactionsPage() {
   const [editingTransfer, setEditingTransfer] = useState<TransferListItem | null>(null);
   // S34: deep-link del centro de notificaciones (`?edit=<txId>`) — el tap en un movimiento del
   // bot abre esa transacción PARA EDITAR (D3). Se consume UNA vez, cuando llega el feed.
-  const [pendingEditId, setPendingEditId] = useState(() => searchParams.get('edit'));
-  const [editNotFound, setEditNotFound] = useState(false);
-  const editNotFoundToasted = useRef(false);
+  const [pendingEditId, consumeEditDeepLink] = useDeepLinkParam('edit');
+  // El fallido guarda un objeto nuevo por intento (y no un booleano): así un segundo deep-link
+  // roto vuelve a avisar, en vez de quedarse mudo porque ya hubo uno antes.
+  const [editNotFound, setEditNotFound] = useState<{ id: string } | null>(null);
+  const editNotFoundToasted = useRef<{ id: string } | null>(null);
   // V36: settledCount viaja en el confirm para poder avisar cuántos cobros se van a arrastrar
   // (D9) sin abrir el detalle.
   const [confirmDelete, setConfirmDelete] = useState<{
@@ -269,7 +271,7 @@ export function TransactionsPage() {
   // al feed. Se apaga aunque no haya nada que abrir, así un refetch posterior no salta a la
   // bandeja cuando el usuario ya se movió al feed a mano.
   if (pendingReviewDeepLink && pendingReviewQuery.data) {
-    setPendingReviewDeepLink(false);
+    consumeReviewDeepLink();
     if (pendingCount > 0) {
       setTab('review');
     }
@@ -282,21 +284,25 @@ export function TransactionsPage() {
   // el bot está ahí; si no aparece, se avisa en vez de dejar la pantalla como si nada.
   if (pendingEditId && txData) {
     const found = txData.content.find((tx) => tx.id === pendingEditId);
-    setPendingEditId(null);
+    consumeEditDeepLink();
     if (found) {
       setEditingTransfer(null);
       setEditing(found);
       setFormOpen(true);
+      // Ahora el deep-link puede llegar con la página YA abierta, y el usuario puede estar
+      // parado en la bandeja: el editor se monta arriba de las tabs y dejarlo en "Por revisar"
+      // se lee como si hubiera pasado otra cosa. El feed es el contexto de lo que abrió.
+      setTab('feed');
     } else {
-      setEditNotFound(true);
+      setEditNotFound({ id: pendingEditId });
     }
   }
 
   // El aviso sí va en un efecto: mostrar un toast es un efecto de verdad (toca algo de afuera
   // del render). El ref lo hace idempotente ante el doble montaje de StrictMode.
   useEffect(() => {
-    if (!editNotFound || editNotFoundToasted.current) return;
-    editNotFoundToasted.current = true;
+    if (!editNotFound || editNotFoundToasted.current === editNotFound) return;
+    editNotFoundToasted.current = editNotFound;
     toast.error('No encontré ese movimiento en el feed. Buscalo con los filtros.');
   }, [editNotFound, toast]);
 

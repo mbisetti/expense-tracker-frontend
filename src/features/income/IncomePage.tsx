@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { Button } from '../../components/ui/Button';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
@@ -14,11 +13,6 @@ import type { IncomeEntryListItem } from './api';
 
 export function IncomePage() {
   const toast = useToast();
-  const [searchParams] = useSearchParams();
-  // S36 (FR-7): deep-link del centro de notificaciones. Se lee UNA vez, como el resto de los
-  // params de la app (no se sincroniza de vuelta a la URL).
-  const [autoConfirmSourceId] = useState(() => searchParams.get('confirm'));
-
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<IncomeEntryListItem | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState<IncomeEntryListItem | null>(null);
@@ -70,7 +64,8 @@ export function IncomePage() {
 
       {/* S36 (FR-8): la card de esperados va PRIMERO y el alta se colapsa detrás de un botón,
           como en Transacciones. Las fuentes quedan a mano porque son las que se tickean. */}
-      <ExpectedIncomeCard autoConfirmSourceId={autoConfirmSourceId} />
+      {/* S36 (FR-7): el deep-link `?confirm=` lo lee la card, que es la que abre el confirm. */}
+      <ExpectedIncomeCard />
 
       <div ref={formRef} tabIndex={-1}>
         {formOpen && (
