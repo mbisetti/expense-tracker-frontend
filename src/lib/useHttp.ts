@@ -26,6 +26,11 @@ function withAuth(options: RequestInit | undefined, token: string | null): Reque
 // saliera bien, reintentaría el DELETE con la misma contraseña equivocada, para nada.
 //
 // Distinguirlos exige el código, no el status: por eso el backend le puso uno propio.
+//
+// Y el refresh tiene tres salidas, no dos: token (retry), null (el server negó la sesión →
+// login) o RefreshUnavailableError (no contestó: red, 5xx). En la tercera la sesión SIGUE y el
+// pedido falla con su error original, que es lo que la pantalla ya sabe mostrar. Antes esa
+// tercera también desconectaba.
 function useAuthorizedRequest() {
   const { accessToken, setAccessToken } = useAuth();
 
@@ -39,7 +44,12 @@ function useAuthorizedRequest() {
         if (!isExpired || path.startsWith('/auth')) {
           throw error;
         }
-        const newToken = await refreshAccessToken();
+        let newToken: string | null;
+        try {
+          newToken = await refreshAccessToken();
+        } catch {
+          throw error;
+        }
         if (!newToken) {
           setAccessToken(null); // ProtectedRoute redirige a /login
           throw error;
