@@ -2,12 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { AuthContext } from './context';
-import { refreshAccessToken } from './refreshManager';
+import { REFRESH_LOCK_NAME, RefreshUnavailableError, refreshAccessToken } from './refreshManager';
 import { useHttp } from '../../lib/useHttp';
 import { jsonResponse } from '../../test/mockResponse';
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe('refreshAccessToken (single-flight)', () => {
@@ -31,6 +32,61 @@ describe('refreshAccessToken (single-flight)', () => {
     );
 
     expect(await refreshAccessToken()).toBeNull();
+  });
+});
+
+// Un fallo del refresh no es lo mismo que "no hay sesión". Antes cualquier error terminaba en
+// null y en la pantalla de login con la cookie perfectamente válida.
+describe('refreshAccessToken (fallas transitorias)', () => {
+  it('un error de red reintenta y termina devolviendo el token', async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => {
+        calls++;
+        return calls < 3
+          ? Promise.reject(new TypeError('Failed to fetch'))
+          : jsonResponse(200, { accessToken: 'late-token' });
+      }),
+    );
+
+    const promise = refreshAccessToken();
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(await promise).toBe('late-token');
+    expect(calls).toBe(3);
+  });
+
+  it('un 502 persistente lanza RefreshUnavailableError en vez de devolver null', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(() => jsonResponse(502, {}));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const promise = refreshAccessToken();
+    promise.catch(() => {});
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    await expect(promise).rejects.toBeInstanceOf(RefreshUnavailableError);
+    // un intento + tres reintentos
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('un 4xx del refresh es definitivo: null sin reintentar', async () => {
+    const fetchMock = vi.fn(() => jsonResponse(401, { error: 'REFRESH_TOKEN_MISSING' }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await refreshAccessToken()).toBeNull();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('toma el lock entre pestañas cuando el browser lo ofrece', async () => {
+    const request = vi.fn((_name: string, cb: () => Promise<unknown>) => cb());
+    vi.stubGlobal('navigator', { ...navigator, locks: { request } });
+    vi.stubGlobal('fetch', vi.fn(() => jsonResponse(200, { accessToken: 'locked-token' })));
+
+    expect(await refreshAccessToken()).toBe('locked-token');
+    expect(request).toHaveBeenCalledWith(REFRESH_LOCK_NAME, expect.any(Function));
   });
 });
 
@@ -87,6 +143,24 @@ describe('useHttp (silent refresh on 401)', () => {
 
     await expect(http('/accounts')).rejects.toMatchObject({ status: 401 });
     expect(setAccessToken).toHaveBeenCalledWith(null);
+  });
+
+  it('si el refresh no está disponible (red caída), propaga el error original y NO limpia la sesión', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn((url: string) => {
+      if (url.includes('/auth/refresh')) {
+        return Promise.reject(new TypeError('Failed to fetch'));
+      }
+      return jsonResponse(401, { error: 'UNAUTHORIZED' });
+    });
+
+    const { http, setAccessToken } = setup(fetchMock);
+    const promise = http('/accounts');
+    promise.catch(() => {});
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    await expect(promise).rejects.toMatchObject({ status: 401 });
+    expect(setAccessToken).not.toHaveBeenCalled();
   });
 
   it('un 401 en /auth/* NO dispara refresh (credencial inválida, no token vencido)', async () => {
