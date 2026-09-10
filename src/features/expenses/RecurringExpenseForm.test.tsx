@@ -5,7 +5,7 @@ import { AuthContext } from '../auth/context';
 import { ToastProvider } from '../../components/ui/ToastProvider';
 import { RecurringExpenseForm } from './RecurringExpenseForm';
 import { jsonResponse } from '../../test/mockResponse';
-import { selectOption } from '../../test/selectOption';
+import { selectOption, selectValue } from '../../test/selectOption';
 
 const expenseCat = { id: 'c1', userId: 'u', name: 'Servicios', type: 'EXPENSE', color: null, icon: null, isEssential: false, sourceDefaultCategoryId: null, createdAt: '2026-01-01' };
 
@@ -24,7 +24,10 @@ beforeEach(() => {
       if (url.includes('/payment-methods'))
         return jsonResponse(200, [{ id: 'pm1', accountId: 'acc1', name: 'Débito', type: 'DEBIT', isDefault: false }]);
       if (url.includes('/accounts'))
-        return jsonResponse(200, [{ id: 'acc1', name: 'Caja', type: 'CASH', currency: 'ARS', balance: 0, balances: [] }]);
+        return jsonResponse(200, [
+          // S50: la cuenta trae su metodo predeterminado, con el que arranca el selector.
+          { id: 'acc1', name: 'Caja', type: 'CASH', currency: 'ARS', balance: 0, balances: [], defaultPaymentMethodId: 'pm1', defaultCardAccountId: null },
+        ]);
       return jsonResponse(200, []);
     }),
   );
@@ -120,5 +123,20 @@ describe('RecurringExpenseForm', () => {
     await waitFor(() => expect(postCalls).toHaveLength(1));
     expect(postCalls[0].body).toMatchObject({ autoDebit: true, debitAccountId: 'acc1' });
     await waitFor(() => expect(onClose).toHaveBeenCalled());
+  });
+
+  // S50 (D2): elegir la cuenta de debito deja puesto SU metodo predeterminado. El prefill vive
+  // en el onChange de la cuenta, no en un efecto.
+  it('elegir la cuenta de debito prefillea su metodo predeterminado', async () => {
+    renderForm();
+    fireEvent.change(await screen.findByLabelText(/Nombre/), { target: { value: 'Netflix' } });
+    fireEvent.change(screen.getByLabelText(/Monto/), { target: { value: '5990' } });
+    fireEvent.change(screen.getByLabelText(/Día de cobro/), { target: { value: '15' } });
+    await selectOption('Categoría', 'c1', { exact: false });
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Débito automático' }));
+    await selectOption('Cuenta de débito', 'acc1', { exact: false });
+
+    await waitFor(() => expect(selectValue('Método', { exact: false })).toBe('pm1'));
   });
 });

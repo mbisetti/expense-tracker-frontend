@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { usePaymentMethods } from './usePaymentMethods';
-import { useDeletePaymentMethod } from './usePaymentMethodMutations';
+import { useDeletePaymentMethod, useSetDefaultMethod } from './usePaymentMethodMutations';
 import { paymentMethodErrorMessage } from './errorMessages';
 import { PaymentMethodForm } from './PaymentMethodForm';
 import { useAccounts } from '../accounts/useAccounts';
@@ -12,6 +12,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { useToast } from '../../components/ui/toastContext';
+import type { Account } from '../accounts/api';
 import type { PaymentMethod, PaymentMethodType } from './api';
 
 const TYPE_LABELS: Record<PaymentMethodType, string> = {
@@ -22,8 +23,16 @@ const TYPE_LABELS: Record<PaymentMethodType, string> = {
   TRANSFER: 'Transferencia',
 };
 
+/**
+ * S50 (D3): los métodos de pago, seccionados por cuenta.
+ *
+ * Antes era una tabla plana con una columna "Cuenta", que era el síntoma: si tenés una columna
+ * "Cuenta" es porque la lista tenía que estar agrupada por cuenta. Cada sección muestra los
+ * métodos de esa cuenta, sus tarjetas vinculadas, y el radio que elige el PREDETERMINADO, que es
+ * con el que arrancan los formularios de transacción.
+ */
 export function PaymentMethodsPage() {
-  const [formOpen, setFormOpen] = useState(false);
+  const [formFor, setFormFor] = useState<{ accountId: string } | null>(null);
   const [editing, setEditing] = useState<PaymentMethod | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
@@ -31,22 +40,48 @@ export function PaymentMethodsPage() {
   const { data: paymentMethods, isPending, isError } = usePaymentMethods();
   const { data: accounts } = useAccounts();
   const deleteMutation = useDeletePaymentMethod();
+  const setDefault = useSetDefaultMethod();
 
-  const accountName = (id: string) => accounts?.find((a) => a.id === id)?.name ?? '—';
+  /**
+   * Las mismas cuentas que ofrece el selector "Cuenta" del formulario de transacción, menos las
+   * cuentas sistema. Así lo que ves acá es exactamente lo que vas a poder elegir al cargar.
+   *
+   * - Las CREDIT vinculadas no tienen sección propia: aparecen DENTRO de su madre, porque una
+   *   tarjeta vinculada ES el método (una tx ruteada a ella va sin paymentMethodId).
+   * - Las cuentas sistema ("Deudas con amigos", S40 D7) tampoco: a esa no se le paga con nada,
+   *   se le transfiere.
+   */
+  const sectionAccounts = (accounts ?? []).filter(
+    (a) => !(a.type === 'CREDIT' && a.linkedAccountId) && !a.systemRole,
+  );
 
-  const openCreate = () => {
-    setEditing(null);
-    setFormOpen(true);
-  };
+  const methodsOf = (accountId: string) =>
+    (paymentMethods ?? []).filter((pm) => pm.accountId === accountId);
+
+  const cardsOf = (accountId: string) =>
+    (accounts ?? []).filter((a) => a.type === 'CREDIT' && a.linkedAccountId === accountId);
 
   const closeForm = () => {
-    setFormOpen(false);
+    setFormFor(null);
     setEditing(null);
   };
 
-  const startEdit = (pm: PaymentMethod) => {
-    setEditing(pm);
-    setFormOpen(true);
+  const chooseDefault = (
+    account: Account,
+    choice: { paymentMethodId?: string; cardAccountId?: string },
+  ) => {
+    setDefault.mutate(
+      { accountId: account.id, ...choice },
+      {
+        onSuccess: () =>
+          toast.success(
+            choice.paymentMethodId || choice.cardAccountId
+              ? `Listo, es el método por defecto de ${account.name}.`
+              : `${account.name} quedó sin método por defecto.`,
+          ),
+        onError: (error) => toast.error(paymentMethodErrorMessage(error)),
+      },
+    );
   };
 
   const confirmDelete = () => {
@@ -60,14 +95,7 @@ export function PaymentMethodsPage() {
 
   return (
     <section className="flex flex-col gap-4 text-left">
-      <PageHeader
-        title="Métodos de pago"
-        actions={
-          <Button type="button" onClick={openCreate}>
-            Nuevo método de pago
-          </Button>
-        }
-      />
+      <PageHeader title="Métodos de pago" />
 
       {isPending && <Skeleton variant="list" rows={4} />}
 
@@ -77,60 +105,127 @@ export function PaymentMethodsPage() {
         </p>
       )}
 
-      {paymentMethods && paymentMethods.length === 0 && (
-        <EmptyState title="No hay métodos de pago todavía." message="Creá el primero." />
+      {!isPending && !isError && sectionAccounts.length === 0 && (
+        <EmptyState
+          title="No hay cuentas todavía."
+          message="Creá una cuenta y sus métodos de pago aparecen acá."
+        />
       )}
 
-      {paymentMethods && paymentMethods.length > 0 && (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-muted">
-                <th className="py-2 pr-2 font-medium">Nombre</th>
-                <th className="py-2 pr-2 font-medium">Cuenta</th>
-                <th className="py-2 pr-2 font-medium">Tipo</th>
-                <th className="py-2 pr-2 font-medium">Por defecto</th>
-                <th className="py-2 pr-2 font-medium"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {paymentMethods.map((pm) => (
-                <tr key={pm.id} className="border-b border-line">
-                  <td className="py-2 pr-2 text-ink">{pm.name}</td>
-                  <td className="py-2 pr-2 text-body">{accountName(pm.accountId)}</td>
-                  <td className="py-2 pr-2 text-body">{TYPE_LABELS[pm.type]}</td>
-                  <td className="py-2 pr-2 text-body">{pm.isDefault ? '★ Sí' : '—'}</td>
-                  <td className="py-2 pr-2">
-                    <div className="flex justify-end">
-                      <EditButton label={pm.name} onClick={() => startEdit(pm)} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {!isPending &&
+        !isError &&
+        sectionAccounts.map((account) => {
+          const methods = methodsOf(account.id);
+          const cards = cardsOf(account.id);
+          const hasDefault = Boolean(account.defaultPaymentMethodId || account.defaultCardAccountId);
+
+          return (
+            <section
+              key={account.id}
+              aria-label={account.name}
+              className="flex flex-col gap-2 rounded-md border border-line bg-surface p-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="m-0 text-sm font-medium text-ink">{account.name}</h2>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormFor({ accountId: account.id });
+                  }}
+                >
+                  Agregar método
+                </Button>
+              </div>
+
+              <ul className="m-0 flex list-none flex-col divide-y divide-line p-0">
+                {/* Sin esta fila no hay forma de SACAR un predeterminado. */}
+                <li className="py-2 first:pt-0">
+                  <label className="flex items-center gap-2 text-sm text-body">
+                    <input
+                      type="radio"
+                      name={`default-${account.id}`}
+                      checked={!hasDefault}
+                      onChange={() => chooseDefault(account, {})}
+                      className="h-4 w-4 accent-brand"
+                    />
+                    Ninguno
+                  </label>
+                </li>
+
+                {methods.map((pm) => (
+                  <li key={pm.id} className="flex items-center justify-between gap-3 py-2">
+                    <label className="flex items-center gap-2 text-sm text-body">
+                      <input
+                        type="radio"
+                        name={`default-${account.id}`}
+                        checked={account.defaultPaymentMethodId === pm.id}
+                        onChange={() => chooseDefault(account, { paymentMethodId: pm.id })}
+                        className="h-4 w-4 accent-brand"
+                      />
+                      <span className="text-ink">{pm.name}</span>
+                      <span className="text-muted">{TYPE_LABELS[pm.type]}</span>
+                    </label>
+                    <EditButton
+                      label={pm.name}
+                      onClick={() => {
+                        setEditing(pm);
+                        setFormFor({ accountId: account.id });
+                      }}
+                    />
+                  </li>
+                ))}
+
+                {/* Las tarjetas vinculadas son CUENTAS: se editan en Cuentas, no acá. Por eso no
+                    llevan lápiz. Elegirlas como predeterminado rutea la tx a la tarjeta. */}
+                {cards.map((card) => (
+                  <li key={card.id} className="flex items-center justify-between gap-3 py-2">
+                    <label className="flex items-center gap-2 text-sm text-body">
+                      <input
+                        type="radio"
+                        name={`default-${account.id}`}
+                        checked={account.defaultCardAccountId === card.id}
+                        onChange={() => chooseDefault(account, { cardAccountId: card.id })}
+                        className="h-4 w-4 accent-brand"
+                      />
+                      <span className="text-ink">{card.name}</span>
+                      <span className="text-muted">Tarjeta vinculada</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+
+              {methods.length === 0 && cards.length === 0 && (
+                <p className="m-0 text-sm text-muted">Esta cuenta no tiene métodos todavía.</p>
+              )}
+            </section>
+          );
+        })}
 
       <Modal
-        open={formOpen}
+        open={formFor !== null}
         onClose={closeForm}
         title={editing ? 'Editar método de pago' : 'Nuevo método de pago'}
       >
-        <PaymentMethodForm
-          key={editing?.id ?? 'new'}
-          paymentMethod={editing ?? undefined}
-          onClose={closeForm}
-          onDelete={
-            editing
-              ? () => {
-                  const id = editing.id;
-                  closeForm();
-                  setConfirmingDeleteId(id);
-                }
-              : undefined
-          }
-        />
+        {formFor && (
+          <PaymentMethodForm
+            key={editing?.id ?? `new-${formFor.accountId}`}
+            paymentMethod={editing ?? undefined}
+            accountId={formFor.accountId}
+            onClose={closeForm}
+            onDelete={
+              editing
+                ? () => {
+                    const id = editing.id;
+                    closeForm();
+                    setConfirmingDeleteId(id);
+                  }
+                : undefined
+            }
+          />
+        )}
       </Modal>
 
       <ConfirmDialog
