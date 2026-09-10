@@ -105,5 +105,13 @@ export type CurrencyExpenses = {
 export type ExpensesSummary = {
   year: number;
   month: number;
+  /** S49: si los montos vienen EFECTIVAMENTE en pesos constantes (D5). Pedirlo sin IPC en la
+   *  tabla devuelve montos nominales y false, que es lo que deshabilita el switch. */
+  constant: boolean;
+  /** S49: hasta qué mes llega el IPC publicado, "YYYY-MM". Viene se haya pedido el ajuste o no:
+   *  es lo que dice si el switch se puede prender. null = todavía no hay IPC. */
+  ipcAsOf: string | null;
+  /** S49: cuántos meses de la ventana quedaron nominales porque no hay IPC tan atrás. */
+  unadjustedMonths: number;
   byCurrency: CurrencyExpenses[];
 };

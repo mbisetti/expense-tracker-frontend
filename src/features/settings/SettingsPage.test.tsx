@@ -91,3 +91,75 @@ describe('SettingsPage', () => {
     expect(localStorage.getItem('holidayCalendar')).toBe('US');
   });
 });
+
+// S49 (D3/D12) — la casa del dólar en Preferencias.
+describe('SettingsPage: cotización del dólar (S49)', () => {
+  const ME = {
+    id: 'u1',
+    email: 'a@a.com',
+    name: 'A',
+    defaultCurrency: 'ARS',
+    workingCurrencies: [],
+    arsQuote: 'MEP',
+    createdAt: '2026-01-01T00:00:00',
+  };
+
+  const INDEXES = {
+    usd: {
+      MEP: { buy: 1529.5, sell: 1533, date: '2026-09-09' },
+      BLUE: { buy: 1525, sell: 1540, date: '2026-09-09' },
+      OFICIAL: { buy: 1485, sell: 1535, date: '2026-09-09' },
+    },
+    ipc: { month: '2026-07', value: 12076.3937 },
+  };
+
+  function stub(indexes: unknown, patchBodies: Record<string, unknown>[] = []) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string, opts?: RequestInit) => {
+        if (opts?.method === 'PATCH') {
+          const body = JSON.parse(opts.body as string);
+          patchBodies.push(body);
+          return jsonResponse(200, { ...ME, ...body });
+        }
+        if (String(url).includes('/indexes/latest')) return jsonResponse(200, indexes);
+        if (String(url).includes('/users/me')) return jsonResponse(200, ME);
+        return jsonResponse(200, {});
+      }),
+    );
+  }
+
+  it('muestra la casa guardada y al cambiarla pega PATCH /users/me', async () => {
+    const patchBodies: Record<string, unknown>[] = [];
+    stub(INDEXES, patchBodies);
+    renderSettings();
+
+    await waitFor(() => expect(selectValue('Cotización del dólar', { exact: false })).toBe('MEP'));
+
+    await selectOption('Cotización del dólar', 'BLUE', { exact: false });
+
+    await waitFor(() => expect(patchBodies).toContainEqual({ arsQuote: 'BLUE' }));
+    expect(await screen.findByText('Cotización guardada.')).toBeInTheDocument();
+  });
+
+  it('el helper muestra los tres valores de hoy', async () => {
+    stub(INDEXES);
+    renderSettings();
+
+    expect(
+      await screen.findByText(/Hoy: MEP \$ ?1\.533 · Blue \$ ?1\.540 · Oficial \$ ?1\.535/),
+    ).toBeInTheDocument();
+  });
+
+  // El job todavía no corrió (primer deploy): el selector funciona igual, sin la línea de valores.
+  it('sin datos de índices no muestra la línea "Hoy:"', async () => {
+    stub({ usd: { MEP: null, BLUE: null, OFICIAL: null }, ipc: null });
+    renderSettings();
+
+    await waitFor(() => expect(selectValue('Cotización del dólar', { exact: false })).toBe('MEP'));
+    expect(screen.queryByText(/Hoy:/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Nunca cambia lo que ya anotaste\./),
+    ).toBeInTheDocument();
+  });
+});

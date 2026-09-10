@@ -15,6 +15,7 @@ import { CommitmentsCard } from './CommitmentsCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { useMe } from '../auth/useMe';
+import { useInflationAdjust } from '../../lib/useInflationAdjust';
 
 const MonthlyChart = lazy(() =>
   import('./MonthlyChart').then((m) => ({ default: m.MonthlyChart })),
@@ -28,7 +29,9 @@ export function DashboardPage() {
   const { data: me } = useMe();
   const guidePending = me?.onboarded === false;
   const { data, isPending, isError } = useDashboardOverview();
-  const monthly = useMonthlySummary();
+  // S49 (D11): el toggle es UNO para el Dashboard y para Gastos, guardado en localStorage.
+  const [inflationAdjusted, setInflationAdjusted] = useInflationAdjust();
+  const monthly = useMonthlySummary(inflationAdjusted);
   const transactions = useTransactions({ page: 0, size: 5, sort: 'date', direction: 'DESC' });
 
   const [selectedCurrency, setSelectedCurrency] = useState<string | null>(null);
@@ -91,6 +94,20 @@ export function DashboardPage() {
                       ?.months ?? []
                   }
                   currency={overview.currency}
+                  // Sólo con la pestaña ARS activa: pesos constantes es para pesos (D5). Con
+                  // otra moneda el switch no existe, en vez de existir sin hacer nada.
+                  adjust={
+                    overview.currency === 'ARS'
+                      ? {
+                          // La posición del switch es la preferencia guardada, pero nunca puede
+                          // quedar prendido sin datos: ahí mentiría sobre lo que se está viendo.
+                          enabled: inflationAdjusted && monthly.data.ipcAsOf != null,
+                          available: monthly.data.ipcAsOf != null,
+                          ipcAsOf: monthly.data.ipcAsOf,
+                          onChange: setInflationAdjusted,
+                        }
+                      : null
+                  }
                 />
               </Suspense>
             )}

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from '../auth/context';
@@ -9,6 +9,11 @@ import type { TransactionListItem } from '../transactions/api';
 import { jsonResponse, ok } from '../../test/mockResponse';
 
 const monthlyFixture = {
+  // S49: la respuesta trae hasta qué mes llega el IPC aunque no se haya pedido el ajuste; es lo
+  // que le dice a la pantalla si el switch se puede prender.
+  constant: false,
+  ipcAsOf: '2026-07',
+  unadjustedMonths: 0,
   byCurrency: [
     {
       currency: 'ARS',
@@ -129,6 +134,8 @@ function renderPage() {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // S49: el toggle de pesos constantes vive en localStorage y es compartido entre pantallas.
+  localStorage.clear();
 });
 
 describe('DashboardPage', () => {
@@ -411,5 +418,104 @@ describe('DashboardPage', () => {
     // ExpectedIncomeCard/BudgetSection ya resolvieron ({budgets: []}, sin fuentes), así que
     // sólo quedan estos dos pendientes.
     expect(screen.getAllByRole('status', { name: 'Cargando…' })).toHaveLength(2);
+  });
+});
+
+// S49 (D5/D12) — el switch de pesos constantes en el encabezado de la figura.
+describe('DashboardPage: ajustar por inflación (S49)', () => {
+  const ARS_ONLY = {
+    byCurrency: [
+      {
+        currency: 'ARS',
+        totalBalance: 200000,
+        monthIncome: 250000,
+        monthExpense: 50000,
+        formalBalance: 200000,
+        informalBalance: 0,
+      },
+    ],
+    consolidated: null,
+  };
+
+  const USD_ONLY = {
+    byCurrency: [
+      {
+        currency: 'USD',
+        totalBalance: 500,
+        monthIncome: 100,
+        monthExpense: 20,
+        formalBalance: 500,
+        informalBalance: 0,
+      },
+    ],
+    consolidated: null,
+  };
+
+  function stubMonthly(overview: unknown, monthlyByUrl: (url: string) => unknown) {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        urls.push(url);
+        if (url.includes('/summary/budgets')) return ok({ budgets: [] });
+        if (url.includes('/savings')) return ok([]);
+        if (url.includes('/summary/expected-income'))
+          return ok({ month: 7, year: 2026, byCurrency: [], sources: [] });
+        if (url.includes('/summary/overview')) return ok(overview);
+        if (url.includes('/summary/monthly')) return ok(monthlyByUrl(url));
+        if (url.includes('/transactions')) return ok(pageFixture);
+        if (url.includes('/users/me')) return ok(ME_ONBOARDED);
+        throw new Error('URL inesperada: ' + url);
+      }),
+    );
+    return urls;
+  }
+
+  it('con ARS activa aparece el switch, y prenderlo pide la serie ajustada', async () => {
+    const urls = stubMonthly(ARS_ONLY, (url) =>
+      url.includes('constant=true')
+        ? { ...monthlyFixture, constant: true, ipcAsOf: '2026-07', unadjustedMonths: 0 }
+        : monthlyFixture,
+    );
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: 'Ajustar por inflación' });
+    expect(toggle).toBeEnabled();
+    expect(screen.getByText('Últimos 6 meses')).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+
+    await waitFor(() => expect(urls.some((u) => u.includes('constant=true'))).toBe(true));
+    expect(
+      await screen.findByText('Últimos 6 meses, en pesos de julio 2026'),
+    ).toBeInTheDocument();
+    expect(localStorage.getItem('inflationAdjusted')).toBe('1');
+  });
+
+  // Pesos constantes es para pesos (D5): con otra moneda el switch no existe, en vez de existir
+  // sin hacer nada.
+  it('con otra moneda activa no hay switch', async () => {
+    stubMonthly(USD_ONLY, () => ({
+      ...monthlyFixture,
+      byCurrency: [{ currency: 'USD', months: monthlyFixture.byCurrency[0].months }],
+    }));
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'Ingresos vs gastos' });
+    expect(screen.queryByRole('switch', { name: 'Ajustar por inflación' })).not.toBeInTheDocument();
+  });
+
+  // Sin IPC el switch se muestra deshabilitado y explica por qué: esconder la función sin decir
+  // nada deja al usuario sin saber que existe.
+  it('sin IPC el switch queda deshabilitado y lo dice', async () => {
+    stubMonthly(ARS_ONLY, () => ({ ...monthlyFixture, constant: false, ipcAsOf: null }));
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: 'Ajustar por inflación' });
+    expect(toggle).toBeDisabled();
+    expect(screen.getByText('Todavía no hay datos del IPC.')).toBeInTheDocument();
   });
 });

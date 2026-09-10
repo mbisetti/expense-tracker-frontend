@@ -2,6 +2,7 @@ import { Amount } from '../../components/ui/Amount';
 import { InfoIcon } from '../../components/ui/icons';
 import { formatMoney } from '../../lib/money';
 import { useExchangeRate } from '../transfers/useExchangeRate';
+import { quoteLabel } from '../../lib/quoteLabel';
 
 type SubBalanceChipProps = {
   currency: string;
@@ -31,10 +32,12 @@ export function SubBalanceChip({
   );
   const converted = needsConversion && rate?.rate != null ? balance * rate.rate : null;
 
+  // S49: con casa, el tooltip dice cuál y de qué día. Sin casa, el copy de siempre.
+  const casa = quoteLabel(rate?.quote, rate?.quoteDate);
   const message = rate?.unavailable
     ? 'Cotización no disponible'
     : converted != null
-      ? `≈ ${formatMoney(converted, favoriteCurrency!)} (estimado)`
+      ? `≈ ${formatMoney(converted, favoriteCurrency!)} (estimado${casa ? `, ${casa}` : ''})`
       : 'Buscando cotización…';
 
   return (

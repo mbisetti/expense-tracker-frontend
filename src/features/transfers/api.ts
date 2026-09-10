@@ -1,3 +1,5 @@
+import type { ArsQuote } from '../../lib/quoteLabel';
+
 export type TransferListItem = {
   id: string;
   fromAccountId: string;
@@ -29,4 +31,9 @@ export type ExchangeRateResult = {
   rate: number | null;
   asOf: string | null;
   unavailable: boolean;
+  /** S49: qué dólar se usó, cuando el par es USD/ARS. null = salió del proveedor de siempre y la
+   *  pantalla muestra el copy de antes de S49. No es un error. */
+  quote: ArsQuote | null;
+  /** S49: de qué día es esa cotización, "YYYY-MM-DD". */
+  quoteDate: string | null;
 };

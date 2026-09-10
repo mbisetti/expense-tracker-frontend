@@ -10,6 +10,8 @@ import { useMe, useUpdateMe } from '../auth/useMe';
 import { NotificationsSection } from '../notifications/NotificationsSection';
 import { InstallSection } from './InstallSection';
 import { WorkingCurrenciesSection } from './WorkingCurrenciesSection';
+import { useLatestIndexes } from './useLatestIndexes';
+import type { ArsQuote } from '../../lib/quoteLabel';
 import { MoonIcon, SunIcon } from '../../components/ui/icons';
 
 // Moneda favorita: opciones curadas (Sprint 22.1). Si el usuario tuviera otra guardada,
@@ -21,6 +23,28 @@ const CURRENCY_LABEL: Record<string, string> = {
   EUR: 'Euro (EUR)',
 };
 
+// S49 (D3/D12): las tres casas del dólar, en el orden en que conviene ofrecerlas. El MEP
+// primero porque es el default y el que se compra legal a precio de mercado.
+const ARS_QUOTES: ArsQuote[] = ['MEP', 'BLUE', 'OFICIAL'];
+const ARS_QUOTE_LABEL: Record<ArsQuote, string> = {
+  MEP: 'MEP (dólar bolsa)',
+  BLUE: 'Blue',
+  OFICIAL: 'Oficial',
+};
+// En la línea "Hoy:" van las tres juntas, así que el nombre corto: "MEP $1.533 · Blue $1.540 ·
+// Oficial $1.535" se lee de un saque, con la aclaración entre paréntesis no.
+const ARS_QUOTE_SHORT: Record<ArsQuote, string> = {
+  MEP: 'MEP',
+  BLUE: 'Blue',
+  OFICIAL: 'Oficial',
+};
+// Sin centavos: una cotización de referencia con dos decimales no se lee mejor, se lee peor.
+const QUOTE_FMT = new Intl.NumberFormat('es-AR', {
+  style: 'currency',
+  currency: 'ARS',
+  maximumFractionDigits: 0,
+});
+
 // "Ajustes y preferencias" — preferencias de la app y nada más desde S25.4: el email, la
 // contraseña, los conectores y el borrado viven en la página Cuenta (D7).
 export function SettingsPage() {
@@ -31,6 +55,31 @@ export function SettingsPage() {
   const { data: me } = useMe();
   const updateMe = useUpdateMe();
   const toast = useToast();
+  // S49: cuánto está cada dólar hoy, para poner el número al lado de la opción. Si el job
+  // todavía no corrió viene todo en null y la línea "Hoy:" simplemente no aparece.
+  const { data: indexes } = useLatestIndexes();
+
+  const quoteValue = (quote: ArsQuote): number | null => indexes?.usd?.[quote]?.sell ?? null;
+
+  // Una sola línea con las tres, armada como UN string: partirla en JSX serían varios nodos de
+  // texto y la frase dejaría de existir como tal (lección S47).
+  const todayLine = (() => {
+    const parts = ARS_QUOTES.map((quote) => {
+      const value = quoteValue(quote);
+      return value == null ? null : `${ARS_QUOTE_SHORT[quote]} ${QUOTE_FMT.format(value)}`;
+    }).filter(Boolean);
+    return parts.length > 0 ? `Hoy: ${parts.join(' · ')}` : null;
+  })();
+
+  const changeArsQuote = (arsQuote: string) => {
+    updateMe.mutate(
+      { arsQuote: arsQuote as ArsQuote },
+      {
+        onSuccess: () => toast.success('Cotización guardada.'),
+        onError: () => toast.error('No pudimos guardar la cotización. Intentá de nuevo.'),
+      },
+    );
+  };
 
   const favCurrencyOptions =
     me && !FAV_CURRENCIES.includes(me.defaultCurrency)
@@ -92,6 +141,31 @@ export function SettingsPage() {
                   qué monedas hablás), y leerlas juntas hace evidente que una es la de referencia y
                   las otras las de trabajo. */}
               <WorkingCurrenciesSection />
+
+              {/* S49 (D12): la tercera de la misma familia. Con qué dólar habla la app. */}
+              <Select
+                label="Cotización del dólar"
+                id="ars-quote"
+                value={me?.arsQuote ?? ''}
+                disabled={!me || updateMe.isPending}
+                onChange={(e) => changeArsQuote(e.target.value)}
+                helper={
+                  todayLine
+                    ? `Se usa para sugerir conversiones entre pesos y dólares y para el total consolidado. Nunca cambia lo que ya anotaste. ${todayLine}`
+                    : 'Se usa para sugerir conversiones entre pesos y dólares y para el total consolidado. Nunca cambia lo que ya anotaste.'
+                }
+              >
+                {ARS_QUOTES.map((quote) => {
+                  const value = quoteValue(quote);
+                  return (
+                    <option key={quote} value={quote}>
+                      {value == null
+                        ? ARS_QUOTE_LABEL[quote]
+                        : `${ARS_QUOTE_LABEL[quote]} · ${QUOTE_FMT.format(value)}`}
+                    </option>
+                  );
+                })}
+              </Select>
 
               <Select
                 label="Formato de fecha"

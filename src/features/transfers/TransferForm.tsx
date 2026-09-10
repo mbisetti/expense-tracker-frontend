@@ -14,6 +14,7 @@ import { useAccounts } from '../accounts/useAccounts';
 import { useMe } from '../auth/useMe';
 import { useCreateTransfer, useUpdateTransfer } from './useTransferMutations';
 import { useExchangeRate } from './useExchangeRate';
+import { quoteLabel } from '../../lib/quoteLabel';
 import { transferErrorMessage } from './errorMessages';
 import type { TransferListItem } from './api';
 
@@ -308,7 +309,10 @@ export function TransferForm({
                     rate?.unavailable
                       ? 'Cotización no disponible: ingresá el monto de destino a mano.'
                       : rate?.rate
-                        ? `Cotización sugerida: 1 ${resolvedFromCcy} ≈ ${rate.rate} ${resolvedToCcy} (editable).`
+                        ? // S49: cuando el número salió de la casa elegida en Ajustes, la
+                          // sugerencia dice cuál y de qué día. Sin casa (otro par, o la tabla
+                          // todavía vacía) es el copy de siempre.
+                          `Cotización sugerida${quoteLabel(rate.quote, rate.quoteDate) ? ` (${quoteLabel(rate.quote, rate.quoteDate)})` : ''}: 1 ${resolvedFromCcy} ≈ ${rate.rate} ${resolvedToCcy} (editable).`
                         : 'Buscando cotización...'
                   }
                 />

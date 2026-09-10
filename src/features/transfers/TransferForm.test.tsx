@@ -214,3 +214,54 @@ describe('TransferForm — comisión del destino', () => {
     expect(calls.some((c) => c.method === 'POST')).toBe(false);
   });
 });
+
+// S49 (D12): la sugerencia dice de qué dólar salió. El efecto de prefill NO se tocó: lo único
+// que cambia es el string del helper.
+describe('TransferForm — la cotización sugerida dice de qué dólar salió (S49)', () => {
+  function stubRate(quote: string | null, quoteDate: string | null) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/exchange-rates')) {
+          return jsonResponse(200, {
+            base: 'ARS',
+            target: 'USD',
+            rate: 0.00065355,
+            asOf: null,
+            unavailable: false,
+            quote,
+            quoteDate,
+          });
+        }
+        if (url.includes('/accounts')) return jsonResponse(200, [accA, accB, accUsd]);
+        return jsonResponse(200, []);
+      }),
+    );
+  }
+
+  it('con casa la nombra, con su fecha', async () => {
+    stubRate('MEP', '2026-09-09');
+    renderForm();
+
+    await selectOption('Cuenta origen', 'a', { exact: false });
+    await selectOption('Cuenta destino', 'u', { exact: false });
+
+    expect(
+      await screen.findByText(
+        'Cotización sugerida (MEP del 9/9): 1 ARS ≈ 0.00065355 USD (editable).',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('sin casa muestra el helper de siempre', async () => {
+    stubRate(null, null);
+    renderForm();
+
+    await selectOption('Cuenta origen', 'a', { exact: false });
+    await selectOption('Cuenta destino', 'u', { exact: false });
+
+    expect(
+      await screen.findByText('Cotización sugerida: 1 ARS ≈ 0.00065355 USD (editable).'),
+    ).toBeInTheDocument();
+  });
+});

@@ -16,6 +16,9 @@ import { CategoryTransactionsModal } from './CategoryTransactionsModal';
 import { Section } from './Section';
 import { SectionNav, type SectionLink } from './SectionNav';
 import { useSectionsOpen } from './useSectionsOpen';
+import { Switch } from '../../components/ui/Switch';
+import { useInflationAdjust } from '../../lib/useInflationAdjust';
+import { ipcMonthLabel } from '../../lib/quoteLabel';
 import { SharedSection } from '../shared/SharedSection';
 import { OwedSection } from '../shared/OwedSection';
 import { useSharedSummary, usePersonDebts } from '../shared/useShared';
@@ -59,8 +62,18 @@ function currentPeriod(): { year: number; month: number } {
 
 // Resumen del mes: total (Amount lg) + delta vs mes anterior + split esencial/no esencial
 // (montos, % y barra de dos segmentos). Markup local, no hace falta un componente genérico.
-function MonthSummary({ data }: { data: CurrencyExpenses }) {
+function MonthSummary({
+  data,
+  ipcAsOf,
+  unadjustedMonths,
+}: {
+  data: CurrencyExpenses;
+  /** S49: mes base de los pesos constantes, "YYYY-MM". null = los montos son nominales. */
+  ipcAsOf?: string | null;
+  unadjustedMonths?: number;
+}) {
   const delta = deltaVsPrev(data.total, data.prevMonthTotal);
+  const base = ipcMonthLabel(ipcAsOf);
   const essentialPct = data.total > 0 ? Math.round((data.essentialTotal / data.total) * 100) : 0;
   const nonEssentialPct = data.total > 0 ? 100 - essentialPct : 0;
 
@@ -102,6 +115,18 @@ function MonthSummary({ data }: { data: CurrencyExpenses }) {
         </p>
       )}
 
+      {/* S49 (D5): con el ajuste puesto, la pantalla dice en pesos de qué mes está hablando.
+          Y si algún mes de la ventana quedó nominal por no haber IPC tan atrás, lo dice también:
+          un promedio con un mes sin ajustar no es del todo comparable. */}
+      {base && (
+        <p className="text-xs text-muted">
+          {`En pesos de ${base}, según el IPC del INDEC.` +
+            (unadjustedMonths && unadjustedMonths > 0
+              ? ` ${unadjustedMonths} ${unadjustedMonths === 1 ? 'mes quedó' : 'meses quedaron'} sin ajustar: no hay IPC tan atrás.`
+              : '')}
+        </p>
+      )}
+
       {data.total > 0 && (
         <div className="flex flex-col gap-1.5">
           {/* S24.2 A.1: esencial = ink (el "negro" temático), no esencial = ámbar. Ni rojo
@@ -138,7 +163,13 @@ export function ExpensesPage() {
   const [drill, setDrill] = useState<CategoryExpense | null>(null);
 
   const { data: me } = useMe();
-  const { data, isPending, isError } = useExpensesSummary(period.year, period.month);
+  // S49 (D11): el mismo toggle que el Dashboard, guardado en localStorage.
+  const [inflationAdjusted, setInflationAdjusted] = useInflationAdjust();
+  const { data, isPending, isError } = useExpensesSummary(
+    period.year,
+    period.month,
+    inflationAdjusted,
+  );
   // Hoisteado de SharedSection (React Query dedupea): la página decide si la sección existe
   // y arma su resumen colapsado; el componente adentro consume la misma cache.
   const { data: shared } = useSharedSummary();
@@ -233,6 +264,14 @@ export function ExpensesPage() {
         : (currencies[0] ?? '');
   const current = data?.byCurrency.find((c) => c.currency === active);
 
+  // S49 (D5/D12): el switch existe sólo con la pestaña ARS activa. Sin IPC en la tabla se
+  // muestra deshabilitado y explica por qué, en vez de desaparecer sin decir nada. Y la posición
+  // nunca queda prendida sin datos: ahí mentiría sobre lo que se está viendo.
+  const ipcAvailable = data?.ipcAsOf != null;
+  const showAdjust = !!data && active === 'ARS';
+  const adjustEnabled = inflationAdjusted && ipcAvailable;
+  const ipcBaseLabel = ipcMonthLabel(data?.ipcAsOf);
+
   const recurring = current?.recurring;
   const pendingRecurring =
     recurring?.items.filter((i) => i.state === 'PENDING' || i.state === 'PARTIAL').length ?? 0;
@@ -259,8 +298,32 @@ export function ExpensesPage() {
         }
       />
 
-      {currencies.length > 1 && (
-        <CurrencyTabs currencies={currencies} selected={active} onSelect={setPicked} />
+      {/* S49 (D12): el switch al lado de las pestañas de moneda, porque el parámetro ajusta la
+          página ENTERA (categorías, evolución, recortar) y no un bloque suelto. Sólo con ARS
+          activa: pesos constantes es para pesos. flex-wrap para que en pantallas angostas caiga
+          debajo de las pestañas en vez de apretarlas. */}
+      {(currencies.length > 1 || showAdjust) && (
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          {currencies.length > 1 && (
+            <CurrencyTabs currencies={currencies} selected={active} onSelect={setPicked} />
+          )}
+          {showAdjust && (
+            <Switch
+              id="expenses-inflation-adjust"
+              label="Ajustar por inflación"
+              checked={adjustEnabled}
+              disabled={!ipcAvailable}
+              helper={
+                !ipcAvailable
+                  ? 'Todavía no hay datos del IPC.'
+                  : adjustEnabled && ipcBaseLabel
+                    ? `Montos en pesos de ${ipcBaseLabel}, según el IPC del INDEC.`
+                    : 'Montos tal como los anotaste.'
+              }
+              onChange={setInflationAdjusted}
+            />
+          )}
+        </div>
       )}
 
       {isPending && <Skeleton variant="card" />}
@@ -277,7 +340,11 @@ export function ExpensesPage() {
 
       {current && (
         <>
-          <MonthSummary data={current} />
+          <MonthSummary
+            data={current}
+            ipcAsOf={data?.constant ? data.ipcAsOf : null}
+            unadjustedMonths={data?.unadjustedMonths}
+          />
           <SectionNav sections={navLinks} onGo={goTo} />
 
           <Section
@@ -288,8 +355,10 @@ export function ExpensesPage() {
             summary={`${current.byCategory.length} categoría${current.byCategory.length === 1 ? '' : 's'}`}
           >
             {/* key por mes+moneda: resetea el triple toggle y "Ver todos" al navegar (S24.2 B). */}
+            {/* S49: `constant` entra en el key. Cambiar de base cambia todos los montos, y el
+                triple toggle y el "Ver todos" locales tienen que arrancar limpios. */}
             <CategoryBreakdown
-              key={`${monthKey(period.year, period.month)}-${active}`}
+              key={`${monthKey(period.year, period.month)}-${active}-${data?.constant ?? false}`}
               data={current}
               onDrill={setDrill}
             />

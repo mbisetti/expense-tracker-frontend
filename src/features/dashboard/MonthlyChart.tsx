@@ -8,31 +8,75 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { Switch } from '../../components/ui/Switch';
 import { formatMoney } from '../../lib/money';
 import { monthShortLabel } from '../../lib/months';
+import { ipcMonthLabel } from '../../lib/quoteLabel';
 import type { MonthlyBucket } from './api';
+
+// S49 (D5/D12) — el switch de pesos constantes vive en el encabezado de la figura, y sólo
+// cuando la moneda activa es ARS: pesos constantes es para pesos.
+export type InflationAdjust = {
+  /** Si los montos que se están mostrando vienen ajustados. */
+  enabled: boolean;
+  /** Si hay IPC en la tabla. Sin datos el switch se muestra deshabilitado, no escondido: que
+   *  exista y explique por qué no anda es más honesto que hacer desaparecer la función. */
+  available: boolean;
+  /** Último mes con IPC publicado, "YYYY-MM". */
+  ipcAsOf: string | null;
+  onChange: (next: boolean) => void;
+};
 
 type MonthlyChartProps = {
   months: MonthlyBucket[];
   currency: string;
+  adjust?: InflationAdjust | null;
 };
 
 const compact = new Intl.NumberFormat('es-AR', { notation: 'compact' });
 
-export function MonthlyChart({ months, currency }: MonthlyChartProps) {
+function adjustHelper(adjust: InflationAdjust): string {
+  if (!adjust.available) return 'Todavía no hay datos del IPC.';
+  const base = ipcMonthLabel(adjust.ipcAsOf);
+  return adjust.enabled && base
+    ? `Montos en pesos de ${base}, según el IPC del INDEC.`
+    : 'Montos tal como los anotaste.';
+}
+
+export function MonthlyChart({ months, currency, adjust }: MonthlyChartProps) {
   const data = months.map((bucket) => ({
     label: monthShortLabel(bucket.month),
     income: bucket.income,
     expense: bucket.expense,
   }));
 
+  const base = adjust?.enabled ? ipcMonthLabel(adjust.ipcAsOf) : null;
+  // Un solo string y no texto partido en JSX (lección S47).
+  const caption = base ? `Últimos 6 meses, en pesos de ${base}` : 'Últimos 6 meses';
+
   return (
     <figure
       aria-label={`Ingresos vs gastos últimos 6 meses ${currency}`}
       className="rounded-xl border border-line bg-surface p-4"
     >
-      <h2>Ingresos vs gastos</h2>
-      <figcaption className="text-body text-sm">Últimos 6 meses</figcaption>
+      {/* flex-wrap: en pantallas angostas el switch cae debajo del título en vez de pisar el
+          gráfico. items-start para que la etiqueta y su helper no estiren la fila del h2. */}
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2>Ingresos vs gastos</h2>
+          <figcaption className="text-body text-sm">{caption}</figcaption>
+        </div>
+        {adjust && (
+          <Switch
+            id="dashboard-inflation-adjust"
+            label="Ajustar por inflación"
+            checked={adjust.enabled}
+            disabled={!adjust.available}
+            helper={adjustHelper(adjust)}
+            onChange={adjust.onChange}
+          />
+        )}
+      </div>
 
       {months.length === 0 ? (
         <p>Sin movimientos en los últimos 6 meses.</p>

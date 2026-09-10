@@ -56,7 +56,16 @@ beforeEach(() => {
     'fetch',
     vi.fn((url: string) => {
       if (url.includes('/summary/expenses')) {
-        return jsonResponse(200, { year: 2026, month: 7, byCurrency });
+        // S49: ipcAsOf viaja siempre (dice si el switch se puede prender); constant es lo que
+        // efectivamente se hizo.
+        return jsonResponse(200, {
+          year: 2026,
+          month: 7,
+          constant: url.includes('constant=true'),
+          ipcAsOf: '2026-07',
+          unadjustedMonths: 0,
+          byCurrency,
+        });
       }
       if (url.includes('/users/me')) {
         return jsonResponse(200, { id: 'u', email: 'a@a.com', name: 'A', defaultCurrency: 'ARS' });
@@ -223,5 +232,118 @@ describe('ExpensesPage — deep-link por hash con la página ya abierta', () => 
     fireEvent.click(screen.getByRole('button', { name: 'simular notificación' }));
 
     expect(await screen.findByText(/Recortando 20% de lo no esencial/)).toBeInTheDocument();
+  });
+});
+
+// S49 (D5/D12) — el mismo switch que el Dashboard, al lado de las pestañas de moneda, porque el
+// parámetro ajusta la página entera.
+describe('ExpensesPage: ajustar por inflación (S49)', () => {
+  it('prenderlo pide la página ajustada y lo dice en el resumen del mes', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        urls.push(url);
+        if (url.includes('/summary/expenses')) {
+          return jsonResponse(200, {
+            year: 2026,
+            month: 7,
+            constant: url.includes('constant=true'),
+            ipcAsOf: '2026-07',
+            unadjustedMonths: 0,
+            byCurrency: [arsCurrency],
+          });
+        }
+        if (url.includes('/users/me')) {
+          return jsonResponse(200, { id: 'u', email: 'a@a.com', name: 'A', defaultCurrency: 'ARS' });
+        }
+        return jsonResponse(200, []);
+      }),
+    );
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: 'Ajustar por inflación' });
+    expect(toggle).toBeEnabled();
+    expect(screen.queryByText(/En pesos de julio 2026/)).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(
+      await screen.findByText('En pesos de julio 2026, según el IPC del INDEC.'),
+    ).toBeInTheDocument();
+    expect(urls.some((u) => u.includes('constant=true'))).toBe(true);
+    expect(localStorage.getItem('inflationAdjusted')).toBe('1');
+  });
+
+  // D7: un mes anterior al arranque de la serie queda nominal, y la pantalla lo dice en vez de
+  // dejar creer que todo está en la misma base.
+  it('avisa cuántos meses quedaron sin ajustar', async () => {
+    localStorage.setItem('inflationAdjusted', '1');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/summary/expenses')) {
+          return jsonResponse(200, {
+            year: 2026,
+            month: 7,
+            constant: true,
+            ipcAsOf: '2026-07',
+            unadjustedMonths: 2,
+            byCurrency: [arsCurrency],
+          });
+        }
+        if (url.includes('/users/me')) {
+          return jsonResponse(200, { id: 'u', email: 'a@a.com', name: 'A', defaultCurrency: 'ARS' });
+        }
+        return jsonResponse(200, []);
+      }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText(
+        'En pesos de julio 2026, según el IPC del INDEC. 2 meses quedaron sin ajustar: no hay IPC tan atrás.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('con la pestaña USD activa el switch desaparece', async () => {
+    byCurrency = [arsCurrency, usdCurrency];
+    renderPage();
+
+    expect(
+      await screen.findByRole('switch', { name: 'Ajustar por inflación' }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'USD' }));
+
+    expect(screen.queryByRole('switch', { name: 'Ajustar por inflación' })).not.toBeInTheDocument();
+  });
+
+  it('sin IPC el switch queda deshabilitado y lo dice', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) => {
+        if (url.includes('/summary/expenses')) {
+          return jsonResponse(200, {
+            year: 2026,
+            month: 7,
+            constant: false,
+            ipcAsOf: null,
+            unadjustedMonths: 0,
+            byCurrency: [arsCurrency],
+          });
+        }
+        if (url.includes('/users/me')) {
+          return jsonResponse(200, { id: 'u', email: 'a@a.com', name: 'A', defaultCurrency: 'ARS' });
+        }
+        return jsonResponse(200, []);
+      }),
+    );
+    renderPage();
+
+    const toggle = await screen.findByRole('switch', { name: 'Ajustar por inflación' });
+    expect(toggle).toBeDisabled();
+    expect(screen.getByText('Todavía no hay datos del IPC.')).toBeInTheDocument();
   });
 });

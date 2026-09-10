@@ -1,3 +1,5 @@
+import type { ArsQuote } from '../../lib/quoteLabel';
+
 import { http } from '../../lib/http';
 
 export type LoginRequest = {
@@ -39,6 +41,9 @@ export type Me = {
   emailVerified: boolean;
   /** S46 (D2): ya terminó o saltó la guía de primeros pasos. false = todavía la puede ver. */
   onboarded: boolean;
+  /** S49 (D3): qué dólar usa la app para sugerir conversiones USD/ARS y para el total
+   *  consolidado. Nunca null: los usuarios anteriores a V62 quedaron en MEP. */
+  arsQuote: ArsQuote;
   createdAt: string;
 };
 

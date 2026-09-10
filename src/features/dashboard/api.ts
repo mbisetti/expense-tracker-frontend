@@ -1,3 +1,5 @@
+import type { ArsQuote } from '../../lib/quoteLabel';
+
 export type CurrencyOverview = {
   currency: string;
   totalBalance: number;
@@ -12,6 +14,11 @@ export type ConsolidatedBalance = {
   currency: string;
   isEstimate: boolean;
   partial: boolean;
+  /** S49: con qué dólar se calculó el "≈". null = no intervino el par USD/ARS (o la tabla de
+   *  índices todavía no tiene datos) y el banner muestra el copy de siempre. */
+  quote: ArsQuote | null;
+  /** S49: de qué día es esa cotización, "YYYY-MM-DD". */
+  quoteDate: string | null;
 };
 
 export type OverviewResponse = {
@@ -34,6 +41,14 @@ export type CurrencyMonthly = {
 
 export type MonthlyResponse = {
   byCurrency: CurrencyMonthly[];
+  /** S49: si los montos vienen EFECTIVAMENTE en pesos constantes. Pedirlo sin IPC en la tabla
+   *  devuelve montos nominales y false, que es lo que deshabilita el switch. */
+  constant: boolean;
+  /** S49: hasta qué mes llega el IPC publicado, "YYYY-MM". Viene se haya pedido el ajuste o no:
+   *  es lo que dice si el switch se puede prender. null = todavía no hay IPC. */
+  ipcAsOf: string | null;
+  /** S49: cuántos meses de la ventana quedaron nominales porque no hay IPC tan atrás. */
+  unadjustedMonths: number;
 };
 
 // ── Compromisos del mes ─────────────────────────────────────────────────────────────────────
