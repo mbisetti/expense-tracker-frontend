@@ -12,6 +12,7 @@ import { useAccounts } from '../accounts/useAccounts';
 import { useMe } from '../auth/useMe';
 import { currencyOptionsForAny } from '../../lib/currencyOptions';
 import { usePaymentMethods } from '../paymentMethods/usePaymentMethods';
+import { defaultMethodValue } from '../paymentMethods/defaultMethodValue';
 import { numberToAmountDisplay, parseAmountInput } from '../../lib/money';
 import { transactionErrorMessage } from '../transactions/errorMessages';
 import { RecurringConfigFields } from './RecurringConfigFields';
@@ -220,7 +221,14 @@ export function RecurringExpenseForm({ open, onClose, defaultCurrency, existing 
                 value={config.debitAccountId}
                 onChange={(e) =>
                   // cambiar la cuenta resetea el método (depende de la cuenta)
-                  patchConfig({ debitAccountId: e.target.value, debitPaymentMethodId: '' })
+                  // S50 (D2): el método del débito automático arranca en el predeterminado de
+                  // la cuenta elegida. Sin tarjetas (este select no las ofrece).
+                  patchConfig({
+                    debitAccountId: e.target.value,
+                    debitPaymentMethodId: defaultMethodValue(
+                      accounts?.find((a) => a.id === e.target.value),
+                    ),
+                  })
                 }
                 required
                 disabled={isPending}

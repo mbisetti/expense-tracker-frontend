@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { formatMoney } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { usePaymentMethods } from '../paymentMethods/usePaymentMethods';
+import { defaultMethodValue } from '../paymentMethods/defaultMethodValue';
 import type { SettleInput } from './api';
 
 // Las cuentas de PASIVO no reciben cobros: CREDIT es mono-moneda y una devolución de un amigo
@@ -85,7 +86,11 @@ export function SettleDialog({
           value={accountId}
           onChange={(e) => {
             setAccountId(e.target.value);
-            setPaymentMethodId(''); // el método depende de la cuenta
+            // S50 (D2): arranca en el predeterminado de la cuenta. Sin tarjetas (ver
+            // MarkRecurringPaidModal).
+            setPaymentMethodId(
+              defaultMethodValue(accounts?.find((a) => a.id === e.target.value)),
+            );
           }}
           required
           disabled={loading}

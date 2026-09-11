@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
 import { usePaymentMethods } from '../paymentMethods/usePaymentMethods';
+import { defaultMethodValue } from '../paymentMethods/defaultMethodValue';
 import {
   useCreateTransaction,
   useUpdateTransaction,
@@ -379,9 +380,18 @@ export function TransactionForm({
             onChange={(e) => {
               const newId = e.target.value;
               setAccountId(newId);
-              setPaymentMethodId(''); // el método depende de la cuenta → se resetea al cambiarla
-              // la moneda vuelve a la principal de la cuenta elegida (Sprint 22 D4)
-              setCurrency(accounts?.find((a) => a.id === newId)?.currency ?? '');
+              // S50 (D2): el método NO se vacía, arranca en el predeterminado de la cuenta. Va
+              // acá y no en un useEffect a propósito: un efecto que dependa de `accounts` vuelve
+              // a correr con cada refetch en background de react-query (foco de ventana) y le
+              // pone de nuevo el método que el usuario acababa de sacar a mano.
+              const newAccount = accounts?.find((a) => a.id === newId);
+              const prefilled = defaultMethodValue(newAccount, { withCards: true });
+              setPaymentMethodId(prefilled);
+              // La moneda vuelve a la principal de la cuenta (Sprint 22 D4), pero de la cuenta
+              // RUTEADA: si el predeterminado es una tarjeta vinculada la tx cae en la tarjeta, y
+              // dejarle la moneda de la madre es el bug que S27 ya pagó una vez.
+              const routedId = prefilled.startsWith('card:') ? prefilled.slice(5) : newId;
+              setCurrency(accounts?.find((a) => a.id === routedId)?.currency ?? '');
               setCurrencyIsOther(false);
               setRecurringId(''); // el vínculo recurrente exige moneda igual → se resetea (S24.3)
             }}

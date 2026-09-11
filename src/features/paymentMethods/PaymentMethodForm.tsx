@@ -14,21 +14,35 @@ import type { PaymentMethod, PaymentMethodType } from './api';
 
 type PaymentMethodFormProps = {
   paymentMethod?: PaymentMethod;
+  /**
+   * S50 (D3): la cuenta a la que va el método, fijada por la sección desde la que se abrió el
+   * formulario. Con esto puesta, la cuenta se muestra como texto y no como un `<Select>` vacío
+   * que hay que completar: era la mitad de la fricción del alta.
+   */
+  accountId?: string;
   onClose: () => void;
   /** En edición: dispara el borrado (con confirmación en la página). */
   onDelete?: () => void;
 };
 
-export function PaymentMethodForm({ paymentMethod, onClose, onDelete }: PaymentMethodFormProps) {
+export function PaymentMethodForm({
+  paymentMethod,
+  accountId: fixedAccountId,
+  onClose,
+  onDelete,
+}: PaymentMethodFormProps) {
   const isEdit = paymentMethod !== undefined;
   const toast = useToast();
 
-  const [accountId, setAccountId] = useState(paymentMethod?.accountId ?? '');
+  const [accountId, setAccountId] = useState(
+    paymentMethod?.accountId ?? fixedAccountId ?? '',
+  );
   const [name, setName] = useState(paymentMethod?.name ?? '');
   const [type, setType] = useState<PaymentMethodType>(paymentMethod?.type ?? 'CASH');
   const [isDefault, setIsDefault] = useState(paymentMethod?.isDefault ?? false);
 
   const { data: accounts } = useAccounts();
+  const accountName = accounts?.find((a) => a.id === accountId)?.name;
   const createMutation = useCreatePaymentMethod();
   const updateMutation = useUpdatePaymentMethod();
   const mutation = isEdit ? updateMutation : createMutation;
@@ -78,22 +92,29 @@ export function PaymentMethodForm({ paymentMethod, onClose, onDelete }: PaymentM
       className="flex flex-col gap-3"
     >
       {/* La cuenta a la que pertenece el método. Inmutable en edición (el backend no permite
-          moverlo de cuenta) → se muestra deshabilitado. */}
-      <Select
-        label="Cuenta"
-        id="pm-account"
-        value={accountId}
-        onChange={(e) => setAccountId(e.target.value)}
-        required
-        disabled={isEdit || isPending}
-      >
-        <option value="">Elegí una cuenta</option>
-        {accounts?.map((account) => (
-          <option key={account.id} value={account.id}>
-            {account.name} ({account.currency})
-          </option>
-        ))}
-      </Select>
+          moverlo de cuenta), y fija cuando el formulario se abre desde la sección de una cuenta
+          (S50 D3): en los dos casos no hay nada que elegir, así que se muestra como texto. */}
+      {accountId ? (
+        <p className="m-0 text-sm text-muted">
+          Cuenta: <span className="text-ink">{accountName ?? '—'}</span>
+        </p>
+      ) : (
+        <Select
+          label="Cuenta"
+          id="pm-account"
+          value={accountId}
+          onChange={(e) => setAccountId(e.target.value)}
+          required
+          disabled={isPending}
+        >
+          <option value="">Elegí una cuenta</option>
+          {accounts?.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name} ({account.currency})
+            </option>
+          ))}
+        </Select>
+      )}
 
       <Input
         label="Nombre"
@@ -129,7 +150,7 @@ export function PaymentMethodForm({ paymentMethod, onClose, onDelete }: PaymentM
           disabled={isPending}
           className="h-5 w-5 rounded-sm border border-line accent-brand"
         />
-        Usar como método por defecto
+        Usar como método por defecto de esta cuenta
       </label>
 
       <div className="flex items-center gap-3">

@@ -9,6 +9,7 @@ import { numberToAmountDisplay, parseAmountInput } from '../../lib/money';
 import { useAccounts } from '../accounts/useAccounts';
 import { TYPE_LABELS } from '../accounts/typeLabels';
 import { usePaymentMethods } from '../paymentMethods/usePaymentMethods';
+import { defaultMethodValue } from '../paymentMethods/defaultMethodValue';
 import { useCreateTransaction } from '../transactions/useTransactionMutations';
 import { transactionErrorMessage } from '../transactions/errorMessages';
 import type { RecurringExpense } from './api';
@@ -78,7 +79,12 @@ export function MarkRecurringPaidModal({ recurring, defaultDate, onClose }: Mark
           value={accountId}
           onChange={(e) => {
             setAccountId(e.target.value);
-            setPaymentMethodId(''); // el método depende de la cuenta
+            // S50 (D2): arranca en el predeterminado de la cuenta. Sin tarjetas: este select no
+            // las ofrece, y un value `card:` que no está entre las options deja el `<Select>` en
+            // blanco sin decir nada.
+            setPaymentMethodId(
+              defaultMethodValue(accounts?.find((a) => a.id === e.target.value)),
+            );
           }}
           required
           disabled={busy}

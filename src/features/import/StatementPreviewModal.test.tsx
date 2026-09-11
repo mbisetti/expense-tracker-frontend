@@ -17,7 +17,16 @@ import type { StatementUpload } from './useStatementImport';
 // deshabilitada cuando no cierra, bloque de nombres nuevos y desglose por titular.
 
 const ACCOUNTS = [
-  { id: 'acc-1', name: 'Mercado Pago', type: 'WALLET', currency: 'ARS', balance: 0 },
+  // S50: con predeterminado puesto, justamente para probar que el preview NO lo usa (D2).
+  {
+    id: 'acc-1',
+    name: 'Mercado Pago',
+    type: 'WALLET',
+    currency: 'ARS',
+    balance: 0,
+    defaultPaymentMethodId: 'pm-1',
+    defaultCardAccountId: null,
+  },
   { id: 'acc-2', name: 'Banco Galicia', type: 'BANK', currency: 'ARS', balance: 0 },
 ];
 
@@ -25,7 +34,21 @@ function stubFetch() {
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string) => {
-      const body = url.includes('/accounts') ? ACCOUNTS : [{ id: 'p-1', name: 'Bauti' }];
+      let body: unknown = [{ id: 'p-1', name: 'Bauti' }];
+      if (url.includes('/accounts')) body = ACCOUNTS;
+      else if (url.includes('/payment-methods')) {
+        body = [
+          {
+            id: 'pm-1',
+            userId: 'u',
+            accountId: 'acc-1',
+            name: 'Transferencia',
+            type: 'TRANSFER',
+            isDefault: true,
+            createdAt: '2026-06-01T00:00:00',
+          },
+        ];
+      }
       return Promise.resolve(
         new Response(JSON.stringify(body), {
           status: 200,
@@ -383,5 +406,20 @@ describe('StatementPreviewModal', () => {
     expect(payload.rows.find((r) => r.id === 'r2')?.selected).toBe(false);
     expect(payload.rows.find((r) => r.id === 'r1')?.selected).toBe(true);
     expect(payload.accountId).toBe('acc-1');
+  });
+
+  // S50 (D2): el preview NO prefillea el metodo predeterminado de la cuenta, a diferencia de los
+  // formularios de transaccion. Una fila de extracto no es una preferencia, es EVIDENCIA: el
+  // lector deduce el metodo cuando lo puede leer, y cuando no, la respuesta honesta es "sin
+  // metodo". Un extracto mezcla transferencias con compras con debito; prefillear las cuarenta
+  // filas con "Transferencia" es etiquetar mal treinta y nadie las corrige a mano.
+  it('no prefillea el metodo predeterminado de la cuenta en las filas sin metodo (S50 D2)', async () => {
+    const onConfirm = vi.fn();
+    renderModal(report(), onConfirm);
+
+    fireEvent.click(await screen.findByRole('button', { name: /Importar 1 movimiento/ }));
+
+    const payload = onConfirm.mock.calls[0][0] as StatementConfirmPayload;
+    expect(payload.rows[0].paymentMethodId).toBeNull();
   });
 });

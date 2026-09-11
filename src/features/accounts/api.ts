@@ -41,6 +41,17 @@ export type Account = {
   systemRole?: SystemAccountRole | null;
   // S40 (D5): plan de pagos de un préstamo (sólo DEBT) + todo lo derivado. null = sin plan.
   loan?: LoanProgress | null;
+  /**
+   * S50 (D1): el método de pago predeterminado de la cuenta, con el que arrancan los formularios.
+   * EXCLUYENTES: a lo sumo uno de los dos tiene valor.
+   *
+   * `defaultCardAccountId` es una tarjeta vinculada (cuenta CREDIT hija). Elegirla RUTEA la
+   * transacción a esa cuenta y va SIN paymentMethodId: la tarjeta ES el método.
+   *
+   * Nullables y opcionales, tolerados como null/undefined igual que `institution`.
+   */
+  defaultPaymentMethodId?: string | null;
+  defaultCardAccountId?: string | null;
 };
 
 export type SystemAccountRole = 'FRIEND_DEBTS';
