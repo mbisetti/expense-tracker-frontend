@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 
 type SwitchProps = {
   checked: boolean;
@@ -6,7 +6,13 @@ type SwitchProps = {
   /** Etiqueta visible; si se omite, pasá `ariaLabel`. */
   label?: string;
   ariaLabel?: string;
-  helper?: string;
+  /**
+   * Texto auxiliar. Acepta un nodo y no sólo un string (S49) para el caso en que el helper CAMBIA
+   * con el estado del switch: ahí el que lo usa envuelve las dos variantes en `ReservedText`, que
+   * reserva el lugar de la más larga y evita que prender el switch reacomode la pantalla. Un
+   * string sigue siendo lo normal.
+   */
+  helper?: ReactNode;
   disabled?: boolean;
   id?: string;
 };

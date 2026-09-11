@@ -8,6 +8,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { ReservedText } from '../../components/ui/ReservedText';
 import { Switch } from '../../components/ui/Switch';
 import { formatMoney } from '../../lib/money';
 import { monthShortLabel } from '../../lib/months';
@@ -35,12 +36,19 @@ type MonthlyChartProps = {
 
 const compact = new Intl.NumberFormat('es-AR', { notation: 'compact' });
 
-function adjustHelper(adjust: InflationAdjust): string {
+// `enabled` entra por parámetro y no se lee de `adjust` para poder pedir las DOS versiones del
+// texto: la vigente y la del switch prendido, que es la más larga y la que reserva el lugar.
+function adjustHelper(adjust: InflationAdjust, enabled: boolean): string {
   if (!adjust.available) return 'Todavía no hay datos del IPC.';
   const base = ipcMonthLabel(adjust.ipcAsOf);
-  return adjust.enabled && base
+  return enabled && base
     ? `Montos en pesos de ${base}, según el IPC del INDEC.`
     : 'Montos tal como los anotaste.';
+}
+
+// Un solo string y no texto partido en JSX (lección S47).
+function captionFor(base: string | null, enabled: boolean): string {
+  return enabled && base ? `Últimos 6 meses, en pesos de ${base}` : 'Últimos 6 meses';
 }
 
 export function MonthlyChart({ months, currency, adjust }: MonthlyChartProps) {
@@ -50,9 +58,11 @@ export function MonthlyChart({ months, currency, adjust }: MonthlyChartProps) {
     expense: bucket.expense,
   }));
 
-  const base = adjust?.enabled ? ipcMonthLabel(adjust.ipcAsOf) : null;
-  // Un solo string y no texto partido en JSX (lección S47).
-  const caption = base ? `Últimos 6 meses, en pesos de ${base}` : 'Últimos 6 meses';
+  // El mes base se resuelve SIEMPRE, esté el ajuste prendido o no: con el switch apagado igual se
+  // necesita para saber qué tan largo puede llegar a ser el subtítulo y reservarle el lugar.
+  const base = ipcMonthLabel(adjust?.ipcAsOf);
+  const caption = captionFor(base, !!adjust?.enabled);
+  const longestCaption = captionFor(base, true);
 
   return (
     <figure
@@ -60,21 +70,42 @@ export function MonthlyChart({ months, currency, adjust }: MonthlyChartProps) {
       className="rounded-xl border border-line bg-surface p-4"
     >
       {/* flex-wrap: en pantallas angostas el switch cae debajo del título en vez de pisar el
-          gráfico. items-start para que la etiqueta y su helper no estiren la fila del h2. */}
+          gráfico. items-start para que la etiqueta y su helper no estiren la fila del h2.
+
+          Tocar el toggle cambia los DOS textos de este encabezado por versiones más largas, y con
+          el tamaño atado al contenido la card se reacomodaba en cada toque: el subtítulo ganaba
+          ancho (y una línea si no le entraba), el texto auxiliar ganaba una línea, y con
+          `justify-between` el toggle se corría solo al ensancharse su propio helper. Las tres cosas
+          se arreglan reservando el espacio de antemano. */}
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
+        {/* flex-1 + min-w-0: el bloque izquierdo se queda con lo que sobra y el subtítulo envuelve
+            adentro, en vez de empujar al de la derecha cuando se alarga. El alto lo reserva
+            ReservedText con la variante larga, así no hay ninguna medida a mano. */}
+        <div className="min-w-0 flex-1">
           <h2>Ingresos vs gastos</h2>
-          <figcaption className="text-body text-sm">{caption}</figcaption>
+          <figcaption className="text-body text-sm">
+            <ReservedText longest={longestCaption}>{caption}</ReservedText>
+          </figcaption>
         </div>
+        {/* Ancho fijo, que es lo que ancla el toggle a la derecha del header: su posición deja de
+            depender del largo del texto que tiene debajo. Y con el ancho fijo las dos variantes del
+            helper envuelven igual, así que el alto que reserva ReservedText es exacto. En mobile el
+            bloque pasa a w-full y cae abajo de las pestañas, con la misma reserva. */}
         {adjust && (
-          <Switch
-            id="dashboard-inflation-adjust"
-            label="Ajustar por inflación"
-            checked={adjust.enabled}
-            disabled={!adjust.available}
-            helper={adjustHelper(adjust)}
-            onChange={adjust.onChange}
-          />
+          <div className="w-full shrink-0 sm:w-72">
+            <Switch
+              id="dashboard-inflation-adjust"
+              label="Ajustar por inflación"
+              checked={adjust.enabled}
+              disabled={!adjust.available}
+              helper={
+                <ReservedText longest={adjustHelper(adjust, true)}>
+                  {adjustHelper(adjust, adjust.enabled)}
+                </ReservedText>
+              }
+              onChange={adjust.onChange}
+            />
+          </div>
         )}
       </div>
 

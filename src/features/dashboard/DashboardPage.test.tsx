@@ -518,4 +518,26 @@ describe('DashboardPage: ajustar por inflación (S49)', () => {
     expect(toggle).toBeDisabled();
     expect(screen.getByText('Todavía no hay datos del IPC.')).toBeInTheDocument();
   });
+
+  // Con el switch APAGADO los textos largos ya están en el DOM, ocupando lugar: es lo que hace que
+  // prenderlo no reacomode la card. jsdom no mide alto, así que lo que se fija es el mecanismo.
+  // Si alguien saca la reserva, el encabezado vuelve a saltar y esto se pone rojo.
+  it('apagado ya reserva el lugar de los textos largos, para no saltar al prenderlo', async () => {
+    stubMonthly(ARS_ONLY, () => monthlyFixture);
+    renderPage();
+
+    await screen.findByRole('switch', { name: 'Ajustar por inflación' });
+
+    // El subtítulo y el texto auxiliar visibles son los cortos...
+    expect(screen.getByText('Últimos 6 meses')).toBeInTheDocument();
+    expect(screen.getByText('Montos tal como los anotaste.')).toBeInTheDocument();
+    // ...y las versiones largas están igual, reservando el espacio y fuera del lector de pantalla.
+    expect(screen.getByText('Últimos 6 meses, en pesos de julio 2026')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
+    expect(
+      screen.getByText('Montos en pesos de julio 2026, según el IPC del INDEC.'),
+    ).toHaveAttribute('aria-hidden', 'true');
+  });
 });

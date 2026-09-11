@@ -16,6 +16,7 @@ import { CategoryTransactionsModal } from './CategoryTransactionsModal';
 import { Section } from './Section';
 import { SectionNav, type SectionLink } from './SectionNav';
 import { useSectionsOpen } from './useSectionsOpen';
+import { ReservedText } from '../../components/ui/ReservedText';
 import { Switch } from '../../components/ui/Switch';
 import { useInflationAdjust } from '../../lib/useInflationAdjust';
 import { ipcMonthLabel } from '../../lib/quoteLabel';
@@ -271,6 +272,14 @@ export function ExpensesPage() {
   const showAdjust = !!data && active === 'ARS';
   const adjustEnabled = inflationAdjusted && ipcAvailable;
   const ipcBaseLabel = ipcMonthLabel(data?.ipcAsOf);
+  // `enabled` entra por parámetro para poder pedir las DOS versiones del texto auxiliar: la
+  // vigente y la del switch prendido, que es la más larga y la que le reserva el lugar.
+  const adjustHelper = (enabled: boolean) =>
+    !ipcAvailable
+      ? 'Todavía no hay datos del IPC.'
+      : enabled && ipcBaseLabel
+        ? `Montos en pesos de ${ipcBaseLabel}, según el IPC del INDEC.`
+        : 'Montos tal como los anotaste.';
 
   const recurring = current?.recurring;
   const pendingRecurring =
@@ -301,27 +310,32 @@ export function ExpensesPage() {
       {/* S49 (D12): el switch al lado de las pestañas de moneda, porque el parámetro ajusta la
           página ENTERA (categorías, evolución, recortar) y no un bloque suelto. Sólo con ARS
           activa: pesos constantes es para pesos. flex-wrap para que en pantallas angostas caiga
-          debajo de las pestañas en vez de apretarlas. */}
+          debajo de las pestañas en vez de apretarlas.
+
+          El bloque del switch lleva ancho fijo y su texto auxiliar va envuelto en ReservedText,
+          igual que en el encabezado del gráfico del Dashboard y por el mismo motivo: ese texto pasa
+          a una versión más larga al prender el ajuste, y con el tamaño atado al contenido el toggle
+          se corría y la fila empujaba todo lo de abajo. */}
       {(currencies.length > 1 || showAdjust) && (
         <div className="flex flex-wrap items-start justify-between gap-2">
           {currencies.length > 1 && (
             <CurrencyTabs currencies={currencies} selected={active} onSelect={setPicked} />
           )}
           {showAdjust && (
-            <Switch
-              id="expenses-inflation-adjust"
-              label="Ajustar por inflación"
-              checked={adjustEnabled}
-              disabled={!ipcAvailable}
-              helper={
-                !ipcAvailable
-                  ? 'Todavía no hay datos del IPC.'
-                  : adjustEnabled && ipcBaseLabel
-                    ? `Montos en pesos de ${ipcBaseLabel}, según el IPC del INDEC.`
-                    : 'Montos tal como los anotaste.'
-              }
-              onChange={setInflationAdjusted}
-            />
+            <div className="w-full shrink-0 sm:w-72">
+              <Switch
+                id="expenses-inflation-adjust"
+                label="Ajustar por inflación"
+                checked={adjustEnabled}
+                disabled={!ipcAvailable}
+                helper={
+                  <ReservedText longest={adjustHelper(true)}>
+                    {adjustHelper(adjustEnabled)}
+                  </ReservedText>
+                }
+                onChange={setInflationAdjusted}
+              />
+            </div>
           )}
         </div>
       )}
