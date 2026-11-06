@@ -65,12 +65,27 @@ const intraTransfer = {
   createdAt: '2026-06-30T00:00:00',
 };
 
+const sharedDetail = {
+  transactionId: 'tx-shared',
+  description: 'Cena parrilla',
+  date: '2026-07-01',
+  currency: 'ARS',
+  totalAmount: 30000,
+  sharedAmount: 20000,
+  yourAmount: 10000,
+  shares: [],
+};
+
 function stubFetch(txContent: unknown[], transfers: unknown[] = [], groups: unknown[] = []) {
   vi.stubGlobal(
     'fetch',
     vi.fn((url: string) => {
       // S47: el nombre del grupo de una fila se resuelve contra esta lista, no viene en la tx.
       if (url.includes('/groups')) return jsonResponse(200, groups);
+      // Va antes de '/transactions', que también matchea esta URL: el modal del reparto recibía la
+      // página de movimientos, reventaba en formatDate(undefined) al llegar la respuesta y se
+      // llevaba puesto todo el árbol. Ése era el test que fallaba al azar (P-16).
+      if (url.includes('/shares')) return jsonResponse(200, sharedDetail);
       if (url.includes('/transfers'))
         return jsonResponse(200, {
           content: transfers,
@@ -178,7 +193,10 @@ describe('TransactionsPage — presentación de las filas', () => {
     expect(info).toHaveLength(1);
 
     fireEvent.click(info[0]);
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    // Espera el reparto ya cargado y no sólo el diálogo, que aparece antes con el skeleton: el
+    // título recién dice el nombre del gasto cuando llegó la respuesta.
+    const dialog = await screen.findByRole('dialog', { name: 'Cena parrilla' });
+    expect(within(dialog).getByText('Total pagado')).toBeInTheDocument();
   });
 
   it('la fila compartida muestra el total y tu parte por separado', async () => {
@@ -236,7 +254,10 @@ describe('TransactionsPage — presentación de las filas', () => {
     expect(screen.getByRole('tooltip')).toHaveTextContent('«Cena parrilla»');
 
     fireEvent.click(info);
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    // Espera el reparto ya cargado y no sólo el diálogo, que aparece antes con el skeleton: el
+    // título recién dice el nombre del gasto cuando llegó la respuesta.
+    const dialog = await screen.findByRole('dialog', { name: 'Cena parrilla' });
+    expect(within(dialog).getByText('Total pagado')).toBeInTheDocument();
   });
 
   it('la transferencia intra-cuenta parte el nombre y el par de monedas en dos renglones', async () => {
