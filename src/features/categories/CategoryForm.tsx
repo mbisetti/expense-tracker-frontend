@@ -16,9 +16,14 @@ type CategoryFormProps = {
   onClose: () => void;
   /** En edición: dispara el borrado (con confirmación en la página). */
   onDelete?: () => void;
+  /**
+   * S51 (D8): en edición, cierra el form y abre el modal de subcategorías (la app no apila
+   * modales: es el mismo movimiento que hace Borrar).
+   */
+  onSubcategories?: () => void;
 };
 
-export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps) {
+export function CategoryForm({ category, onClose, onDelete, onSubcategories }: CategoryFormProps) {
   const isEdit = category !== undefined;
   const toast = useToast();
   // Query cacheada (la página ya la tiene): no hay request extra.
@@ -154,13 +159,27 @@ export function CategoryForm({ category, onClose, onDelete }: CategoryFormProps)
         >
           Cancelar
         </Button>
+        {isEdit && onSubcategories && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onSubcategories}
+            disabled={isPending}
+            className="ml-auto"
+          >
+            Subcategorías
+          </Button>
+        )}
         {isEdit && onDelete && (
           <Button
             type="button"
             variant="ghost"
             onClick={onDelete}
             disabled={isPending}
-            className="ml-auto border-expense/40 text-expense hover:bg-expense/10 hover:text-expense"
+            className={[
+              onSubcategories ? '' : 'ml-auto',
+              'border-expense/40 text-expense hover:bg-expense/10 hover:text-expense',
+            ].join(' ')}
           >
             Borrar
           </Button>

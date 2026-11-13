@@ -11,4 +11,17 @@ export type Category = {
   isEssential: boolean;
   sourceDefaultCategoryId: string | null;
   createdAt: string;
+  /**
+   * S51: subcategorías vivas, en su orden. El server siempre manda la lista (vacía si no hay).
+   * Opcional porque este tipo lo construyen a mano fixtures de una decena de tests (lección de
+   * S38 y S47): nada de la app depende de que esté.
+   */
+  subcategories?: Subcategory[];
+};
+
+// S51: un segundo nivel opcional. No tiene color, tipo ni esencialidad: hereda todo de su
+// categoría.
+export type Subcategory = {
+  id: string;
+  name: string;
 };

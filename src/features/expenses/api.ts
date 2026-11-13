@@ -14,6 +14,20 @@ export type CategoryExpense = {
   txCount: number;
   avg3mCount: number;
   maxTxAmount: number;
+  /**
+   * S51 (D9): el gasto del mes por subcategoría, ordenado por monto. Vacía si ningún movimiento
+   * de la categoría en el mes tiene subcategoría; en ese caso la lupa no dibuja el bloque.
+   * Opcional por los fixtures.
+   */
+  subcategories?: SubcategoryExpense[];
+};
+
+export type SubcategoryExpense = {
+  /** null = el renglón "Sin subcategoría". */
+  subcategoryId: string | null;
+  name: string | null;
+  amount: number;
+  txCount: number;
 };
 
 export type EssentialMonthBucket = {
