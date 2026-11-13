@@ -129,4 +129,52 @@ describe('CategoriesPage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
+
+  // S51 (D2/D8): el contador sólo existe si hay subcategorías, y abre el modal.
+  it('una categoría con subcategorías muestra el contador, que abre el modal; una sin, nada', async () => {
+    const boliche = {
+      ...userCategory,
+      id: 'cat-bol',
+      name: 'Boliche',
+      subcategories: [
+        { id: 's1', name: 'Entrada' },
+        { id: 's2', name: 'Previa' },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => jsonResponse(200, [boliche, { ...userCategory, subcategories: [] }])),
+    );
+
+    renderPage();
+    await screen.findByText('Boliche');
+    // Un solo contador: el de Boliche. Mascotas (lista vacía) no muestra nada.
+    expect(screen.getAllByRole('button', { name: /subcategoría/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: '2 subcategorías' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Subcategorías de Boliche' });
+    expect(within(dialog).getByText('Entrada')).toBeInTheDocument();
+    expect(within(dialog).getByText('Previa')).toBeInTheDocument();
+  });
+
+  it('"Subcategorías" en el form de edición cierra el form y abre el modal', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => jsonResponse(200, [userCategory])));
+
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar Mascotas' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Subcategorías' }));
+
+    expect(screen.queryByRole('dialog', { name: 'Editar categoría' })).not.toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: 'Subcategorías de Mascotas' });
+    expect(within(dialog).getByText(/Todavía no tiene subcategorías/)).toBeInTheDocument();
+  });
+
+  it('el alta de una categoría no ofrece subcategorías (todavía no hay a qué colgarlas)', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => jsonResponse(200, [userCategory])));
+
+    renderPage();
+    await screen.findByText('Mascotas');
+    fireEvent.click(screen.getByRole('button', { name: 'Nueva categoría' }));
+    expect(screen.queryByRole('button', { name: 'Subcategorías' })).not.toBeInTheDocument();
+  });
 });

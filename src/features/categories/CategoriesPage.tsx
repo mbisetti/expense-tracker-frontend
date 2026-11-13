@@ -4,6 +4,8 @@ import { useDeleteCategory } from './useCategoryMutations';
 import { categoryErrorMessage } from './errorMessages';
 import { CategoryForm } from './CategoryForm';
 import { OrganizeCategoriesModal } from './OrganizeCategoriesModal';
+import { SubcategoriesModal } from './SubcategoriesModal';
+import { subcategoryCount } from './subcategoryLabel';
 import { Button } from '../../components/ui/Button';
 import { PageHeader } from '../../components/ui/PageHeader';
 import { Badge } from '../../components/ui/Badge';
@@ -27,6 +29,8 @@ export function CategoriesPage() {
   const [editing, setEditing] = useState<Category | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
   const [organizeOpen, setOrganizeOpen] = useState(false);
+  // S51: la categoría cuyas subcategorías se están administrando (null = modal cerrado).
+  const [subcategoriesOf, setSubcategoriesOf] = useState<string | null>(null);
 
   const toast = useToast();
   const { data: categories, isPending, isError } = useCategories();
@@ -128,6 +132,17 @@ export function CategoriesPage() {
                           <span className="text-ink">{category.name}</span>
                           {/* Sprint 24: marca visual de esencialidad (info, barato). */}
                           {category.isEssential && <Badge status="info" label="Esencial" />}
+                          {/* S51 (D2/D8): sólo si ya tiene alguna. Quien no usa subcategorías
+                              no ve nada nuevo en esta pantalla. */}
+                          {!isSystem && (category.subcategories?.length ?? 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setSubcategoriesOf(category.id)}
+                              className="text-xs text-muted hover:text-ink hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                            >
+                              {subcategoryCount(category.subcategories?.length ?? 0)}
+                            </button>
+                          )}
                         </span>
                         {isSystem ? (
                           <em className="text-body">Sistema</em>
@@ -162,8 +177,23 @@ export function CategoriesPage() {
                 }
               : undefined
           }
+          onSubcategories={
+            editing
+              ? () => {
+                  const id = editing.id;
+                  closeForm();
+                  setSubcategoriesOf(id);
+                }
+              : undefined
+          }
         />
       </Modal>
+
+      <SubcategoriesModal
+        open={subcategoriesOf !== null}
+        categoryId={subcategoriesOf}
+        onClose={() => setSubcategoriesOf(null)}
+      />
 
       <OrganizeCategoriesModal
         open={organizeOpen}

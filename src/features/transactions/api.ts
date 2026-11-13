@@ -41,6 +41,8 @@ export type TransactionListItem = {
    * obligatorio obliga a un commit mecánico que toca archivos que no tienen nada que ver.
    */
   groupId?: string | null;
+  /** S51: la subcategoría (de `categoryId`), o null. Opcional por los fixtures, como groupId. */
+  subcategoryId?: string | null;
 };
 
 export type TransactionResponse = TransactionListItem & {

@@ -80,6 +80,7 @@ export function TransactionForm({
   const [currencyIsOther, setCurrencyIsOther] = useState(false);
   const [date, setDate] = useState(transaction?.date ?? todayLocal());
   const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? '');
+  const [subcategoryId, setSubcategoryId] = useState(transaction?.subcategoryId ?? '');
   const [paymentMethodId, setPaymentMethodId] = useState(transaction?.paymentMethodId ?? '');
   const [description, setDescription] = useState(transaction?.description ?? '');
 
@@ -138,6 +139,8 @@ export function TransactionForm({
   const categoryOptions = categories?.filter(
     (c) => c.type === type || c.type === 'BOTH',
   );
+  // S51: las subcategorías de la categoría elegida (vacío = el Select no se dibuja).
+  const subcategoryOptions = categories?.find((c) => c.id === categoryId)?.subcategories ?? [];
   const selectedAccount = accounts?.find((a) => a.id === accountId);
   // Sprint 22.2 (D6): el "método" puede ser un PaymentMethod (uuid) o una tarjeta de crédito
   // hija (value "card:<accountId>"). Si es una tarjeta, la tx cae en la cuenta-tarjeta.
@@ -214,6 +217,8 @@ export function TransactionForm({
       if (parseAmountInput(amount) !== transaction.amount) changes.amount = parseAmountInput(amount);
       if (date !== transaction.date) changes.date = date;
       if (categoryId && categoryId !== transaction.categoryId) changes.categoryId = categoryId;
+      // S51: se manda siempre que difiera, incluido "" (= quitar). Sin tocarlo no viaja.
+      if (subcategoryId !== (transaction.subcategoryId ?? '')) changes.subcategoryId = subcategoryId;
       if (paymentMethodId && paymentMethodId !== transaction.paymentMethodId)
         changes.paymentMethodId = paymentMethodId;
       if (description && description !== transaction.description)
@@ -272,6 +277,7 @@ export function TransactionForm({
         amount: parseAmountInput(amount),
         date,
         categoryId: categoryId || undefined,
+        subcategoryId: subcategoryId || undefined,
         paymentMethodId: selectedCardId ? undefined : paymentMethodId || undefined,
         description: description || undefined,
         // Sprint 22: manda la moneda resuelta (principal si no se tocó el selector).
@@ -497,7 +503,12 @@ export function TransactionForm({
         label="Categoría"
         id="tx-category"
         value={categoryId}
-        onChange={(e) => setCategoryId(e.target.value)}
+        onChange={(e) => {
+          setCategoryId(e.target.value);
+          // S51: cambiar de categoría vuelve la subcategoría a "Sin subcategoría". Va en el
+          // handler y no en un efecto (react-hooks/set-state-in-effect).
+          setSubcategoryId('');
+        }}
         disabled={isPending}
       >
         <option value="">Sin categoría</option>
@@ -507,6 +518,24 @@ export function TransactionForm({
           </option>
         ))}
       </Select>
+
+      {/* S51 (D2/D10): sólo si la categoría elegida tiene subcategorías. Nunca es obligatorio. */}
+      {subcategoryOptions.length > 0 && (
+        <Select
+          label="Subcategoría"
+          id="tx-subcategory"
+          value={subcategoryId}
+          onChange={(e) => setSubcategoryId(e.target.value)}
+          disabled={isPending}
+        >
+          <option value="">Sin subcategoría</option>
+          {subcategoryOptions.map((sub) => (
+            <option key={sub.id} value={sub.id}>
+              {sub.name}
+            </option>
+          ))}
+        </Select>
+      )}
 
       <Select
         label="Método de pago"
@@ -588,7 +617,11 @@ export function TransactionForm({
                   if (v && v !== RECURRING_NEW) {
                     const rec = recurringOptions.find((r) => r.id === v);
                     if (rec) {
-                      setCategoryId(rec.categoryId);
+                      if (rec.categoryId !== categoryId) {
+                        setCategoryId(rec.categoryId);
+                        // S51: la subcategoría es de la categoría; si ésta cambia, se va.
+                        setSubcategoryId('');
+                      }
                       setAmount(numberToAmountDisplay(rec.amount));
                     }
                   }

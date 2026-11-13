@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAccounts } from '../accounts/useAccounts';
 import { useCategories } from '../categories/useCategories';
+import { categoryWithSub, subcategoryName } from '../categories/subcategoryLabel';
 import { useGroups } from '../groups/useGroups';
 import { useTransactions } from './useTransactions';
 import { useDeleteTransaction } from './useTransactionMutations';
@@ -225,8 +226,13 @@ export function TransactionsPage() {
   // no necesita que el backend le mande el nombre repetido en cada movimiento.
   const groupName = (id: string | null | undefined) =>
     id ? (groups?.find((g) => g.id === id)?.name ?? null) : null;
-  const categoryName = (id: string | null) =>
-    id ? categories?.find((c) => c.id === id)?.name ?? '—' : '—';
+  // S51 (D10): "Boliche › Transporte" si el movimiento tiene subcategoría.
+  const categoryName = (id: string | null, subcategoryId?: string | null) => {
+    if (!id) return '—';
+    const category = categories?.find((c) => c.id === id);
+    if (!category) return '—';
+    return categoryWithSub(category.name, subcategoryName(category, subcategoryId));
+  };
 
   // Sprint 23 (D2): opciones del filtro de categoría según el Tipo elegido (BOTH sirve para
   // INCOME y EXPENSE; con Tipo vacío se listan todas).
@@ -781,7 +787,7 @@ export function TransactionsPage() {
                             de una categoría vacía se filtra: "— · Cuenta" no dice nada. */}
                         {!isDesktop && (
                           <div className="truncate text-xs text-muted">
-                            {[categoryName(row.item.categoryId), accountName(row.item.accountId)]
+                            {[categoryName(row.item.categoryId, row.item.subcategoryId), accountName(row.item.accountId)]
                               .filter((part) => part && part !== '—')
                               .join(' · ')}
                           </div>
@@ -810,7 +816,7 @@ export function TransactionsPage() {
                       </td>
                       {isDesktop && (
                         <td className="truncate py-2 pr-4 text-body">
-                          {categoryName(row.item.categoryId)}
+                          {categoryName(row.item.categoryId, row.item.subcategoryId)}
                         </td>
                       )}
                       {isDesktop && (

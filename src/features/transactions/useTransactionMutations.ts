@@ -15,6 +15,8 @@ export type CreateTransactionInput = {
   currency?: string;
   // Sprint 24.3: vínculo opcional a un gasto recurrente (solo EXPENSE, misma moneda).
   recurringExpenseId?: string;
+  // S51: subcategoría de `categoryId`. Ausente = sin subcategoría.
+  subcategoryId?: string;
 };
 
 export type UpdateTransactionInput = {
@@ -25,6 +27,9 @@ export type UpdateTransactionInput = {
   description?: string;
   // Sprint 24.3: "" = desvincular, UUID = vincular, ausente = no tocar (patrón linkedAccountId).
   recurringExpenseId?: string;
+  // S51: mismo patrón. "" = quitar, UUID = poner, ausente = no tocar. Cambiar la categoría sin
+  // mandarla la quita sola (lo hace el server).
+  subcategoryId?: string;
 };
 
 function useInvalidateTransactions() {
